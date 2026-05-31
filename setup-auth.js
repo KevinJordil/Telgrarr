@@ -1,5 +1,7 @@
 const fs = require('fs');
 const crypto = require('crypto');
+const path = require('path');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 
 const username = process.argv[2];
 const password = process.argv[3];
@@ -15,7 +17,7 @@ const salt = crypto.randomBytes(16).toString('hex');
 const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
 
 const authData = { username, salt, hash };
-const filePath = '/home/fhd/software/telgrarr/data/auth.json';
+const filePath = path.join(DATA_DIR, 'auth.json');
 
 fs.writeFileSync(filePath, JSON.stringify(authData, null, 2));
 console.log(`\n✅ SUCCESS: Secure credentials generated and saved to ${filePath}`);

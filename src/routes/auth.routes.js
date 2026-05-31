@@ -8,10 +8,12 @@ const events      = require('../events');
 const EVENT_TYPES = require('../../gui/src/shared/events.json');
 const writeAtomic = require('write-file-atomic');
 const { activeSessions, requireAuth, persistSessions } = require('../middlewares/auth');
+const path        = require('path');
+const config      = require('../config');
 
-const AUTH_FILE     = '/home/fhd/software/telgrarr/data/auth.json';
-const SESSION_FILE  = '/home/fhd/software/telgrarr/data/sessions.json';
-const RECOVERY_FILE = '/home/fhd/software/telgrarr/data/recovery.json';
+const AUTH_FILE     = path.join(config.DATA_DIR, 'auth.json');
+const SESSION_FILE  = path.join(config.DATA_DIR, 'sessions.json');
+const RECOVERY_FILE = path.join(config.DATA_DIR, 'recovery.json');
 
 function persistNow() {
   try {
