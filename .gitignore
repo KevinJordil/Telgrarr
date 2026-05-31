@@ -16,3 +16,6 @@ gui/dist/
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Runtime backup archives (contain secrets)
+backups/

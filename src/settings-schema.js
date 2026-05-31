@@ -1,0 +1,130 @@
+'use strict';
+
+const TMDB_LANGUAGES = [
+  { value: 'ar-SA', label: 'Arabic (Saudi Arabia)' },
+  { value: 'en-US', label: 'English (US)' },
+  { value: 'fr-FR', label: 'French (France)' },
+  { value: 'de-DE', label: 'German (Germany)' },
+  { value: 'es-ES', label: 'Spanish (Spain)' },
+  { value: 'ja-JP', label: 'Japanese' },
+  { value: 'ko-KR', label: 'Korean' },
+  { value: 'pt-BR', label: 'Portuguese (Brazil)' },
+  { value: 'tr-TR', label: 'Turkish' },
+  { value: 'zh-CN', label: 'Chinese (Simplified)' },
+];
+
+const SETTINGS_SCHEMA = [
+  {
+    id: 'telegram', title: 'Telegram', icon: 'Send',
+    testEndpoint: '/api/settings/test/telegram', testLabel: 'Send Test Message',
+    fields: [
+      { key: 'telegram.botToken', label: 'Bot Token', type: 'secret', placeholder: '1234567890:AAExxx...', required: true, rule: 'telegramToken' },
+      { key: 'telegram.chatId', label: 'Chat ID', type: 'text', placeholder: '-1001234567890', required: true, rule: 'chatId' },
+      { key: 'telegram.delayMs', label: 'Delay Between Messages', type: 'slider',
+        min: 500, max: 10000, step: 500, displayFormat: 'ms-to-s',
+        note: 'Pause between consecutive messages in one batch.', integer: true },
+    ],
+  },
+  {
+    id: 'queue', title: 'Queue & Timing', icon: 'Timer',
+    fields: [
+      { key: 'batchWindowMs', label: 'Batch Window', type: 'slider',
+        min: 30000, max: 1800000, step: 30000, displayFormat: 'ms-to-min',
+        note: 'Wait time before processing a batch. Takes effect on the next new batch only.', integer: true },
+    ],
+  },
+  {
+    id: 'sonarr', title: 'Sonarr', icon: 'Tv',
+    testEndpoint: '/api/settings/test/sonarr', testLabel: 'Test Connection',
+    fields: [
+      { key: 'sonarr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:8989', required: true, rule: 'url' },
+      { key: 'sonarr.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Sonarr API key', required: true },
+    ],
+  },
+  {
+    id: 'radarr', title: 'Radarr', icon: 'Film',
+    testEndpoint: '/api/settings/test/radarr', testLabel: 'Test Connection',
+    fields: [
+      { key: 'radarr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:7878', required: true, rule: 'url' },
+      { key: 'radarr.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Radarr API key', required: true },
+    ],
+  },
+  {
+    id: 'emby', title: 'Emby', icon: 'Play',
+    testEndpoint: '/api/settings/test/emby', testLabel: 'Test Connection',
+    fields: [
+      { key: 'emby.refreshUrl', label: 'Library Refresh URL', type: 'url', placeholder: 'https://your-emby/Library/Refresh', required: false, rule: 'url' },
+      { key: 'emby.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Emby API key', required: false },
+    ],
+  },
+  {
+    id: 'tmdb', title: 'TMDb', icon: 'Star',
+    fields: [
+      { key: 'tmdb.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your TMDb v3 API key', required: true },
+      { key: 'tmdb.language', label: 'Metadata Language', type: 'select', options: TMDB_LANGUAGES },
+    ],
+  },
+  {
+    id: 'seerr', title: 'Seerr', icon: 'Search',
+    fields: [
+      { key: 'seerr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'https://your-seerr-instance', required: false, rule: 'url' },
+    ],
+  },
+  {
+    id: 'omdb', title: 'OMDb', icon: 'Database',
+    testEndpoint: '/api/settings/test/omdb', testLabel: 'Test API Key',
+    fields: [
+      { key: 'omdb.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your OMDb API key',
+        note: 'Optional. Used as a fallback source for IMDb, Rotten Tomatoes, and Metacritic ratings when Radarr has not yet synced them. Leave empty to disable.', required: false },
+    ],
+  },
+  {
+    id: 'translator', title: 'AI Translator', icon: 'Languages',
+    testEndpoint: '/api/settings/test/translator-ai', testLabel: 'Test AI Key',
+    fields: [
+      { key: 'translator.endpoint', label: 'API Endpoint (OpenAI Compatible)', type: 'url',
+        placeholder: 'https://api.openai.com/v1/chat/completions',
+        note: 'The chat completions endpoint for your AI provider (OpenAI, OpenRouter, Groq, etc.).', required: false, rule: 'url' },
+      { key: 'translator.model', label: 'AI Model', type: 'text',
+        placeholder: 'gpt-4o-mini',
+        note: 'The exact model ID to request (e.g., gpt-4o-mini, deepseek/deepseek-chat).', required: false },
+      { key: 'translator.apiKey', label: 'API Key', type: 'secret',
+        placeholder: 'sk-...',
+        note: 'Required for AI translations (Tier 1). If empty, translations will be skipped.', required: false },
+      { key: 'translator.deeplApiKey', label: 'DeepL Free API Key', type: 'secret',
+        placeholder: 'xxxxxxxxxxxxxxxx',
+        note: 'Tier 2 fallback — get free key at deepl.com/pro#developer (500k chars/month).', required: false },
+    ],
+  },
+  {
+    id: 'mediaCache', title: 'Media Cache', icon: 'Database',
+    fields: [
+      { key: 'mediaCache.ttlDays', label: 'Cache TTL (Days)', type: 'slider',
+        min: 1, max: 90, step: 1,
+        note: 'How long TMDb and OMDb metadata is cached before re-fetching. Default: 30 days.', integer: true },
+      { key: 'mediaCache.maxEntries', label: 'Max Cache Entries', type: 'slider',
+        min: 50, max: 500, step: 50,
+        note: 'Maximum number of titles stored in cache. Oldest entry is evicted when limit is reached. Default: 500.', integer: true },
+    ],
+  },
+  {
+    id: 'logging', title: 'Logging', icon: 'FileText',
+    fields: [
+      { key: 'logging.level', label: 'Log Level', type: 'select',
+        options: [
+          { value: 'info',  label: 'Info — standard operational output' },
+          { value: 'warn',  label: 'Warn — suppressions and degraded states only' },
+          { value: 'error', label: 'Error — failures only' },
+        ],
+        note: 'Controls which log levels are written to disk and console. Requires restart.' },
+      { key: 'logging.rotation.app.maxSizeMb', label: 'App Log Max Size (MB)', type: 'slider', min: 1, max: 50, step: 1, note: 'Roll app.log when it reaches this size.', integer: true },
+      { key: 'logging.rotation.app.maxAgeDays', label: 'App Log Max Age (Days)', type: 'slider', min: 1, max: 30, step: 1, note: 'Delete app.log archives older than this.', integer: true },
+      { key: 'logging.rotation.error.maxSizeMb', label: 'Error Log Max Size (MB)', type: 'slider', min: 1, max: 50, step: 1, note: 'Roll error.log when it reaches this size.', integer: true },
+      { key: 'logging.rotation.error.maxAgeDays', label: 'Error Log Max Age (Days)', type: 'slider', min: 1, max: 90, step: 1, note: 'Delete error.log archives older than this.', integer: true },
+      { key: 'logging.rotation.audit.maxSizeMb', label: 'Audit Log Max Size (MB)', type: 'slider', min: 1, max: 20, step: 1, note: 'Roll audit.log when it reaches this size.', integer: true },
+      { key: 'logging.rotation.audit.maxAgeDays', label: 'Audit Log Max Age (Days)', type: 'slider', min: 7, max: 365, step: 1, note: 'Delete audit.log archives older than this.', integer: true },
+    ],
+  },
+];
+
+module.exports = { SETTINGS_SCHEMA, TMDB_LANGUAGES };

@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* 🌙 DEFAULT DARK MODE */
+  :root, [data-theme="dark"] {
+    --color-bg: 10 10 10;
+    --color-surface: 23 23 23;
+    --color-border: 38 38 38;
+    --color-text: 248 250 252;
+    --color-muted: 148 163 184;
+    --color-accent: 139 92 246;
+    --color-accent-glow: 167 139 250;
+    --color-accent-dark: 91 33 182;
+  }
+
+  /* ☀️ LIGHT MODE */
+  [data-theme="light"] {
+    --color-bg: 248 250 252;
+    --color-surface: 255 255 255;
+    --color-border: 226 232 240;
+    --color-text: 15 23 42;
+    --color-muted: 100 116 139;
+    --color-accent: 139 92 246;
+    --color-accent-glow: 167 139 250;
+    --color-accent-dark: 91 33 182;
+  }
+
+  /* 🌌 MIDNIGHT CYBER (Sleek, modern dark blue/purple) */
+  [data-theme="neon"] {
+    --color-bg: 11 15 25;
+    --color-surface: 17 24 39;
+    --color-border: 30 58 138;
+    --color-text: 248 250 252;
+    --color-muted: 147 197 253;
+    --color-accent: 168 85 247;
+    --color-accent-glow: 192 132 252;
+    --color-accent-dark: 126 34 206;
+  }
+
+  /* ✈️ TELEGRAM NATIVE */
+  [data-theme="telegram"] {
+    --color-bg: 23 33 43;
+    --color-surface: 36 47 61;
+    --color-border: 14 22 33;
+    --color-text: 245 245 245;
+    --color-muted: 127 145 164;
+    --color-accent: 82 136 193;
+    --color-accent-glow: 100 160 215;
+    --color-accent-dark: 43 82 120;
+  }
+
+  body {
+    @apply bg-telgrarr-black text-telgrarr-text antialiased selection:bg-telgrarr-purple selection:text-white transition-colors duration-300;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 🚨 BULLETPROOF WEBKIT AUTOFILL FIX 🚨 */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 1000px rgb(var(--color-surface)) inset !important;
+      -webkit-text-fill-color: rgb(var(--color-text)) !important;
+      transition: background-color 5000s ease-in-out 0s;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-telgrarr-surface/70 backdrop-blur-xl border border-telgrarr-border shadow-glass rounded-2xl;
+  }
+}

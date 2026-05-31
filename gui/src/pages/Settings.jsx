@@ -1,0 +1,181 @@
+import React, { useState, useEffect } from 'react';
+import { Settings as SettingsIcon, XCircle, Loader2, RefreshCw } from 'lucide-react';
+import useSettingsStore from '../store/settingsStore';
+import ConfirmModal from '../components/ConfirmModal';
+import { setVal, buildPayload } from '../features/settings/formUtils';
+import SecurityPanel from '../features/settings/panels/SecurityPanel';
+import BackupPanel from '../features/settings/panels/BackupPanel';
+import SettingsSection from '../features/settings/SettingsSection';
+import useSettingsDraft from '../features/settings/hooks/useSettingsDraft';
+import useConnectionTest from '../features/settings/hooks/useConnectionTest';
+import useRestartPoll from '../features/settings/hooks/useRestartPoll';
+
+export default function Settings() {
+  const {
+    settings, schema, loading, error,
+    fetchSettings, fetchSchema,
+    saveSection, testConnection,
+    saveStatus, testStatus,
+  } = useSettingsStore();
+
+  const [showSecrets, setShowSecrets] = useState({});
+  const [expanded, setExpanded] = useState({});
+  const [confirm, setConfirm] = useState({
+    open: false,
+    onConfirm: null,
+    title: '',
+    message: '',
+    confirmLabel: 'Confirm',
+    danger: false,
+  });
+
+  const { draft, setDraft, handleChange, sectionIsDirty } = useSettingsDraft(settings, schema);
+  const { handleTest, handleTestDeepl } = useConnectionTest(draft, testConnection);
+  const { restarting, startRestartPoll } = useRestartPoll(fetchSettings);
+
+  useEffect(() => {
+    fetchSettings();
+    fetchSchema();
+  }, [fetchSettings, fetchSchema]);
+
+  const openConfirm = (opts) => {
+    setConfirm({
+      open: true,
+      onConfirm: opts.onConfirm || null,
+      title: opts.title || '',
+      message: opts.message || '',
+      confirmLabel: opts.confirmLabel || 'Confirm',
+      danger: !!opts.danger,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirm({
+      open: false,
+      onConfirm: null,
+      title: '',
+      message: '',
+      confirmLabel: 'Confirm',
+      danger: false,
+    });
+  };
+
+  const handleSaveRequest = (sectionId) => {
+    const section = schema.find((s) => s.id === sectionId);
+    if (!section) return;
+
+    const payload = buildPayload(draft, section.fields);
+
+    openConfirm({
+      title: `Save ${section.title}`,
+      message: 'Changes take effect immediately after saving.',
+      confirmLabel: 'Save Changes',
+      danger: false,
+      onConfirm: async () => {
+        const result = await saveSection(sectionId, payload);
+        if (result.success) {
+          setDraft((prev) => {
+            let next = { ...prev };
+            const sec = schema.find((s) => s.id === sectionId);
+            if (sec) {
+              sec.fields.forEach((f) => {
+                if (f.type === 'secret') {
+                  next = setVal(next, f.key, '');
+                }
+              });
+            }
+            return next;
+          });
+          if (result.needsRestart) startRestartPoll();
+        }
+      }
+    });
+  };
+
+  const handleConfirm = async () => {
+    const current = confirm;
+    closeConfirm();
+    if (current.onConfirm) {
+      await current.onConfirm();
+    }
+  };
+
+  if (loading || (!error && (!draft || !schema))) {
+    return (
+      <div className="min-h-screen bg-telgrarr-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-telgrarr-purple animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-telgrarr-black flex flex-col items-center justify-center gap-4 px-6">
+        <XCircle className="w-10 h-10 text-red-400" />
+        <p className="text-telgrarr-text font-semibold text-center">Failed to load settings</p>
+        <p className="text-telgrarr-muted text-sm text-center">{error}</p>
+        <button
+          onClick={() => {
+            fetchSettings();
+            fetchSchema();
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 bg-telgrarr-purple hover:bg-telgrarr-purple-glow text-telgrarr-text text-sm font-semibold rounded-xl transition-all"
+        >
+          <RefreshCw className="w-4 h-4" /> Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-telgrarr-black text-telgrarr-text pb-24">
+      <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-telgrarr-purple/10 to-transparent pointer-events-none" />
+      <div className="max-w-lg mx-auto px-4 pt-6 md:pt-8 space-y-4 relative z-10">
+        <div className="flex items-center gap-3 mb-6 px-1">
+          <SettingsIcon className="w-6 h-6 text-telgrarr-purple drop-shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
+          <h1 className="text-2xl font-bold tracking-tight text-telgrarr-text">System Settings</h1>
+        </div>
+
+        {schema.map((section) => (
+          <SettingsSection
+            key={section.id}
+            section={section}
+            draft={draft}
+            expanded={expanded}
+            setExpanded={setExpanded}
+            saveStatus={saveStatus}
+            testStatus={testStatus}
+            sectionIsDirty={sectionIsDirty}
+            handleChange={handleChange}
+            showSecrets={showSecrets}
+            setShowSecrets={setShowSecrets}
+            handleTest={handleTest}
+            handleTestDeepl={handleTestDeepl}
+            handleSaveRequest={handleSaveRequest}
+          />
+        ))}
+
+        <BackupPanel openConfirm={openConfirm} startRestartPoll={startRestartPoll} />
+        <SecurityPanel />
+      </div>
+
+      {restarting && (
+        <div className="fixed inset-0 z-50 bg-telgrarr-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+          <RefreshCw className="w-10 h-10 text-telgrarr-purple animate-spin" />
+          <p className="text-telgrarr-text font-semibold">Backend restarting…</p>
+          <p className="text-telgrarr-muted text-sm">Do not refresh your browser.</p>
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={confirm.open}
+        title={confirm.title}
+        message={confirm.message}
+        confirmLabel={confirm.confirmLabel}
+        danger={confirm.danger}
+        onConfirm={handleConfirm}
+        onCancel={closeConfirm}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,26 @@
+{
+  "name": "telgrarr",
+  "version": "1.0.0",
+  "description": "Sonarr/Radarr webhook queue with Arabic Telegram notifications and Emby refresh",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "pm2 start ecosystem.config.js",
+    "recover": "node scripts/gen-recovery.js",
+    "test": "vitest",
+    "test:e2e": "playwright test",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.17",
+    "axios": "^1.7.2",
+    "express": "^4.19.2",
+    "handlebars": "^4.7.9",
+    "pino": "^10.3.1",
+    "proper-lockfile": "^4.1.2",
+    "write-file-atomic": "^7.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "vitest": "^1.6.1"
+  }
+}

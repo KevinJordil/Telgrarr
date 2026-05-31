@@ -1,0 +1,53 @@
+name: TELGRARR CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies (Root / Backend)
+        run: npm ci
+
+      - name: Install Dependencies (Frontend GUI)
+        run: cd gui && npm ci
+
+      - name: Security Audit (Report Only)
+        run: npm audit || true
+        
+      - name: Run Linter (if present)
+        run: npm run lint --if-present
+
+      - name: Run Unit & Parity Tests (Vitest)
+        run: npm run test:run
+
+      - name: Build Frontend GUI
+        run: cd gui && npm run build
+
+      - name: Install Playwright Chromium & OS Deps
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E Smoke Tests (Playwright)
+        run: npm run test:e2e
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
