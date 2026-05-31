@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+gui/node_modules/
+
+# Production Data & Secrets (CRITICAL)
+data/
+media_queue.json
+.env
+
+# Backups & Logs
+*.bak.*
+logs/
+
+# Build & Test Artifacts
+gui/dist/
+test-results/
+playwright-report/
+playwright/.cache/
