@@ -11,9 +11,15 @@ app.use(express.json());
 
 // -- CORS ---------------------------------------------------------------------
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://telgrarr.ifahad.net');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // CORS_ORIGIN (B.1) drives the allowed origin. Empty (default) => no ACAO =>
+  // same-origin enforced by the browser; cross-origin denied. Set CORS_ORIGIN to
+  // allow one specific origin. No hardcoded domain in shipped code (D2/D6).
+  if (config.CORS_ORIGIN) {
+    res.setHeader('Access-Control-Allow-Origin', config.CORS_ORIGIN);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
