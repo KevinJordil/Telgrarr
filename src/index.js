@@ -1,4 +1,5 @@
 'use strict';
+require('./load-env')();   // RD-1: load .env into process.env BEFORE config/logger evaluate (no .env => no-op)
 const log                               = require('./logger');
 const config                            = require('./config');
 const backup                            = require('./backup');
