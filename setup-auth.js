@@ -1,6 +1,7 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
+require('./src/load-env')();   // RD-1: honor .env for DATA_DIR (no .env => no-op)
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 
 const username = process.argv[2];
