@@ -19,3 +19,6 @@ playwright/.cache/
 
 # Runtime backup archives (contain secrets)
 backups/
+
+# Machine-specific PM2 config (operators copy ecosystem.config.example.js)
+ecosystem.config.js
