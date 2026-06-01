@@ -70,8 +70,8 @@ app.get('*', (req, res) => {
 
 // -- Start --------------------------------------------------------------------
 function startListener() {
-  app.listen(config.listenerPort, config.listenerHost, () => {
-    log.info('Listener', 'Running on ' + config.listenerHost + ':' + config.listenerPort);
+  app.listen(config.PORT, config.HOST, () => {
+    log.info('Listener', 'Running on ' + config.HOST + ':' + config.PORT);
   });
 }
 
