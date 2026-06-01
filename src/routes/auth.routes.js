@@ -11,6 +11,7 @@ const { activeSessions, requireAuth, persistSessions } = require('../middlewares
 const path        = require('path');
 const config      = require('../config');
 const { hashNew, verify, needsUpgrade } = require('../auth/credentials');
+const rateLimit = require('../auth/rate-limit');
 
 const AUTH_FILE     = path.join(config.DATA_DIR, 'auth.json');
 const SESSION_FILE  = path.join(config.DATA_DIR, 'sessions.json');
@@ -26,7 +27,7 @@ function persistNow() {
 }
 
 // -- POST /api/login ----------------------------------------------------------
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -42,13 +43,17 @@ router.post('/login', (req, res) => {
     // and a wrong password cost the same — closes the enumeration timing oracle.
     const knownUser  = username === authData.username;
     const passwordOk = verify(password, authData);
+    const ip = req.ip || 'unknown';
     if (!knownUser || !passwordOk) {
+      const delayMs = rateLimit.recordFailure(ip, username);
       const reason = knownUser ? 'Bad Password' : 'Unknown User';
       log.audit('Auth', `Authentication → Rejected → ${reason}: [${username}]`);
       events.emit(EVENT_TYPES.AUTH_LOGIN_FAILED, 'warn', 'Auth', `Authentication rejected for [${username}]`, { username });
+      if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
+      rateLimit.clear(ip, username);
       if (needsUpgrade(authData)) {
         try {
           writeAtomic.sync(AUTH_FILE, JSON.stringify({ username: authData.username, ...hashNew(password) }, null, 2));
