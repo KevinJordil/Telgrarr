@@ -47,7 +47,10 @@ function hashNew(password) {
 // Verify a password against a stored record { algo?, salt, hash }; untagged => legacy.
 function verify(password, record) {
   const algo = record.algo || ALGO_LEGACY;
-  return _hashFor(algo, password, record.salt) === record.hash;
+  const computed = _hashFor(algo, password, record.salt);
+  const a = Buffer.from(computed, 'hex');
+  const b = Buffer.from(String(record.hash || ''), 'hex');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 // True when a record is not on the current algo and should be re-hashed.

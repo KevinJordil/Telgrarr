@@ -7,6 +7,18 @@ const requestLogger = require('./middlewares/request-logger');
 
 const app = express();
 
+// RD-3: map config.TRUST_PROXY (raw string) to Express 'trust proxy' setting types.
+// ''/'false'/'0' => false (OFF — parity with Express default); 'true'/'1' => true;
+// integer => hop count; any other string => passthrough (IP/CIDR/list).
+function normalizeTrustProxy(raw) {
+  const v = String(raw ?? '').trim();
+  if (v === '' || v === 'false' || v === '0') return false;
+  if (v === 'true' || v === '1') return true;
+  if (/^\d+$/.test(v)) return Number(v);
+  return v;
+}
+app.set('trust proxy', normalizeTrustProxy(config.TRUST_PROXY));
+
 app.use(express.json());
 
 // -- CORS ---------------------------------------------------------------------

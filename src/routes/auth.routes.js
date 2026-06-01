@@ -38,14 +38,13 @@ router.post('/login', (req, res) => {
     
     const authData = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
     
-    if (username !== authData.username) {
-      log.audit('Auth', `Authentication → Rejected → Unknown User: [${username}]`);
-      events.emit(EVENT_TYPES.AUTH_LOGIN_FAILED, 'warn', 'Auth', `Authentication rejected for [${username}]`, { username });
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
-    if (!verify(password, authData)) {
-      log.audit('Auth', `Authentication → Rejected → Bad Password: [${username}]`);
+    // S6: verify on EVERY attempt (even an unknown user) so a missing username
+    // and a wrong password cost the same — closes the enumeration timing oracle.
+    const knownUser  = username === authData.username;
+    const passwordOk = verify(password, authData);
+    if (!knownUser || !passwordOk) {
+      const reason = knownUser ? 'Bad Password' : 'Unknown User';
+      log.audit('Auth', `Authentication → Rejected → ${reason}: [${username}]`);
       events.emit(EVENT_TYPES.AUTH_LOGIN_FAILED, 'warn', 'Auth', `Authentication rejected for [${username}]`, { username });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
