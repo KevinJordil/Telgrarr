@@ -10,7 +10,7 @@ const writeAtomic = require('write-file-atomic');
 const { activeSessions, requireAuth, persistSessions } = require('../middlewares/auth');
 const path        = require('path');
 const config      = require('../config');
-const { hashPassword, verify } = require('../auth/credentials');
+const { hashNew, verify, needsUpgrade } = require('../auth/credentials');
 
 const AUTH_FILE     = path.join(config.DATA_DIR, 'auth.json');
 const SESSION_FILE  = path.join(config.DATA_DIR, 'sessions.json');
@@ -44,12 +44,21 @@ router.post('/login', (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    if (!verify(password, authData.salt, authData.hash)) {
+    if (!verify(password, authData)) {
       log.audit('Auth', `Authentication → Rejected → Bad Password: [${username}]`);
       events.emit(EVENT_TYPES.AUTH_LOGIN_FAILED, 'warn', 'Auth', `Authentication rejected for [${username}]`, { username });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
+      if (needsUpgrade(authData)) {
+        try {
+          writeAtomic.sync(AUTH_FILE, JSON.stringify({ username: authData.username, ...hashNew(password) }, null, 2));
+          log.audit('Auth', `Credential Upgrade → Success → [${username}]`);
+        } catch (err) {
+          log.error('Auth', `Credential Upgrade → Error → ${err.message}`);
+        }
+      }
+
     const token = crypto.randomBytes(32).toString('hex');
     const thirtyDays = 30 * 24 * 60 * 60 * 1000;
     activeSessions.set(token, Date.now() + thirtyDays);
@@ -77,17 +86,15 @@ router.post('/auth/password', requireAuth, (req, res) => {
     }
     
     const authData = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
-    if (!verify(currentPassword, authData.salt, authData.hash)) {
+    if (!verify(currentPassword, authData)) {
       log.audit('Auth', `Password Change → Rejected → Bad Current Password: [${authData.username}]`);
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
     
-    const newSalt = crypto.randomBytes(16).toString('hex');
-    const newHash = hashPassword(newPassword, newSalt);
     
     writeAtomic.sync(
       AUTH_FILE,
-      JSON.stringify({ username: authData.username, salt: newSalt, hash: newHash }, null, 2)
+      JSON.stringify({ username: authData.username, ...hashNew(newPassword) }, null, 2)
     );
     
     log.audit('Auth', `Password Change → Success → [${authData.username}]`);
@@ -140,12 +147,10 @@ router.post('/auth/recover', (req, res) => {
     try { fs.unlinkSync(RECOVERY_FILE); } catch (_) {}
     
     const authData = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
-    const newSalt  = crypto.randomBytes(16).toString('hex');
-    const newHash  = hashPassword(newPassword, newSalt);
     
     writeAtomic.sync(
       AUTH_FILE,
-      JSON.stringify({ username: authData.username, salt: newSalt, hash: newHash }, null, 2)
+      JSON.stringify({ username: authData.username, ...hashNew(newPassword) }, null, 2)
     );
     
     activeSessions.clear();
