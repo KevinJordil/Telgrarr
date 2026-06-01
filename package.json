@@ -4,7 +4,8 @@
   "description": "Sonarr/Radarr webhook queue with Arabic Telegram notifications and Emby refresh",
   "main": "src/index.js",
   "scripts": {
-    "start": "pm2 start ecosystem.config.js",
+    "start": "node src/index.js",
+    "start:pm2": "pm2 start ecosystem.config.js",
     "recover": "node scripts/gen-recovery.js",
     "test": "vitest",
     "test:e2e": "playwright test",
