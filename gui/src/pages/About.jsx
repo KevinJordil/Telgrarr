@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Info, Server, Clock, FolderOpen, Terminal, Copy, Check, RefreshCw } from 'lucide-react';
-import useAuthStore from '../store/authStore';
 
 function formatUptime(seconds) {
   const years   = Math.floor(seconds / (365 * 24 * 3600));
@@ -60,7 +59,6 @@ function CopyButton({ text }) {
 }
 
 export default function About() {
-  const token               = useAuthStore((s) => s.token);
   const [info,    setInfo]  = useState(null);
   const [error,   setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -70,9 +68,7 @@ export default function About() {
     setLoading(true);
     setError('');
     try {
-      const res  = await fetch('/api/about', {
-        headers: { Authorization: 'Bearer ' + token }
-      });
+      const res  = await fetch('/api/about');
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Failed to load system info.'); return; }
       setInfo(data);

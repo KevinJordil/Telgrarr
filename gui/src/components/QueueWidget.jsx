@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, X } from 'lucide-react';
-import useAuthStore from '../store/authStore';
 
 function useCountdown(expiresAt) {
   const [remaining, setRemaining] = useState(null);
@@ -20,11 +19,9 @@ function useCountdown(expiresAt) {
   return remaining;
 }
 
-export default function QueueWidget({ queueState, token }) {
+export default function QueueWidget({ queueState }) {
   const { active, expiresAt } = queueState;
   const remaining = useCountdown(expiresAt);
-  const { token: authToken } = useAuthStore();
-  const usedToken = token || authToken;
   const [flushing, setFlushing] = useState(false);
 
   const totalMs  = 300000; // 5 min default — visual only
@@ -42,20 +39,14 @@ export default function QueueWidget({ queueState, token }) {
   async function handleFlush() {
     setFlushing(true);
     try {
-      await fetch('/api/queue/flush', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + usedToken },
-      });
+      await fetch('/api/queue/flush', { method: 'POST' });
     } catch (_) {}
     setTimeout(() => setFlushing(false), 1500);
   }
 
   async function handleClear() {
     try {
-      await fetch('/api/queue/clear', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + usedToken },
-      });
+      await fetch('/api/queue/clear', { method: 'POST' });
     } catch (_) {}
   }
 

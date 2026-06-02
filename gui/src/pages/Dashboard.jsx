@@ -8,7 +8,7 @@ import QueueWidget from '../components/QueueWidget';
 import LiveFeed from '../components/LiveFeed';
 
 export default function Dashboard() {
-  const { token, logout } = useAuthStore();
+  const { logout } = useAuthStore();
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +17,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await fetch('/api/history', { headers: { Authorization: 'Bearer ' + token } });
+        const res = await fetch('/api/history');
         if (res.ok) {
           const data = await res.json();
           setHistory(data);
@@ -28,13 +28,13 @@ export default function Dashboard() {
       finally { setLoading(false); }
     };
     fetchHistory();
-  }, [token, navigate, logout]);
+  }, [navigate, logout]);
 
   return (
     <div className="min-h-screen bg-telgrarr-black text-telgrarr-text p-4 pb-28 md:pb-12 overflow-x-hidden relative">
       <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-telgrarr-purple/10 to-transparent pointer-events-none" />
 
-      <QueueWidget queueState={queueState} token={token} />
+      <QueueWidget queueState={queueState} />
 
       <section className="relative z-10 mb-8 max-w-5xl mx-auto">
         <div className="flex items-center gap-2 mb-4 px-1">

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ScrollText, RefreshCw, ChevronDown, Filter } from 'lucide-react';
-import useAuthStore from '../store/authStore';
 import useSSE from '../hooks/useSSE';
 
 const LEVELS  = ['all', 'info', 'warn', 'error'];
@@ -20,7 +19,6 @@ function formatTime(iso) {
 }
 
 export default function Logs() {
-  const { token } = useAuthStore();
   const { events: sseEvents } = useSSE();
   const [logs, setLogs]         = useState([]);
   const [level, setLevel]       = useState('all');
@@ -34,11 +32,11 @@ export default function Logs() {
     const params = new URLSearchParams({ limit: '200' });
     if (level  !== 'all') params.set('level',  level);
     if (module !== 'all') params.set('module', module);
-    fetch('/api/logs?' + params.toString(), { headers: { Authorization: 'Bearer ' + token } })
+    fetch('/api/logs?' + params.toString())
       .then(r => r.ok ? r.json() : [])
       .then(data => { setLogs(data); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [token, level, module]);
+  }, [level, module]);
 
   useEffect(() => {
     const logEvents = sseEvents.filter(e => e.type === 'log.info' || e.type === 'log.warn' || e.type === 'log.error');

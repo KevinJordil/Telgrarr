@@ -203,7 +203,7 @@ export default function Login() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        login(data.token);
+        login();
         navigate('/dashboard');
       } else {
         setError(data.error || 'Login failed. Check your credentials.');

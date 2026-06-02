@@ -6,7 +6,7 @@ import api from '../api';
 const MAX_EVENTS = 15;
 
 export default function useSSE() {
-  const { token } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [connected, setConnected] = useState(false);
   const [events, setEvents]       = useState([]);
   const [queueState, setQueueState] = useState({ active: false, expiresAt: null });
@@ -14,7 +14,7 @@ export default function useSSE() {
   const retryRef = useRef(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     let cancelled = false;
 
     async function connect() {
@@ -75,7 +75,7 @@ export default function useSSE() {
       if (esRef.current) { esRef.current.close(); esRef.current = null; }
       setConnected(false);
     };
-  }, [token]);
+  }, [isAuthenticated]);
 
   return { connected, events, queueState };
 }

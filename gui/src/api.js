@@ -6,15 +6,6 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// ── Request interceptor — inject Bearer token ─────────────────────────────
-api.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().token;
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 // ── 401 debounced logout guard ────────────────────────────────────────────
 // Problem solved: on a new tab, 3-4 parallel requests can all get 401
@@ -28,7 +19,7 @@ function scheduleLogout() {
   _logoutTimer = setTimeout(() => {
     _logoutTimer = null;
     // Only logout if still unauthenticated after the settling window
-    if (useAuthStore.getState().token) {
+    if (useAuthStore.getState().isAuthenticated) {
       useAuthStore.getState().logout();
     }
   }, 2000);
