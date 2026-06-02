@@ -3,7 +3,7 @@
 const express  = require('express');
 const router   = express.Router();
 const events   = require('../events');
-const { activeSessions, requireAuth } = require('../middlewares/auth');
+const { requireAuth } = require('../middlewares/auth');
 const { getQueueState }  = require('../sweeper');
 const { issue, consume } = require('../auth/stream-ticket');
 
@@ -15,13 +15,8 @@ router.get('/stream-ticket', requireAuth, function(req, res) {
 
 router.get('/stream', function(req, res) {
   const now = Date.now();
-  // C.6b: single-use ticket (primary) OR legacy session token (kept until C.6c).
-  let authed = false;
-  if (req.query.ticket) authed = consume(req.query.ticket, now);
-  if (!authed && req.query.token) {
-    const expiry = activeSessions.get(req.query.token);
-    authed = !!expiry && now <= expiry;
-  }
+  // C.6c: ticket-only (single-use). Legacy session-token-in-URL removed (S2 complete).
+  const authed = !!req.query.ticket && consume(req.query.ticket, now);
   if (!authed) return res.status(401).end();
 
   res.setHeader('Content-Type',      'text/event-stream');
