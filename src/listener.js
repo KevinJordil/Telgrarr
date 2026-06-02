@@ -56,7 +56,7 @@ app.use('/api', require('./routes/templates.routes'));
 app.use('/api', require('./routes/backups.routes'));
 app.use('/api', require('./routes/about.routes'));
 app.use('/api/preview', require('./routes/preview.routes'));
-app.use('/',    require('./routes/webhooks.routes'));
+app.use('/hooks', require('./routes/webhooks.routes'));
 
 // -- Health -------------------------------------------------------------------
 app.get('/health', (req, res) => {

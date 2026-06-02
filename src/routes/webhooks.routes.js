@@ -7,9 +7,19 @@ const EVENT_TYPES = require('../../gui/src/shared/events.json');
 const blacklist  = require('../blacklist');
 const { enqueue } = require('../queue');
 const { scheduleSweep } = require('../sweeper');
+const config = require('../config');
+const { tokenValid } = require('../auth/webhook-token');
 
 // ── POST /sonarr ─────────────────────────────────────────────────────────────
-router.post('/sonarr', async (req, res) => {
+// C.5 / S1 — closed-by-default webhook guard. Secret is the /hooks/<secret>/ path
+// segment (RD-5 primary), constant-time compared. Unset WEBHOOK_SECRET => 401.
+function webhookAuth(req, res, next) {
+  if (tokenValid(req.params.token, config.WEBHOOK_SECRET)) return next();
+  log.audit('Webhook', 'Authentication → Rejected → Missing or invalid secret');
+  return res.status(401).json({ error: 'Unauthorized' });
+}
+
+router.post('/:token/sonarr', webhookAuth, async (req, res) => {
   res.sendStatus(200);
   const payload = req.body;
 
@@ -67,7 +77,7 @@ router.post('/sonarr', async (req, res) => {
 });
 
 // ── POST /radarr ─────────────────────────────────────────────────────────────
-router.post('/radarr', async (req, res) => {
+router.post('/:token/radarr', webhookAuth, async (req, res) => {
   res.sendStatus(200);
   const payload = req.body;
 
