@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import useAuthStore from '../store/authStore';
 import EVENT_TYPES from '../shared/events.json';
+import api from '../api';
 
 const MAX_EVENTS = 15;
 
@@ -14,10 +15,23 @@ export default function useSSE() {
 
   useEffect(() => {
     if (!token) return;
+    let cancelled = false;
 
-    function connect() {
+    async function connect() {
+      if (cancelled) return;
       if (esRef.current) esRef.current.close();
-      const es = new EventSource('/api/stream?token=' + token);
+      let ticket;
+      try {
+        const res = await api.get('/stream-ticket');
+        ticket = res.data.ticket;
+      } catch (_) {
+        if (cancelled) return;
+        setConnected(false);
+        retryRef.current = setTimeout(connect, 5000);
+        return;
+      }
+      if (cancelled) return;
+      const es = new EventSource('/api/stream?ticket=' + ticket);
       esRef.current = es;
 
       es.onopen = () => setConnected(true);
@@ -56,6 +70,7 @@ export default function useSSE() {
     connect();
 
     return () => {
+      cancelled = true;
       if (retryRef.current) clearTimeout(retryRef.current);
       if (esRef.current) { esRef.current.close(); esRef.current = null; }
       setConnected(false);
