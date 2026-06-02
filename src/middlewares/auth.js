@@ -2,6 +2,7 @@
 const fs          = require('fs');
 const path        = require('path');
 const writeAtomic = require('write-file-atomic');
+const { readCookie, COOKIE_NAME } = require('../auth/session-cookie');
 
 const SESSION_FILE = path.join(__dirname, '../../data/sessions.json');
 const activeSessions = new Map();
@@ -52,11 +53,12 @@ async function flushSessions() {
 
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const bearer = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.split(' ')[1] : undefined;
+  // C.7: Bearer (legacy, kept for rollback) OR httpOnly session cookie.
+  const token  = bearer || readCookie(req, COOKIE_NAME);
+  if (!token) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-
-  const token  = authHeader.split(' ')[1];
   const expiry = activeSessions.get(token);
   const now    = Date.now();
 

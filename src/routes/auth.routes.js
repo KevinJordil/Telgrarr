@@ -12,6 +12,7 @@ const path        = require('path');
 const config      = require('../config');
 const { hashNew, verify, needsUpgrade } = require('../auth/credentials');
 const rateLimit = require('../auth/rate-limit');
+const { COOKIE_NAME, cookieOptions, readCookie } = require('../auth/session-cookie');
 
 const AUTH_FILE     = path.join(config.DATA_DIR, 'auth.json');
 const SESSION_FILE  = path.join(config.DATA_DIR, 'sessions.json');
@@ -70,6 +71,7 @@ router.post('/login', async (req, res) => {
     
     log.audit('Auth', `Authentication → Success → [${username}]`);
     events.emit(EVENT_TYPES.AUTH_LOGIN_SUCCESS, 'info', 'Auth', `Authentication successful for [${username}]`, { username });
+    res.cookie(COOKIE_NAME, token, cookieOptions(req, config.COOKIE_SECURE, thirtyDays));
     res.json({ success: true, token });
     
   } catch (err) {
@@ -172,6 +174,22 @@ router.post('/auth/recover', (req, res) => {
     
   } catch (err) {
     log.error('Auth', `Recovery Execution → Error → ${err.message}`);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// -- POST /api/logout ---------------------------------------------------------
+router.post('/logout', (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const bearer = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.split(' ')[1] : undefined;
+    const token = bearer || readCookie(req, COOKIE_NAME);
+    if (token && activeSessions.delete(token)) persistNow();
+    res.clearCookie(COOKIE_NAME, cookieOptions(req, config.COOKIE_SECURE));
+    log.audit('Auth', 'Logout → Success → Session cleared');
+    res.json({ success: true });
+  } catch (err) {
+    log.error('Auth', `Logout → Error → ${err.message}`);
     res.status(500).json({ error: 'Internal error' });
   }
 });

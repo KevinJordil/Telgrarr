@@ -178,5 +178,8 @@ Object.defineProperty(config, 'TRUST_PROXY', { value: process.env.TRUST_PROXY !=
 // routes return 401 (closed-by-default). Resolved at boot like the B.1 vars: a
 // RESTART is required to pick up a change (hot-reload does not recompute these).
 Object.defineProperty(config, 'WEBHOOK_SECRET', { value: (process.env.WEBHOOK_SECRET != null && process.env.WEBHOOK_SECRET !== '') ? process.env.WEBHOOK_SECRET : (config.webhookSecret || ''), enumerable: false, configurable: true });
+// C.7 / RD-4: cookie Secure policy. 'auto' (default) => Secure when the request is
+// HTTPS (req.secure / X-Forwarded-Proto); 'true'/'false' force it. Boot-resolved.
+Object.defineProperty(config, 'COOKIE_SECURE', { value: (process.env.COOKIE_SECURE != null && process.env.COOKIE_SECURE !== '') ? process.env.COOKIE_SECURE : 'auto', enumerable: false, configurable: true });
 
 module.exports = config;
