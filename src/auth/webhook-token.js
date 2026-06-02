@@ -20,4 +20,14 @@ function maskHooksUrl(url) {
     .replace(/(\/hooks\/)[^/?#]+(\/(?:sonarr|radarr)\b)/i, '$1***$2');
 }
 
-module.exports = { tokenValid, maskHooksUrl };
+// C.6 / S2 — generalized redaction for the request-logger seam: secret query values
+// (token/ticket/apikey/api_key) -> ***, composed with the /hooks/<token>/ path mask.
+// Masking lives at the seam; logger.js is deliberately NOT a regex scrubber.
+function redactQuery(url) {
+  return url.replace(/([?&](?:token|ticket|api[-_]?key)=)[^&#]*/gi, '$1***');
+}
+function redactUrl(url) {
+  return maskHooksUrl(redactQuery(String(url == null ? '' : url)));
+}
+
+module.exports = { tokenValid, maskHooksUrl, redactUrl };

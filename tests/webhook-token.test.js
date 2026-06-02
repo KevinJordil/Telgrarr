@@ -34,3 +34,25 @@ describe('Webhook token (C.5 / S1)', () => {
     expect(maskHooksUrl(undefined)).toBe('');
   });
 });
+
+describe('redactUrl (C.6 / S2)', () => {
+  const { redactUrl } = require('../src/auth/webhook-token.js');
+  it('redacts secret query params (token/ticket/apikey/api_key), case-insensitive', () => {
+    expect(redactUrl('/api/stream?token=abc123')).toBe('/api/stream?token=***');
+    expect(redactUrl('/api/stream?ticket=xyz')).toBe('/api/stream?ticket=***');
+    expect(redactUrl('/x?apikey=k')).toBe('/x?apikey=***');
+    expect(redactUrl('/x?api_key=k')).toBe('/x?api_key=***');
+    expect(redactUrl('/x?API-KEY=k')).toBe('/x?API-KEY=***');
+  });
+  it('redacts only the secret among many params', () => {
+    expect(redactUrl('/x?a=1&token=t&b=2')).toBe('/x?a=1&token=***&b=2');
+  });
+  it('also redacts the /hooks/ path token', () => {
+    expect(redactUrl('/hooks/SECRET/sonarr')).toBe('/hooks/***/sonarr');
+    expect(redactUrl('/hooks/SECRET/radarr?token=t')).toBe('/hooks/***/radarr?token=***');
+  });
+  it('leaves clean URLs untouched', () => {
+    expect(redactUrl('/api/login')).toBe('/api/login');
+    expect(redactUrl(undefined)).toBe('');
+  });
+});

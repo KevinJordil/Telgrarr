@@ -1,6 +1,6 @@
 'use strict';
 const log = require('../logger');
-const { maskHooksUrl } = require('../auth/webhook-token');
+const { redactUrl } = require('../auth/webhook-token');
 
 const MODULE = 'HTTP';
 
@@ -12,7 +12,7 @@ function requestLogger(req, res, next) {
   res.on('finish', () => {
     const duration = Date.now() - start;
     const status   = res.statusCode;
-    const msg      = `${req.method} ${maskHooksUrl(req.originalUrl)} ${status} - ${duration}ms`;
+    const msg      = `${req.method} ${redactUrl(req.originalUrl)} ${status} - ${duration}ms`;
 
     if (status >= 500)      log.error(MODULE, msg);
     else if (status >= 400) log.warn(MODULE,  msg);
