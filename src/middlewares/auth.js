@@ -52,10 +52,8 @@ async function flushSessions() {
 }
 
 function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const bearer = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.split(' ')[1] : undefined;
-  // C.7: Bearer (legacy, kept for rollback) OR httpOnly session cookie.
-  const token  = bearer || readCookie(req, COOKIE_NAME);
+  // C.7c: cookie-only — legacy Bearer accepted-path removed (S4 complete).
+  const token = readCookie(req, COOKIE_NAME);
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
