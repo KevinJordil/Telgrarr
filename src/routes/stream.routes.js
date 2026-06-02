@@ -3,13 +3,26 @@
 const express  = require('express');
 const router   = express.Router();
 const events   = require('../events');
-const { activeSessions } = require('../middlewares/auth');
+const { activeSessions, requireAuth } = require('../middlewares/auth');
 const { getQueueState }  = require('../sweeper');
+const { issue, consume } = require('../auth/stream-ticket');
+
+// C.6b / S2 — issue a short-lived single-use ticket for the EventSource connect
+// (browsers can't set an auth header on EventSource). requireAuth = current Bearer.
+router.get('/stream-ticket', requireAuth, function(req, res) {
+  res.json({ ticket: issue() });
+});
 
 router.get('/stream', function(req, res) {
-  const token  = req.query.token;
-  const expiry = activeSessions.get(token);
-  if (!expiry || Date.now() > expiry) return res.status(401).end();
+  const now = Date.now();
+  // C.6b: single-use ticket (primary) OR legacy session token (kept until C.6c).
+  let authed = false;
+  if (req.query.ticket) authed = consume(req.query.ticket, now);
+  if (!authed && req.query.token) {
+    const expiry = activeSessions.get(req.query.token);
+    authed = !!expiry && now <= expiry;
+  }
+  if (!authed) return res.status(401).end();
 
   res.setHeader('Content-Type',      'text/event-stream');
   res.setHeader('Cache-Control',     'no-cache');
