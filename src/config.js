@@ -174,5 +174,9 @@ Object.defineProperty(config, 'PORT',        { value: (process.env.PORT != null 
 Object.defineProperty(config, 'HOST',        { value: (process.env.HOST != null && process.env.HOST !== '') ? process.env.HOST : config.listenerHost, enumerable: false, configurable: true });
 Object.defineProperty(config, 'CORS_ORIGIN', { value: process.env.CORS_ORIGIN != null ? process.env.CORS_ORIGIN : '', enumerable: false, configurable: true });
 Object.defineProperty(config, 'TRUST_PROXY', { value: process.env.TRUST_PROXY != null ? process.env.TRUST_PROXY : '', enumerable: false, configurable: true });
+// C.5: webhook auth secret (env -> config.json webhookSecret -> ''). Empty =>
+// routes return 401 (closed-by-default). Resolved at boot like the B.1 vars: a
+// RESTART is required to pick up a change (hot-reload does not recompute these).
+Object.defineProperty(config, 'WEBHOOK_SECRET', { value: (process.env.WEBHOOK_SECRET != null && process.env.WEBHOOK_SECRET !== '') ? process.env.WEBHOOK_SECRET : (config.webhookSecret || ''), enumerable: false, configurable: true });
 
 module.exports = config;
