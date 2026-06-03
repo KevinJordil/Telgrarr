@@ -1,0 +1,52 @@
+# ── Version control ─────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+
+# ── Node modules (reinstalled in image) ─────────────────────────
+node_modules
+gui/node_modules
+
+# ── Built/test artifacts (rebuilt in build stage) ───────────────
+gui/dist
+test-results
+playwright-report
+coverage
+
+# ── Persistent / runtime state (NEVER ship in the image) ────────
+data
+logs
+backups
+media_queue.json
+*.bak.*
+
+# ── Local env / secrets ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Test infra (runs in CI, not in the image) ───────────────────
+tests
+playwright.config.js
+vitest.config.js
+
+# ── Process-manager configs (irrelevant inside the container) ───
+ecosystem.config*.js
+
+# ── Dev/ops utilities (DATA_DIR-blind; not runtime deps) ─────────
+release-manager.js
+fetch-official-genres.js
+
+# ── OS / editor cruft ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+*.swp
+*.log
+
+# ── Docker self-references ──────────────────────────────────────
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
