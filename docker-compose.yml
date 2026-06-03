@@ -1,0 +1,49 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# TELGRARR — docker-compose.yml  (single service / one volume / one network)
+#
+# First run:
+#   cp .env.example .env && $EDITOR .env
+#   docker compose up -d --build
+#   docker compose exec telgrarr node setup-auth.js   # auth bootstrap
+#
+# Notes:
+#   - Reads ./.env via env_file. Runtime defaults (NODE_ENV, DATA_DIR=/data,
+#     HOST=0.0.0.0, PORT=3400) are baked into the Dockerfile; .env overrides.
+#   - DATA_DIR is fixed to /data by the volume mount below. Leave DATA_DIR
+#     commented in .env (changing it desyncs the app from the volume target).
+#   - Port mapping is symmetric: PORT in .env adjusts host:container both
+#     sides. For asymmetric mapping, use a local docker-compose.override.yml
+#     (uncommitted).
+#   - The named network 'telgrarr-net' is declared here so a separate stack
+#     (reverse proxy, watchtower, …) can attach to it as `external: true`.
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+  telgrarr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: telgrarr:local
+    container_name: telgrarr
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-3400}:${PORT:-3400}"
+    volumes:
+      - telgrarr-data:/data
+    networks:
+      - telgrarr-net
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+
+volumes:
+  telgrarr-data:
+    name: telgrarr-data
+
+networks:
+  telgrarr-net:
+    name: telgrarr-net
+    driver: bridge
