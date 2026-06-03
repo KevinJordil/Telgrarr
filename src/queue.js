@@ -22,7 +22,7 @@ async function getQueue() {
     return JSON.parse(raw);
   } catch (err) {
     log.error('Queue', `Queue Read → Error → ${err.message}`);
-    return [];
+    throw err;
   } finally {
     if (release) await release();
   }
