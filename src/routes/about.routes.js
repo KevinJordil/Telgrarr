@@ -8,6 +8,7 @@ const log = require('../logger');
 const { requireAuth } = require('../middlewares/auth');
 
 const INSTALL_ROOT = path.resolve(__dirname, '../../');
+const APP_VERSION  = require('../../package.json').version;   // E.3/RD-7: version SSoT = package.json
 
 let RELEASE_DATA = { version: 'unknown', tier: 'unknown', buildTimestamp: 'unknown' };
 
@@ -24,7 +25,7 @@ router.get('/about', requireAuth, (req, res) => {
   try {
     res.json({
       appName:       'Telgrarr',
-      version:       RELEASE_DATA.version,
+      version:       APP_VERSION,
       tier:          RELEASE_DATA.tier,
       buildTimestamp: RELEASE_DATA.buildTimestamp,
       nodeVersion:   process.version,
