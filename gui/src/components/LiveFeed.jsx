@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Wifi, WifiOff } from 'lucide-react';
-import EVENT_TYPES from '../shared/events.json';
+import EVENT_TYPES from '@shared/events.json';
 
 const TYPE_CONFIG = {
   [EVENT_TYPES.QUEUE_ITEM_ADDED]:    { color: 'text-blue-400',   bg: 'bg-blue-400/10',   dot: 'bg-blue-400'   },

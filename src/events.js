@@ -3,7 +3,7 @@ const { EventEmitter } = require('events');
 const fs              = require('fs');
 const path            = require('path');
 const writeFileAtomic = require('write-file-atomic');
-const EVENT_TYPES     = require('../gui/src/shared/events.json');
+const EVENT_TYPES     = require('../shared/events.json');
 const VALID_EVENTS    = Object.values(EVENT_TYPES);
 
 const EVENTS_FILE = path.join(__dirname, '../data/events-ring.json');

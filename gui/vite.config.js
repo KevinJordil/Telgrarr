@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'node:url'
 
 // DEV-ONLY. Production serves the built SPA (gui/dist) SAME-ORIGIN from the Node
 // process (Express SPA fallback) — this dev server + proxy NEVER run in prod.
@@ -13,6 +14,11 @@ const proxyTarget = process.env.DEV_PROXY_TARGET
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@shared': fileURLToPath(new URL('../shared', import.meta.url)),
+    },
+  },
   server: {
     port: 5173,
     host: '0.0.0.0',

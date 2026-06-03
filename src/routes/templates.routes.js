@@ -4,7 +4,7 @@ const router     = express.Router();
 const templates  = require('../templates');
 const log        = require('../logger');
 const events     = require('../events');
-const EVENT_TYPES = require('../../gui/src/shared/events.json');
+const EVENT_TYPES = require('../../shared/events.json');
 const { requireAuth } = require('../middlewares/auth');
 
 // ── GET /api/templates ────────────────────────────────────────────────────────

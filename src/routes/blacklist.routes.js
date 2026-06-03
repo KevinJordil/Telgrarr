@@ -5,7 +5,7 @@ const axios      = require('axios');
 const config     = require('../config');
 const log        = require('../logger');
 const events     = require('../events');
-const EVENT_TYPES = require('../../gui/src/shared/events.json');
+const EVENT_TYPES = require('../../shared/events.json');
 const blacklist  = require('../blacklist');
 const { requireAuth } = require('../middlewares/auth');
 

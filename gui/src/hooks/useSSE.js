@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import useAuthStore from '../store/authStore';
-import EVENT_TYPES from '../shared/events.json';
+import EVENT_TYPES from '@shared/events.json';
 import api from '../api';
 
 const MAX_EVENTS = 15;
