@@ -1,5 +1,8 @@
 'use strict';
 require('./load-env')();   // RD-1: load .env into process.env BEFORE config/logger evaluate (no .env => no-op)
+const path                              = require('path');
+const fs                                = require('fs');
+const lockfile                          = require('proper-lockfile');
 const log                               = require('./logger');
 const config                            = require('./config');
 const backup                            = require('./backup');
@@ -15,9 +18,28 @@ log.info('App', '━━━━━━━━━━━━━━━━━━━━━
 log.info('App', 'System Startup → Success → telgrarr initialized');
 log.info('App', '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-loadEvents();
-blacklist.load();
-startListener();
+// ── D.1: Single-Instance Lock (RD-8) ─────────────────────────────────────────
+const LOCK_FILE = path.join(config.DATA_DIR, '.telgrarr.lock');
+let releaseLock = null;
+
+(async () => {
+  try {
+    // proper-lockfile requires the sentinel file to exist
+    fs.closeSync(fs.openSync(LOCK_FILE, 'a'));
+    releaseLock = await lockfile.lock(LOCK_FILE, {
+      stale:   30000,
+      retries: { retries: 5, minTimeout: 200, maxTimeout: 200, factor: 1 }
+    });
+    log.info('App', `Single Instance → Acquired → ${LOCK_FILE}`);
+  } catch (err) {
+    log.error('App', `Single Instance → Conflict → Another telgrarr instance is running or lock unavailable (${err.message})`);
+    process.exit(1);
+  }
+
+  loadEvents();
+  blacklist.load();
+  startListener();
+})();
 
 // ── GAP-1 & GAP-6: Startup Recovery Sweep ────────────────────────────────────
 setTimeout(async () => {
@@ -76,6 +98,15 @@ async function gracefulShutdown(signal, code = 0) {
     log.info('Events', `Ring Buffer → Flushed → Signal: ${signal}`);
   } catch (err) {
     log.error('Events', `Ring Buffer → Flush Error → ${err.message}`);
+  }
+
+  if (releaseLock) {
+    try {
+      await releaseLock();
+      log.info('App', `Single Instance → Released → Signal: ${signal}`);
+    } catch (err) {
+      log.error('App', `Single Instance → Release Error → ${err.message}`);
+    }
   }
 
   log.info('App', 'System Shutdown → Complete → telgrarr stopped');
