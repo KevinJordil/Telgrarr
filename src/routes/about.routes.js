@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const log = require('../logger');
+const { DATA_DIR } = require('../config');                      // D-A: ledger path honors env (E.4-fix-b)
 const { requireAuth } = require('../middlewares/auth');
 
 const INSTALL_ROOT = path.resolve(__dirname, '../../');
@@ -13,7 +14,7 @@ const APP_VERSION  = require('../../package.json').version;   // E.3/RD-7: versi
 let RELEASE_DATA = { version: 'unknown', tier: 'unknown', buildTimestamp: 'unknown' };
 
 try {
-  const releasePath = path.join(__dirname, '../../data/system-release.json');
+  const releasePath = path.join(DATA_DIR, 'system-release.json');
   if (fs.existsSync(releasePath)) {
     RELEASE_DATA = JSON.parse(fs.readFileSync(releasePath, 'utf8'));
   }
