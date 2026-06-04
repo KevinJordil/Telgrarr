@@ -12,12 +12,14 @@
  *
  * Refs: E.3 / E.4, RD-7, R09. Closes M6 + D4.
  */
+require('./src/load-env')();   // RD-1: honor .env for DATA_DIR (no .env => no-op)
 const fs              = require('fs');
 const path            = require('path');
 const writeFileAtomic = require('write-file-atomic');
 
+const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, 'data');   // D-A: CLI mirrors setup-auth.js (Master §3)
 const PKG_PATH    = path.join(__dirname, 'package.json');
-const LEDGER_PATH = path.join(__dirname, 'data', 'system-release.json');
+const LEDGER_PATH = path.join(DATA_DIR, 'system-release.json');
 const VALID_TYPES = ['patch', 'minor', 'major', 'beta-bump'];
 const SEMVER_RE   = /^(\d+)\.(\d+)\.(\d+)(?:-beta\.(\d+))?$/;
 
