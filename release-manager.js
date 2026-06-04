@@ -1,63 +1,115 @@
 'use strict';
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+/**
+ * release-manager.js — bump the Telgrarr version.
+ *
+ * SSoT is package.json (RD-7). data/system-release.json is the build/history
+ * ledger only (no version field on the ledger). Both files are written
+ * atomically (R09). Restarting the running process is the operator's job
+ * (PM2, systemd, docker compose, …); this script never reloads anything.
+ *
+ * Usage:   node release-manager.js <patch|minor|major|beta-bump>
+ *          node release-manager.js --help
+ *
+ * Refs: E.3 / E.4, RD-7, R09. Closes M6 + D4.
+ */
+const fs              = require('fs');
+const path            = require('path');
+const writeFileAtomic = require('write-file-atomic');
 
-const args = process.argv.slice(2);
-const releaseType = args[0]; // 'patch', 'minor', 'major', 'beta-bump'
-const releasePath = path.join(__dirname, 'data', 'system-release.json');
+const PKG_PATH    = path.join(__dirname, 'package.json');
+const LEDGER_PATH = path.join(__dirname, 'data', 'system-release.json');
+const VALID_TYPES = ['patch', 'minor', 'major', 'beta-bump'];
+const SEMVER_RE   = /^(\d+)\.(\d+)\.(\d+)(?:-beta\.(\d+))?$/;
 
-if (!['patch', 'minor', 'major', 'beta-bump'].includes(releaseType)) {
-  console.error("❌ Invalid type. Use: patch, minor, major, or beta-bump");
+function fail(msg) {
+  console.error(`❌  ${msg}`);
   process.exit(1);
 }
 
-const currentData = JSON.parse(fs.readFileSync(releasePath, 'utf8'));
-const currentVersion = currentData.version;
-let [core, beta] = currentVersion.split('-beta.');
+function usage() {
+  return `Usage: node release-manager.js <${VALID_TYPES.join('|')}>`;
+}
 
-let [major, minor, patch] = core.split('.').map(Number);
-let betaNum = beta ? parseInt(beta) : 0;
+// ── CLI parse ─────────────────────────────────────────────────────────────
+const releaseType = process.argv[2];
+if (releaseType === '-h' || releaseType === '--help') {
+  console.log(usage());
+  process.exit(0);
+}
+if (!releaseType) {
+  fail(`Missing release type.\n${usage()}`);
+}
+if (!VALID_TYPES.includes(releaseType)) {
+  fail(`Invalid release type: ${releaseType}\n${usage()}`);
+}
 
-if (releaseType === 'major') { major++; minor = 0; patch = 0; betaNum = 0; }
-if (releaseType === 'minor') { minor++; patch = 0; betaNum = 0; }
-if (releaseType === 'patch') { patch++; betaNum = 0; }
-if (releaseType === 'beta-bump') { 
-  if (!beta) { patch++; betaNum = 1; } else { betaNum++; }
+// ── Load SSoT + ledger ────────────────────────────────────────────────────
+function readJson(file, label) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (err) {
+    fail(`Failed to read ${label} (${file}): ${err.message}`);
+  }
+}
+
+const pkg    = readJson(PKG_PATH,    'package.json');
+const ledger = readJson(LEDGER_PATH, 'system-release ledger');
+if (!Array.isArray(ledger.history)) ledger.history = [];
+
+// ── Parse current version (SSoT) ──────────────────────────────────────────
+const currentVersion = pkg.version;
+const m = SEMVER_RE.exec(currentVersion || '');
+if (!m) {
+  fail(`package.json version "${currentVersion}" is not a recognized semver (expected X.Y.Z or X.Y.Z-beta.N)`);
+}
+
+let major   = Number(m[1]);
+let minor   = Number(m[2]);
+let patch   = Number(m[3]);
+let betaNum = m[4] !== undefined ? Number(m[4]) : 0;
+const hadBeta = m[4] !== undefined;
+
+// ── Compute next version ──────────────────────────────────────────────────
+switch (releaseType) {
+  case 'major':     major++; minor = 0; patch = 0; betaNum = 0; break;
+  case 'minor':     minor++; patch = 0; betaNum = 0;            break;
+  case 'patch':     patch++; betaNum = 0;                       break;
+  case 'beta-bump':
+    if (!hadBeta) { patch++; betaNum = 1; } else { betaNum++; }
+    break;
 }
 
 let newVersion = `${major}.${minor}.${patch}`;
-if (betaNum > 0 || releaseType === 'beta-bump') {
-  newVersion += `-beta.${betaNum}`;
-}
+if (betaNum > 0) newVersion += `-beta.${betaNum}`;
 
 const timestamp = new Date().toISOString();
+const tier      = betaNum > 0 ? 'beta' : 'production';
 
-// Push current state to history ledger
-currentData.history.push({
-  version: currentVersion,
-  timestamp: currentData.buildTimestamp || timestamp
+// ── Ledger: append history, drop legacy version key, set tier+timestamp ──
+ledger.history.push({
+  version:   currentVersion,
+  timestamp: ledger.buildTimestamp || timestamp
 });
+delete ledger.version;          // RD-7: ledger no longer carries the SSoT
+ledger.tier           = tier;
+ledger.buildTimestamp = timestamp;
 
-// Update SSoT
-currentData.version = newVersion;
-currentData.tier = betaNum > 0 ? 'beta' : 'production';
-currentData.buildTimestamp = timestamp;
+// ── Atomic writes (R09): SSoT then ledger ─────────────────────────────────
+pkg.version = newVersion;
+try {
+  writeFileAtomic.sync(PKG_PATH,    JSON.stringify(pkg,    null, 2) + '\n');
+  writeFileAtomic.sync(LEDGER_PATH, JSON.stringify(ledger, null, 2) + '\n');
+} catch (err) {
+  fail(`Atomic write failed: ${err.message}`);
+}
 
-fs.writeFileSync(releasePath, JSON.stringify(currentData, null, 2));
-
-console.log(`\n✅ SYSTEM RELEASE MANAGER`);
+// ── Report ────────────────────────────────────────────────────────────────
+console.log(`\n✅  SYSTEM RELEASE MANAGER`);
 console.log(`─────────────────────────────`);
 console.log(`Old Version : ${currentVersion}`);
 console.log(`New Version : ${newVersion}`);
-console.log(`Tier        : ${currentData.tier}`);
+console.log(`Tier        : ${tier}`);
 console.log(`Timestamp   : ${timestamp}`);
 console.log(`─────────────────────────────`);
-
-try {
-  console.log('🔄 Hot-reloading architecture via PM2...');
-  execSync('pm2 reload telgrarr', { stdio: 'ignore' });
-  console.log(`🚀 v${newVersion} is now live.`);
-} catch (err) {
-  console.error('⚠️ PM2 reload failed. Manual restart required.');
-}
+console.log(`📦 Atomically updated: package.json (SSoT) + data/system-release.json (ledger)`);
+console.log(`🔄 Restart Telgrarr via your process manager to load v${newVersion}.`);
