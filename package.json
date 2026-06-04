@@ -2,7 +2,32 @@
   "name": "telgrarr",
   "version": "0.1.0",
   "description": "Sonarr/Radarr webhook queue with Arabic Telegram notifications and Emby refresh",
+  "keywords": [
+    "sonarr",
+    "radarr",
+    "telegram",
+    "webhook",
+    "notifier",
+    "emby",
+    "media",
+    "self-hosted",
+    "arabic",
+    "translation"
+  ],
+  "license": "MIT",
+  "author": "Fahad-Beta",
+  "homepage": "https://github.com/Fahad-Beta/telgrarr#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fahad-Beta/telgrarr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Fahad-Beta/telgrarr/issues"
+  },
   "main": "src/index.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "start": "node src/index.js",
     "start:pm2": "pm2 start ecosystem.config.js",
