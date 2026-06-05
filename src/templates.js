@@ -114,4 +114,34 @@ async function deleteSlot(id) {
   return getTemplates();
 }
 
-module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, setActiveMode, addSlot, updateSlot, deleteSlot };
+// ── ACTIVE TEMPLATE RESOLUTION ────────────────────────────────────────────────
+// Resolves the template string to render for a given (activeMode, kind).
+// Single source for the rule previously duplicated between formatter.js (Sonarr)
+// and radarr-formatter.js (Radarr) — closes roadmap M1 (Phase F.1).
+//
+// Precedence (parity-preserving with the legacy inline blocks):
+//   activeMode === 'default_en'                     → 'DEFAULT_EN'
+//   activeMode === 'default_ar'                     → 'DEFAULT_AR'
+//   custom mode + slot found + slot[kind] truthy    → slot[kind]
+//   anything else (no slot / falsy slot[kind])      → 'DEFAULT_AR'
+//
+// NOTE: `kind` is validated fail-fast (R06) — defensive add not present in the
+// original blocks. Cannot fire from existing callers; prevents a silent
+// `slot[undefined]` → DEFAULT_AR fallback if a future caller fat-fingers it.
+//
+// The internal slot lookup goes through `module.exports.getSlotById` so unit
+// tests can spy on it (CJS lexical binding would otherwise bypass spyOn — see
+// the Phase A vi.mock note in the roadmap). Zero runtime cost; identical
+// semantics to a direct call.
+function resolveTemplate(activeMode, kind) {
+  if (kind !== 'sonarr' && kind !== 'radarr') {
+    throw new Error(`resolveTemplate: kind must be 'sonarr' or 'radarr', got: ${JSON.stringify(kind)}`);
+  }
+  if (activeMode === 'default_en') return 'DEFAULT_EN';
+  if (activeMode === 'default_ar') return 'DEFAULT_AR';
+  const slot = module.exports.getSlotById(activeMode);
+  if (slot && slot[kind]) return slot[kind];
+  return 'DEFAULT_AR';
+}
+
+module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, setActiveMode, addSlot, updateSlot, deleteSlot, resolveTemplate };
