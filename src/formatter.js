@@ -13,13 +13,7 @@ function getPosterUrl(series) {
 function buildCaption(series, episodes) {
   const enrichedSeries = enrichSonarrMedia(series);
 
-  let template = 'DEFAULT_AR';
-  const activeMode = templates.getActiveMode();
-  if (activeMode === 'default_en') template = 'DEFAULT_EN';
-  else if (activeMode !== 'default_ar') {
-    const slot = templates.getSlotById(activeMode);
-    if (slot && slot.sonarr) template = slot.sonarr;
-  }
+  const template = templates.resolveTemplate(templates.getActiveMode(), 'sonarr');
 
   return renderSonarr(template, enrichedSeries, episodes);
 }
