@@ -8,13 +8,7 @@ function getPosterUrl(movie) {
 }
 
 function buildMovieCaption(movie, tmdbMovie, ratings = {}) {
-  let template = 'DEFAULT_AR';
-  const activeMode = templates.getActiveMode();
-  if (activeMode === 'default_en') template = 'DEFAULT_EN';
-  else if (activeMode !== 'default_ar') {
-    const slot = templates.getSlotById(activeMode);
-    if (slot && slot.radarr) template = slot.radarr;
-  }
+  const template = templates.resolveTemplate(templates.getActiveMode(), 'radarr');
   
   return renderRadarr(template, movie, tmdbMovie, ratings);
 }
