@@ -114,7 +114,7 @@ function renderSonarr(templateString, series, episodes) {
   if (!compiledString || compiledString === 'DEFAULT_AR') compiledString = DEFAULT_SONARR_TEMPLATE;
   else if (compiledString === 'DEFAULT_EN') compiledString = DEFAULT_SONARR_EN;
   const compile = Handlebars.compile(compiledString);
-  return compile(data);
+  return capToLimit(compile(data));
 }
 
 function renderRadarr(templateString, movie, tmdbMovie, ratings = {}) {
