@@ -9,6 +9,17 @@ const {
 
 const TG_CAPTION_LIMIT = 1024;
 
+// Hard-cap a rendered caption at Telegram's caption limit. DRY (R02): single
+// source for the cap rule (incl. the 3-char ellipsis budget), shared by
+// renderRadarr's pass-3 fallback (F.2a) and renderSonarr (F.2b). NOTE: this is
+// a byte-level cut and can sever an HTML tag mid-token — a pre-existing
+// limitation inherited from the original renderRadarr pass-3 truncation; a
+// tag-aware truncator would belong to BOTH renderers and is out of F.2 scope.
+function capToLimit(caption) {
+  if (caption.length <= TG_CAPTION_LIMIT) return caption;
+  return caption.substring(0, TG_CAPTION_LIMIT - 3) + '...';
+}
+
 function buildRangeString(nums) {
   const sorted = [...new Set(nums)].sort((a, b) => a - b);
   const ranges = [];
@@ -159,10 +170,7 @@ function renderRadarr(templateString, movie, tmdbMovie, ratings = {}) {
     }
   }
   // Pass 3 — drop overview entirely
-  caption = compile(buildData(null));
-  if (caption.length > TG_CAPTION_LIMIT) {
-    caption = caption.substring(0, TG_CAPTION_LIMIT - 3) + '...';
-  }
+  caption = capToLimit(compile(buildData(null)));
   return { caption, pass: 3, length: caption.length };
 }
 
