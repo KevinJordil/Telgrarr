@@ -22,7 +22,8 @@ const SETTINGS_SCHEMA = [
       { key: 'telegram.chatId', label: 'Chat ID', type: 'text', placeholder: '-1001234567890', required: true, rule: 'chatId' },
       { key: 'telegram.delayMs', label: 'Delay Between Messages', type: 'slider',
         min: 500, max: 10000, step: 500, displayFormat: 'ms-to-s',
-        note: 'Pause between consecutive messages in one batch.', integer: true },
+        note: 'Pause between consecutive messages in one batch.', integer: true,
+        errorMessage: 'Must be between 500ms and 10000ms' },
     ],
   },
   {
@@ -30,7 +31,8 @@ const SETTINGS_SCHEMA = [
     fields: [
       { key: 'batchWindowMs', label: 'Batch Window', type: 'slider',
         min: 30000, max: 1800000, step: 30000, displayFormat: 'ms-to-min',
-        note: 'Wait time before processing a batch. Takes effect on the next new batch only.', integer: true },
+        note: 'Wait time before processing a batch. Takes effect on the next new batch only.', integer: true,
+        errorMessage: 'Must be between 30000 (30s) and 1800000 (30min)' },
     ],
   },
   {
@@ -75,7 +77,8 @@ const SETTINGS_SCHEMA = [
     testEndpoint: '/api/settings/test/omdb', testLabel: 'Test API Key',
     fields: [
       { key: 'omdb.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your OMDb API key',
-        note: 'Optional. Used as a fallback source for IMDb, Rotten Tomatoes, and Metacritic ratings when Radarr has not yet synced them. Leave empty to disable.', required: false },
+        note: 'Optional. Used as a fallback source for IMDb, Rotten Tomatoes, and Metacritic ratings when Radarr has not yet synced them. Leave empty to disable.', required: false,
+        mustBeString: true },
     ],
   },
   {
@@ -84,10 +87,12 @@ const SETTINGS_SCHEMA = [
     fields: [
       { key: 'translator.endpoint', label: 'API Endpoint (OpenAI Compatible)', type: 'url',
         placeholder: 'https://api.openai.com/v1/chat/completions',
-        note: 'The chat completions endpoint for your AI provider (OpenAI, OpenRouter, Groq, etc.).', required: false, rule: 'url' },
+        note: 'The chat completions endpoint for your AI provider (OpenAI, OpenRouter, Groq, etc.).', required: false, rule: 'url',
+        nonWhitespaceIfProvided: true },
       { key: 'translator.model', label: 'AI Model', type: 'text',
         placeholder: 'gpt-4o-mini',
-        note: 'The exact model ID to request (e.g., gpt-4o-mini, deepseek/deepseek-chat).', required: false },
+        note: 'The exact model ID to request (e.g., gpt-4o-mini, deepseek/deepseek-chat).', required: false,
+        nonWhitespaceIfProvided: true },
       { key: 'translator.apiKey', label: 'API Key', type: 'secret',
         placeholder: 'sk-...',
         note: 'Required for AI translations (Tier 1). If empty, translations will be skipped.', required: false },

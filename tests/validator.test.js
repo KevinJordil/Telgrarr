@@ -112,17 +112,21 @@ describe('validator parity harness', () => {
     );
   });
 
-  // ── RULE: url — ftp:// is intentionally accepted (Authorized Divergence) ─────
-  it('ftp:// URL is ACCEPTED on sonarr.baseUrl (new URL() semantics — Authorized Divergence)', () => {
-    const errors = validateSettings({ sonarr: { baseUrl: 'ftp://somehost' } });
-    const urlErrors = errors.filter(e => e.field === 'sonarr.baseUrl');
-    expect(urlErrors.length).toBe(0);
+  // ── RULE: url — F.4 tightened to http(s) only (parity break authorized §3) ─
+  it('ftp:// URL is REJECTED on sonarr.baseUrl (F.4: http/https only)', () => {
+    expectSingleError(
+      { sonarr: { baseUrl: 'ftp://somehost' } },
+      'sonarr.baseUrl',
+      'Must be a valid URL'
+    );
   });
 
-  it('ftp:// URL is ACCEPTED on radarr.baseUrl (new URL() semantics — Authorized Divergence)', () => {
-    const errors = validateSettings({ radarr: { baseUrl: 'ftp://somehost' } });
-    const urlErrors = errors.filter(e => e.field === 'radarr.baseUrl');
-    expect(urlErrors.length).toBe(0);
+  it('ftp:// URL is REJECTED on radarr.baseUrl (F.4: http/https only)', () => {
+    expectSingleError(
+      { radarr: { baseUrl: 'ftp://somehost' } },
+      'radarr.baseUrl',
+      'Must be a valid URL'
+    );
   });
 
   // ── EMPTY REQUIRED FIELDS ────────────────────────────────────────────────

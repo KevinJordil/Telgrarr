@@ -2,11 +2,26 @@
 
 const { SETTINGS_SCHEMA } = require('../settings-schema');
 
+// Non-schema operational-field bounds. These fields (listenerPort and backup.*)
+// are validated explicitly outside the SETTINGS_SCHEMA-driven loop because
+// they're admin/operational and not in the Settings UI. Moving them into the
+// schema would surface them in the GUI, which is out of scope.
+const LISTENER_PORT_MIN   = 1025;
+const LISTENER_PORT_MAX   = 65534;
+const BACKUP_INTERVAL_MIN = 1;
+const BACKUP_INTERVAL_MAX = 30;
+const BACKUP_RETAIN_MIN   = 1;
+const BACKUP_RETAIN_MAX   = 20;
+
 const RULES = {
+  // F.4: URL rule restricted to http(s) only — every consumer (Sonarr, Radarr,
+  // Emby, Seerr, TMDB translator endpoint) is HTTP-based. Accepting other
+  // schemes (ftp://, file://, etc.) was a latent footgun. Authorized parity
+  // break per roadmap §3 — paired with updated test.
   url: (val) => {
     try {
-      new URL(val);
-      return true;
+      const u = new URL(val);
+      return u.protocol === 'http:' || u.protocol === 'https:';
     } catch {
       return false;
     }
@@ -25,21 +40,21 @@ function validateSettings(body) {
 
   // 1. NON-SCHEMA EXPLICIT BLOCK
   if (body.listenerPort !== undefined) {
-    if (!Number.isInteger(body.listenerPort) || body.listenerPort < 1025 || body.listenerPort > 65534) {
-      errors.push({ field: 'listenerPort', message: 'Must be an integer between 1025 and 65534' });
+    if (!Number.isInteger(body.listenerPort) || body.listenerPort < LISTENER_PORT_MIN || body.listenerPort > LISTENER_PORT_MAX) {
+      errors.push({ field: 'listenerPort', message: `Must be an integer between ${LISTENER_PORT_MIN} and ${LISTENER_PORT_MAX}` });
     }
   }
 
   // Backup is not in schema but MUST be validated for behavioral parity
   if (body.backup) {
     if (body.backup.intervalDays !== undefined) {
-      if (!Number.isInteger(body.backup.intervalDays) || body.backup.intervalDays < 1 || body.backup.intervalDays > 30) {
-        errors.push({ field: 'backup.intervalDays', message: 'Must be an integer between 1 and 30' });
+      if (!Number.isInteger(body.backup.intervalDays) || body.backup.intervalDays < BACKUP_INTERVAL_MIN || body.backup.intervalDays > BACKUP_INTERVAL_MAX) {
+        errors.push({ field: 'backup.intervalDays', message: `Must be an integer between ${BACKUP_INTERVAL_MIN} and ${BACKUP_INTERVAL_MAX}` });
       }
     }
     if (body.backup.retainCount !== undefined) {
-      if (!Number.isInteger(body.backup.retainCount) || body.backup.retainCount < 1 || body.backup.retainCount > 20) {
-        errors.push({ field: 'backup.retainCount', message: 'Must be an integer between 1 and 20' });
+      if (!Number.isInteger(body.backup.retainCount) || body.backup.retainCount < BACKUP_RETAIN_MIN || body.backup.retainCount > BACKUP_RETAIN_MAX) {
+        errors.push({ field: 'backup.retainCount', message: `Must be an integer between ${BACKUP_RETAIN_MIN} and ${BACKUP_RETAIN_MAX}` });
       }
     }
     if (body.backup.enabled !== undefined && typeof body.backup.enabled !== 'boolean') {
@@ -55,14 +70,10 @@ function validateSettings(body) {
 
       if (field.integer) {
          if (!Number.isInteger(val) || val < field.min || val > field.max) {
-           // Inject legacy hardcoded messages for precise parity
-           if (field.key === 'batchWindowMs') {
-             errors.push({ field: field.key, message: 'Must be between 30000 (30s) and 1800000 (30min)' });
-           } else if (field.key === 'telegram.delayMs') {
-             errors.push({ field: field.key, message: 'Must be between 500ms and 10000ms' });
-           } else {
-             errors.push({ field: field.key, message: `Must be an integer between ${field.min} and ${field.max}` });
-           }
+           // F.4: per-field override via schema.errorMessage; falls back to
+           // the generic template. Was a key-specific if/else (R04 violation).
+           const msg = field.errorMessage || `Must be an integer between ${field.min} and ${field.max}`;
+           errors.push({ field: field.key, message: msg });
          }
          continue;
       }
@@ -84,11 +95,13 @@ function validateSettings(body) {
             continue;
          }
       } else {
-         if (field.key === 'translator.endpoint' || field.key === 'translator.model') {
+         // F.4: per-field opt-in checks via schema hints. Was a key-specific
+         // if/else on field.key (R04 violation).
+         if (field.nonWhitespaceIfProvided) {
             if (val !== '' && isWhitespace) {
                errors.push({ field: field.key, message: 'Cannot be empty if provided' });
             }
-         } else if (field.key === 'omdb.apiKey') {
+         } else if (field.mustBeString) {
             if (val !== '' && typeof val !== 'string') {
                errors.push({ field: field.key, message: 'Must be a string' });
             }
