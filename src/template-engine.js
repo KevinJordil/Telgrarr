@@ -156,7 +156,16 @@ function renderRadarr(templateString, movie, tmdbMovie, ratings = {}) {
   if (caption.length <= TG_CAPTION_LIMIT) return { caption, pass: 1, length: caption.length };
   // Pass 2 — calculate exact overview budget and re-render
   const shellLength = compile(buildData('')).length;
-  let budget = TG_CAPTION_LIMIT - shellLength - 3;
+  // F.2d: measure the overview-section PREFIX overhead empirically. With a
+  // 1-char overview, the rendered template emits (shellLength + prefix + 1)
+  // chars; the prefix is the '\n\n<emoji> ' wrap around {{{overview}}} (~6
+  // code units for DEFAULT_AR, ~5 for DEFAULT_EN, variable for custom
+  // templates). Pre-F.2d this overhead was unmodeled, so the trimmed caption
+  // always ran to shellLength + overhead + budget + 3 ≈ 1030/1029 > 1024 and
+  // pass 2 was unreachable. Empirical probing handles custom templates too.
+  const probe = compile(buildData('X')).length;
+  const overhead = probe - shellLength - 1;
+  let budget = TG_CAPTION_LIMIT - shellLength - overhead - 3;
   if (budget > 20 && rawOv.length > 0) {
     const wmTag = '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
     const hasWm = rawOv.includes(wmTag);

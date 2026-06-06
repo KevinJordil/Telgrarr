@@ -118,43 +118,47 @@ describe('renderRadarr', () => {
     expect(r.caption).toContain(MOVIE.title);
   });
 
-  // ── Pass 2 — NOT TESTED: known unreachable code path ─────────────────────────
-  //
-  // FINDING (surfaced F.2c, queued as F.2d — separate authorized behavior change):
-  //
-  // The budget formula `TG_CAPTION_LIMIT - shellLength - 3` omits the template's
-  // overview-section prefix overhead. For DEFAULT_AR the prefix '\n\n‏📝 '
-  // is ~6 code units; for DEFAULT_EN '\n\n📝 ' is ~5. This means the trimmed
-  // caption always renders to shellLength + overhead + budget + 3 ≈ 1030/1029,
-  // both > 1024, so the guard `if (caption.length <= TG_CAPTION_LIMIT)` is
-  // never satisfied and every over-budget movie falls directly to pass 3.
-  //
-  // Proposed fix (F.2d):
-  //   const probe    = compile(buildData('X')).length;
-  //   const overhead = probe - shellLength - 1;
-  //   budget         = TG_CAPTION_LIMIT - shellLength - overhead - 3;
-  //
-  // This measures the real prefix for any template (custom or default) and
-  // produces a pass-2 caption of exactly 1024 chars. A pass-2 test will be
-  // added in F.2d once the fix is approved.
+  // ── Pass 2 (F.2d-fixed) ──────────────────────────────────────────────────────
+  // Pre-F.2d this path was unreachable: the budget formula
+  // `TG_CAPTION_LIMIT - shellLength - 3` omitted the template's overview-section
+  // prefix overhead (~6 code units for DEFAULT_AR '\n\n‏📝 '; ~5 for DEFAULT_EN
+  // '\n\n📝 '). F.2d now measures the overhead empirically (probe with a
+  // 1-char overview) and produces a pass-2 caption of exactly 1024 chars.
 
-  // ── Pass 3 ───────────────────────────────────────────────────────────────────
-
-  it('pass 3 (AR) via overview fallthrough: shell without overview, ≤ 1024, no ellipsis', () => {
-    // Normal title + long overview → full render > 1024 → pass-1 fails →
-    // pass-2 attempt fails (budget bug above) → pass-3 emits the no-overview
-    // shell. Shell length < 1024 → capToLimit is identity → no ellipsis.
+  it('F.2d — pass 2 (AR): long overview trimmed to fit at exactly 1024 with ellipsis', () => {
+    // Normal title + over-budget overview → pass 1 fails → pass 2 trims the
+    // overview to the exact remaining budget so the caption fits at 1024.
     const r = renderRadarr(
       'DEFAULT_AR',
       MOVIE,
       { ...TMDB_MOVIE, _overviewAr: 'أ'.repeat(900) },
       {}
     );
-    expect(r.pass).toBe(3);
-    expect(r.length).toBeLessThanOrEqual(1024);
+    expect(r.pass).toBe(2);
+    expect(r.length).toBe(1024);
+    // Truncation marker '...' is INTERNAL to the overview section — the
+    // template emits footer chars (runtime, ratings, IMDb link, &#8203;)
+    // after the trimmed overview, so the caption does NOT end with '...'.
+    expect(r.caption.includes('...')).toBe(true);
     expect(r.caption).toContain(MOVIE.title);
-    expect(r.caption).not.toContain('أ'.repeat(20)); // overview dropped
+    expect(r.caption).toContain('أ'); // overview present (trimmed)
   });
+
+  it('F.2d — pass 2 (EN): long overview trimmed to fit at exactly 1024 with ellipsis', () => {
+    const r = renderRadarr(
+      'DEFAULT_EN',
+      MOVIE,
+      { ...TMDB_MOVIE, _overviewEn: 'Y'.repeat(900) },
+      {}
+    );
+    expect(r.pass).toBe(2);
+    expect(r.length).toBe(1024);
+    expect(r.caption.includes('...')).toBe(true);
+    expect(r.caption).toContain(MOVIE.title);
+    expect(r.caption).toContain('Y');
+  });
+
+  // ── Pass 3 ───────────────────────────────────────────────────────────────────
 
   it('F.2a — pass 3 (AR) huge title: capToLimit fires — caption === 1024 with ellipsis', () => {
     // Shell itself (no overview, huge title) exceeds 1024 → capToLimit truncates.
