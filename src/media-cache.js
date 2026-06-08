@@ -16,22 +16,31 @@ function ensureCacheFile() {
 
 let _cache    = null;
 let _loadedAt = 0;
+let _loadInFlight = null;
 
 async function loadCache() {
   const now = Date.now();
   if (_cache && now - _loadedAt < 5000) return _cache;
-  try {
-    ensureCacheFile();
-    const raw = await fs.promises.readFile(CACHE_FILE, 'utf8');
-    _cache    = JSON.parse(raw);
-    _loadedAt = now;
-    return _cache;
-  } catch (err) {
-    log.error('MediaCache', `Cache Load → Error → ${err.message}`);
-    _cache    = {};
-    _loadedAt = now;
-    return _cache;
-  }
+  if (_loadInFlight) return _loadInFlight;
+
+  _loadInFlight = (async () => {
+    try {
+      ensureCacheFile();
+      const raw = await fs.promises.readFile(CACHE_FILE, 'utf8');
+      _cache    = JSON.parse(raw);
+      _loadedAt = now;
+      return _cache;
+    } catch (err) {
+      log.error('MediaCache', `Cache Load → Error → ${err.message}`);
+      _cache    = {};
+      _loadedAt = now;
+      return _cache;
+    } finally {
+      _loadInFlight = null;
+    }
+  })();
+
+  return _loadInFlight;
 }
 
 async function saveCache(data) {
