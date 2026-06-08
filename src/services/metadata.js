@@ -14,12 +14,8 @@ async function fetchSonarrMetadata(seriesId) {
 
 // ── Radarr metadata resolution ──────────────────────────────────────────────
 async function fetchRadarrMetadata(movieId, activeMode) {
-  let movie;
-  try {
-    movie = await getMovieById(movieId);
-  } catch (err) {
-    throw err; // caller owns logging
-  }
+  // No try/catch here — caller owns logging; the await re-throws naturally.
+  const movie = await getMovieById(movieId);
   if (!movie) {
     return { movie: null, tmdbMovie: null, omdbData: null };
   }

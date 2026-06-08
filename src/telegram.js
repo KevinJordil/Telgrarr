@@ -27,15 +27,4 @@ async function sendPhoto(photoUrl, caption) {
   }
 }
 
-async function sendAll(messages) {
-  const DELAY = config.telegram.delayMs;
-  for (let i = 0; i < messages.length; i++) {
-    const { photoUrl, caption } = messages[i];
-    await sendPhoto(photoUrl, caption);
-    if (i < messages.length - 1) {
-      await sleep(DELAY);
-    }
-  }
-}
-
-module.exports = { sendPhoto, sendAll, sleep };
+module.exports = { sendPhoto, sleep };

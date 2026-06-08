@@ -85,7 +85,7 @@ router.post('/send', requireAuth, async (req, res) => {
       photoUrl = 'https://image.tmdb.org/t/p/w600_and_h900_bestv2/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg';
     }
 
-    await telegram.sendAll([{ photoUrl, caption: html }]);
+    await telegram.sendPhoto(photoUrl, html);
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
