@@ -106,6 +106,7 @@ function loadFromDisk(context = 'boot') {
 }
 
 const config = loadFromDisk('boot');
+log.setLevel(config.logging && config.logging.level);
 
 function reload() {
   const fresh = loadFromDisk('reload');
@@ -121,6 +122,7 @@ function reload() {
       ? Object.assign({}, fresh[key])
       : fresh[key];
   }
+  log.setLevel(config.logging && config.logging.level);
   log.info('Config', 'Hot-reload complete — all modules updated.');
 }
 

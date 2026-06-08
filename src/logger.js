@@ -18,6 +18,13 @@ const logBuffer = [];
 let _logSeq = 0;
 
 const LEVEL_ORDER = { error: 0, warn: 1, info: 2 };
+let _configuredLevel = 'info';
+
+function setLevel(level) {
+  if (typeof level === 'string' && LEVEL_ORDER[level] != null) {
+    _configuredLevel = level;
+  }
+}
 
 function timestamp() {
   return new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -25,13 +32,7 @@ function timestamp() {
 
 function _isLevelAllowed(level) {
   if (level === 'audit') return true;
-  try {
-    const config = require('./config');
-    const configured = config.logging?.level ?? 'info';
-    return LEVEL_ORDER[level] <= LEVEL_ORDER[configured];
-  } catch {
-    return LEVEL_ORDER[level] <= LEVEL_ORDER['info'];
-  }
+  return LEVEL_ORDER[level] <= LEVEL_ORDER[_configuredLevel];
 }
 
 function _write(level, module, message) {
@@ -110,4 +111,4 @@ function reopenLogFiles() {
   auditDest.reopen();
 }
 
-module.exports = { info, warn, error, audit, getRecentLogs, getFilteredLogs, reopenLogFiles };
+module.exports = { info, warn, error, audit, getRecentLogs, getFilteredLogs, reopenLogFiles, setLevel };
