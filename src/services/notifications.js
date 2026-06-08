@@ -9,7 +9,7 @@ async function dispatchBatch(messages, historyItems) {
 
   const successful = [];
   const failed = [];
-  const DELAY = config.telegram?.delayMs || 3000;
+  const DELAY = config.telegram.delayMs;
 
   for (let i = 0; i < messages.length; i++) {
     try {
