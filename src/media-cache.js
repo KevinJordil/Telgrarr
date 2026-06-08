@@ -6,7 +6,7 @@ const write = require('write-file-atomic');
 const config = require('./config');
 const log    = require('./logger');
 
-const CACHE_FILE = path.join(__dirname, '../data/media-cache.json');
+const CACHE_FILE = path.join(config.DATA_DIR, 'media-cache.json');
 
 function ensureCacheFile() {
   if (!fs.existsSync(CACHE_FILE)) {
@@ -51,7 +51,7 @@ async function saveCache(data) {
 
 function isExpired(entry) {
   if (!entry?.cachedAt) return true;
-  const ttlMs = (config.mediaCache?.ttlDays ?? 30) * 86400000;
+  const ttlMs = config.mediaCache.ttlDays * 86400000;
   return Date.now() - new Date(entry.cachedAt).getTime() > ttlMs;
 }
 
