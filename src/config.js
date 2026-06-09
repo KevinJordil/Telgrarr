@@ -183,5 +183,7 @@ Object.defineProperty(config, 'WEBHOOK_SECRET', { value: (process.env.WEBHOOK_SE
 // C.7 / RD-4: cookie Secure policy. 'auto' (default) => Secure when the request is
 // HTTPS (req.secure / X-Forwarded-Proto); 'true'/'false' force it. Boot-resolved.
 Object.defineProperty(config, 'COOKIE_SECURE', { value: (process.env.COOKIE_SECURE != null && process.env.COOKIE_SECURE !== '') ? process.env.COOKIE_SECURE : 'auto', enumerable: false, configurable: true });
+// C10: logs directory path. Env-resolved at boot (RESTART required to pick up a change).
+Object.defineProperty(config, 'LOGS_DIR',      { value: (process.env.LOGS_DIR != null && process.env.LOGS_DIR !== '') ? process.env.LOGS_DIR : path.join(__dirname, '../logs'), enumerable: false, configurable: true });
 
 module.exports = config;

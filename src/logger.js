@@ -4,7 +4,10 @@ const fs   = require('fs');
 const pino = require('pino');
 const events = require('./events');
 
-const logsDir = path.join(__dirname, '../logs');
+// LOGS_DIR read directly from env (not via require('./config')) to avoid
+// re-introducing the config<->logger require cycle severed in C9.
+// config.LOGS_DIR resolves to the same value; both consumers stay consistent.
+const logsDir = process.env.LOGS_DIR || path.join(__dirname, '../logs');
 fs.mkdirSync(logsDir, { recursive: true });
 
 const appDest   = pino.destination({ dest: path.join(logsDir, 'app.log'),   sync: true });

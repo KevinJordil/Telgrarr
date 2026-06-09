@@ -4,7 +4,7 @@ const path    = require('path');
 const config  = require('./config');
 const log     = require('./logger');
 
-const LOGS_DIR = path.join(__dirname, '../logs');
+const LOGS_DIR = config.LOGS_DIR;
 const MODULE   = 'LogRotator';
 
 const FAMILIES = [
