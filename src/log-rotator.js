@@ -13,6 +13,8 @@ const FAMILIES = [
   { name: 'audit', file: 'audit.log' },
 ];
 
+const MAX_ARCHIVE_GENERATIONS_PER_DAY = 9999;
+
 function dateTag() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -20,33 +22,48 @@ function dateTag() {
 async function resolveArchiveName(family) {
   const base = family.file.replace('.log', '');
   const date = dateTag();
-  let gen = 1;
-  while (true) {
+  for (let gen = 1; gen <= MAX_ARCHIVE_GENERATIONS_PER_DAY; gen++) {
     const candidate = path.join(LOGS_DIR, `${base}.${date}.${gen}.log`);
     try {
       await fs.stat(candidate);
-      gen++;
-    } catch {
-      return candidate;
+      // candidate exists; try next gen
+    } catch (err) {
+      if (err.code === 'ENOENT') return candidate;
+      throw new Error(`resolveArchiveName: stat error for ${candidate}: ${err.message}`);
     }
   }
+  throw new Error(`resolveArchiveName: exceeded ${MAX_ARCHIVE_GENERATIONS_PER_DAY} generations for ${family.file} on ${date}`);
 }
 
 async function rotateFamily(family, rotCfg) {
-  if (!rotCfg || !rotCfg.maxSizeMb || !rotCfg.maxAgeDays) return;
+  if (!rotCfg) return;
+  if (typeof rotCfg.maxSizeMb !== 'number' || rotCfg.maxSizeMb <= 0 ||
+      typeof rotCfg.maxAgeDays !== 'number' || rotCfg.maxAgeDays <= 0) {
+    log.warn(MODULE, `${family.name} rotation: invalid maxSizeMb/maxAgeDays (must be positive numbers); skipping`);
+    return;
+  }
 
   const activeFile = path.join(LOGS_DIR, family.file);
 
   let stats;
   try {
     stats = await fs.stat(activeFile);
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      log.warn(MODULE, `${family.file} stat failed: ${err.message}; skipping rotation pass`);
+    }
     return;
   }
 
   const sizeMb = stats.size / (1024 * 1024);
   if (sizeMb >= rotCfg.maxSizeMb) {
-    const archivePath = await resolveArchiveName(family);
+    let archivePath;
+    try {
+      archivePath = await resolveArchiveName(family);
+    } catch (err) {
+      log.warn(MODULE, `${family.file} rotation: ${err.message}; skipping`);
+      return;
+    }
     try {
       await fs.rename(activeFile, archivePath);
       log.reopenLogFiles();
