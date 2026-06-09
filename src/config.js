@@ -54,12 +54,18 @@ const REQUIRED_CREDENTIALS = [
   ['tmdb',     'apiKey',     'TMDB API key'],
 ];
 
-function validateRequiredCredentials(cfg, context) {
+function getMissingCredentials(cfg) {
+  if (!cfg) cfg = config;
   const missing = [];
   for (const [section, key, label] of REQUIRED_CREDENTIALS) {
     const val = cfg[section]?.[key];
     if (!val || String(val).trim() === '') missing.push(label);
   }
+  return missing;
+}
+
+function validateRequiredCredentials(cfg, context) {
+  const missing = getMissingCredentials(cfg);
   if (missing.length === 0) return;
   missing.forEach(label => log.error('Config', `Missing required credential: ${label}`));
   if (context === 'boot') {
@@ -167,6 +173,7 @@ async function save(incoming) {
 config.reload   = reload;
 config.save     = save;
 config.DEFAULTS = DEFAULTS;
+config.getMissingCredentials = getMissingCredentials;
 // ── B.1: resolved environment layer (additive; env -> file -> DEFAULTS) ──────
 // Non-enumerable: save() never persists these and reload() never wipes them.
 // CONFIG_FILE already derives from DATA_DIR. Consumers wired in later steps; env

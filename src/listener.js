@@ -1,5 +1,6 @@
 'use strict';
 const express       = require('express');
+const fs            = require('fs');
 const path          = require('path');
 const config        = require('./config');
 const log           = require('./logger');
@@ -59,8 +60,45 @@ app.use('/api/preview', require('./routes/preview.routes'));
 app.use('/hooks', require('./routes/webhooks.routes'));
 
 // -- Health -------------------------------------------------------------------
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+// F.8 (O3): deep health probe — queue writability + required-credential check.
+// Returns 200 when all checks pass, 503 when any check fails. Existing field
+// shape ({ status, time }) preserved for backward compat; new `checks` object
+// surfaces individual probe results.
+async function checkQueueWritable() {
+  const queueFile = config.queueFile;
+  const queueDir  = path.dirname(queueFile);
+  try {
+    await fs.promises.access(queueDir, fs.constants.W_OK);
+  } catch (err) {
+    return { ok: false, reason: `queue dir (${queueDir}) not writable: ${err.message}` };
+  }
+  try {
+    await fs.promises.access(queueFile, fs.constants.W_OK);
+    return { ok: true };
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return { ok: true, note: 'queue file not yet created; dir writable' };
+    }
+    return { ok: false, reason: `queue file not writable: ${err.message}` };
+  }
+}
+
+function checkConfigValid() {
+  const missing = config.getMissingCredentials();
+  return missing.length === 0 ? { ok: true } : { ok: false, missing };
+}
+
+app.get('/health', async (req, res) => {
+  const checks = {
+    queue:  await checkQueueWritable(),
+    config: checkConfigValid(),
+  };
+  const allOk = Object.values(checks).every(c => c.ok);
+  res.status(allOk ? 200 : 503).json({
+    status: allOk ? 'ok' : 'degraded',
+    time:   new Date().toISOString(),
+    checks,
+  });
 });
 
 // -- Static GUI (Production) --------------------------------------------------
