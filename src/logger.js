@@ -1,13 +1,15 @@
 'use strict';
 const path = require('path');
+const fs   = require('fs');
 const pino = require('pino');
 const events = require('./events');
 
 const logsDir = path.join(__dirname, '../logs');
+fs.mkdirSync(logsDir, { recursive: true });
 
-const appDest   = pino.destination(path.join(logsDir, 'app.log'));
-const errDest   = pino.destination(path.join(logsDir, 'error.log'));
-const auditDest = pino.destination(path.join(logsDir, 'audit.log'));
+const appDest   = pino.destination({ dest: path.join(logsDir, 'app.log'),   sync: true });
+const errDest   = pino.destination({ dest: path.join(logsDir, 'error.log'), sync: true });
+const auditDest = pino.destination({ dest: path.join(logsDir, 'audit.log'), sync: true });
 
 const fileLogger  = pino(appDest);
 const errorLogger = pino(errDest);
@@ -37,6 +39,7 @@ function _isLevelAllowed(level) {
 
 function _write(level, module, message) {
   const ts = new Date().toISOString();
+  if (_logSeq >= Number.MAX_SAFE_INTEGER) _logSeq = 0;
   const entry = {
     id: `log-${Date.now()}-${++_logSeq}`,
     level,
@@ -62,34 +65,34 @@ function _write(level, module, message) {
   if (logBuffer.length > LOG_BUFFER_SIZE) logBuffer.shift();
 
   if (level !== 'audit') {
-    events.emit(`log.${level}`, level, module, message, {});
+    try {
+      events.emit(`log.${level}`, level, module, message, {});
+    } catch (err) {
+      try { process.stderr.write(`[logger] events.emit failed: ${err && err.message}\n`); } catch (_) {}
+    }
   }
 }
 
 function info(module, message) {
   if (!_isLevelAllowed('info')) return;
-  process.stdout.write(`[${timestamp()}] [INFO]  [${module}] ${message}
-`);
+  process.stdout.write(`[${timestamp()}] [INFO]  [${module}] ${message}\n`);
   _write('info', module, message);
 }
 
 function warn(module, message) {
   if (!_isLevelAllowed('warn')) return;
-  process.stdout.write(`[${timestamp()}] [WARN]  [${module}] ${message}
-`);
+  process.stdout.write(`[${timestamp()}] [WARN]  [${module}] ${message}\n`);
   _write('warn', module, message);
 }
 
 function error(module, message) {
   if (!_isLevelAllowed('error')) return;
-  process.stderr.write(`[${timestamp()}] [ERROR] [${module}] ${message}
-`);
+  process.stderr.write(`[${timestamp()}] [ERROR] [${module}] ${message}\n`);
   _write('error', module, message);
 }
 
 function audit(module, message) {
-  process.stdout.write(`[${timestamp()}] [AUDIT] [${module}] ${message}
-`);
+  process.stdout.write(`[${timestamp()}] [AUDIT] [${module}] ${message}\n`);
   _write('audit', module, message);
 }
 
@@ -106,9 +109,13 @@ function getFilteredLogs({ limit = 100, level, module, since } = {}) {
 }
 
 function reopenLogFiles() {
-  appDest.reopen();
-  errDest.reopen();
-  auditDest.reopen();
+  for (const [name, dest] of [['app', appDest], ['error', errDest], ['audit', auditDest]]) {
+    try {
+      dest.reopen();
+    } catch (err) {
+      try { process.stderr.write(`[logger] ${name} reopen failed: ${err && err.message}\n`); } catch (_) {}
+    }
+  }
 }
 
 module.exports = { info, warn, error, audit, getRecentLogs, getFilteredLogs, reopenLogFiles, setLevel };
