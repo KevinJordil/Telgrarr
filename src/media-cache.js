@@ -10,7 +10,7 @@ const CACHE_FILE = path.join(config.DATA_DIR, 'media-cache.json');
 
 function ensureCacheFile() {
   if (!fs.existsSync(CACHE_FILE)) {
-    fs.writeFileSync(CACHE_FILE, '{}', 'utf8');
+    write.sync(CACHE_FILE, '{}');
   }
 }
 
@@ -27,12 +27,12 @@ async function loadCache() {
     try {
       ensureCacheFile();
       const raw = await fs.promises.readFile(CACHE_FILE, 'utf8');
-      _cache    = JSON.parse(raw);
+      _cache    = Object.assign(Object.create(null), JSON.parse(raw));
       _loadedAt = now;
       return _cache;
     } catch (err) {
       log.error('MediaCache', `Cache Load → Error → ${err.message}`);
-      _cache    = {};
+      _cache    = Object.create(null);
       _loadedAt = now;
       return _cache;
     } finally {
