@@ -16,6 +16,14 @@ const log       = require('./logger');
 const events    = require('./events');
 const EVENT_TYPES = require('../shared/events.json');
 const SWEEP_STATE_FILE = path.join(__dirname, '../data/sweep-state.json');
+
+function tracesOf(items) {
+  if (!Array.isArray(items)) return '-';
+  const set = new Set();
+  for (const i of items) { if (i && i.traceId) set.add(i.traceId); }
+  return set.size === 0 ? '-' : Array.from(set).join(',');
+}
+
 let batchTimer    = null;
 let batchExpiresAt = null;
 let isSweeping    = false;
@@ -126,13 +134,13 @@ async function runSweep() {
       try {
         series = await fetchSonarrMetadata(seriesId);
       } catch (err) {
-        log.error('Sweeper', `Metadata Fetch (Sonarr) → Error → ID: ${seriesId} | ${err.message}`);
+        log.error('Sweeper', `Metadata Fetch (Sonarr) → Error → ID: ${seriesId} | Traces: [${tracesOf(episodes)}] | ${err.message}`);
         continue;
       }
       const caption  = buildCaption(series, episodes);
       const photoUrl = getShowPosterUrl(series);
       if (!photoUrl) {
-        log.warn('Sweeper', `Message Prep (Sonarr) → Skipped → Missing poster for "${series.title}"`);
+        log.warn('Sweeper', `Message Prep (Sonarr) → Skipped → Missing poster for "${series.title}" | Traces: [${tracesOf(episodes)}]`);
         continue;
       }
       messages.push({ photoUrl, caption });
@@ -144,8 +152,9 @@ async function runSweep() {
         poster:    photoUrl,
         details:   `${episodes.length} Episode${episodes.length > 1 ? 's' : ''}`,
         timestamp: new Date().toISOString(),
+        traces:    tracesOf(episodes),
       });
-      log.info('Sweeper', `Message Prep (Sonarr) → Success → "${series.title}" (${episodes.length} episode(s))`);
+      log.info('Sweeper', `Message Prep (Sonarr) → Success → "${series.title}" (${episodes.length} episode(s)) | Traces: [${tracesOf(episodes)}]`);
       events.emit(
         EVENT_TYPES.SWEEP_ITEM_READY,
         'info',
@@ -160,11 +169,11 @@ async function runSweep() {
       try {
         ({ movie, tmdbMovie, omdbData } = await fetchRadarrMetadata(movieId, activeMode));
       } catch (err) {
-        log.error('Sweeper', `Metadata Fetch (Radarr) → Error → ID: ${movieId} | ${err.message}`);
+        log.error('Sweeper', `Metadata Fetch (Radarr) → Error → ID: ${movieId} | Traces: [${tracesOf(radarrGroups[movieId])}] | ${err.message}`);
         continue;
       }
       if (!movie) {
-        log.warn('Sweeper', `Message Prep (Radarr) → Skipped → Metadata unavailable for ID: ${movieId}`);
+        log.warn('Sweeper', `Message Prep (Radarr) → Skipped → Metadata unavailable for ID: ${movieId} | Traces: [${tracesOf(radarrGroups[movieId])}]`);
         continue;
       }
       const enriched = await enrichRadarrMedia(movie, tmdbMovie, omdbData, activeMode);
@@ -175,7 +184,7 @@ async function runSweep() {
       const { caption, pass, length } = buildMovieCaption(movie, tmdbMovie, ratings);
       const photoUrl = getMoviePosterUrl(movie);
       if (!photoUrl) {
-        log.warn('Sweeper', `Message Prep (Radarr) → Skipped → Missing poster for "${movie.title}"`);
+        log.warn('Sweeper', `Message Prep (Radarr) → Skipped → Missing poster for "${movie.title}" | Traces: [${tracesOf(radarrGroups[movieId])}]`);
         continue;
       }
       messages.push({ photoUrl, caption });
@@ -196,8 +205,9 @@ async function runSweep() {
         imdbId:   movie.imdbId  || null,
         tmdbId:   movie.tmdbId  || null,
         language: config.tmdb.language,
+        traces:   tracesOf(radarrGroups[movieId]),
       });
-      log.info('Sweeper', `Message Prep (Radarr) → Success → "${movie.title}" | Pass: ${pass} | Length: ${length}`);
+      log.info('Sweeper', `Message Prep (Radarr) → Success → "${movie.title}" | Pass: ${pass} | Length: ${length} | Traces: [${tracesOf(radarrGroups[movieId])}]`);
       events.emit(
         EVENT_TYPES.SWEEP_ITEM_READY,
         'info',
@@ -217,7 +227,7 @@ async function runSweep() {
     sentCount = successful.length;
     const errorCount = failed.length;
     for (const fail of failed) {
-      log.error('Sweeper', `Telegram Dispatch → Error → "${fail.item.title}" | ${fail.error}`);
+      log.error('Sweeper', `Telegram Dispatch → Error → "${fail.item.title}" | Traces: [${fail.item.traces || '-'}] | ${fail.error}`);
       events.emit(
         EVENT_TYPES.SWEEP_TG_ERROR,
         'error',

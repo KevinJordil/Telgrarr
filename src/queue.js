@@ -38,7 +38,8 @@ async function enqueue(item) {
     data.push(item);
     fs.writeFileSync(QUEUE_FILE, JSON.stringify(data, null, 2), 'utf8');
     const source = item.source || 'unknown';
-    log.info('Queue', `Queue Append → Success → Source: [${source}] | Queue Length: ${data.length}`);
+    const trace  = item.traceId || '-';
+    log.info('Queue', `Queue Append → Success → Source: [${source}] | Trace: [${trace}] | Queue Length: ${data.length}`);
   } catch (err) {
     log.error('Queue', `Queue Append → Error → ${err.message}`);
     throw err;
