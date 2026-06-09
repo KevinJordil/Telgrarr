@@ -85,13 +85,16 @@ async function set(key, data) {
     const cacheData = await loadCache();
     cacheData[key]  = { data, cachedAt: new Date().toISOString() };
 
-    const maxEntries = config.mediaCache?.maxEntries ?? 500;
+    const maxEntries = config.mediaCache.maxEntries;
     const keys = Object.keys(cacheData);
     if (keys.length > maxEntries) {
-      const oldest = keys.reduce((a, b) =>
-        new Date(cacheData[a].cachedAt) < new Date(cacheData[b].cachedAt) ? a : b
-      );
-      delete cacheData[oldest];
+      const sorted = keys
+        .map(k => [k, new Date(cacheData[k].cachedAt).getTime()])
+        .sort((a, b) => a[1] - b[1]);
+      const overflow = keys.length - maxEntries;
+      for (let i = 0; i < overflow; i++) {
+        delete cacheData[sorted[i][0]];
+      }
     }
 
     await saveCache(cacheData);
