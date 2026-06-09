@@ -6,18 +6,21 @@ const log    = require('./logger');
 const config = require('./config');
 
 const ROOT_DIR   = path.join(__dirname, '..');
-const DATA_DIR   = path.join(__dirname, '../data');
+const DATA_DIR   = config.DATA_DIR;
 const BACKUP_DIR = path.join(__dirname, '../backups');
 
 // Architecture: Strict Manifest Mapping handles files across different directories
 const BACKUP_MANIFEST = [
-  { name: 'auth.json',        dir: DATA_DIR },
-  { name: 'blacklist.json',   dir: DATA_DIR },
-  { name: 'config.json',      dir: DATA_DIR },
-  { name: 'history.json',     dir: DATA_DIR },
-  { name: 'sessions.json',    dir: DATA_DIR },
-  { name: 'templates.json',   dir: DATA_DIR },
-  { name: 'media_queue.json', dir: ROOT_DIR } // Critical Addition: Preserves pending webhooks
+  { name: 'auth.json',           dir: DATA_DIR },
+  { name: 'blacklist.json',      dir: DATA_DIR },
+  { name: 'config.json',         dir: DATA_DIR },
+  { name: 'events-ring.json',    dir: DATA_DIR }, // F.9 (O4): SSE ring buffer
+  { name: 'history.json',        dir: DATA_DIR },
+  { name: 'recovery.json',       dir: DATA_DIR }, // F.9 (O4): system-state recovery marker
+  { name: 'sessions.json',       dir: DATA_DIR },
+  { name: 'system-release.json', dir: DATA_DIR }, // F.9 (O4): release/version ledger
+  { name: 'templates.json',      dir: DATA_DIR },
+  { name: 'media_queue.json',    dir: ROOT_DIR }  // Critical Addition: Preserves pending webhooks
 ];
 
 function createBackup() {
