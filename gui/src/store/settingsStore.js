@@ -122,6 +122,18 @@ const useSettingsStore = create((set) => {
         const { [sectionId]: _omitted, ...rest } = s.testStatus;
         return { testStatus: rest };
       }),
+
+    revealSecret: async (key) => {
+      // SD-9: fetch one unmasked secret on explicit user action. The plaintext
+      // is returned to the caller for transient display only; never stored in
+      // global state (keeps the reveal blast radius to the component).
+      try {
+        const res = await api.post('/settings/reveal', { key });
+        return { success: true, value: res.data.value };
+      } catch (err) {
+        return { success: false, error: err.response?.data?.error || err.message };
+      }
+    },
   };
 });
 
