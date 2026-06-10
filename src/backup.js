@@ -125,7 +125,9 @@ function deleteBackup(filename) {
 
 function pruneBackups() {
   try {
-    const retainCount = config.backup.retainCount || 5;
+    // R13: config always merges DEFAULTS.backup.retainCount; trust it (no duplicated
+    // literal) and an explicit 0 is honored (previously masked to 5 by the || fallback).
+    const retainCount = config.backup.retainCount;
     const backups = listBackups();
     if (backups.length > retainCount) {
       const toDelete = backups.slice(retainCount);
