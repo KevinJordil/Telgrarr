@@ -71,7 +71,7 @@ function validateRequiredCredentials(cfg, context) {
   if (context === 'boot') {
     log.warn('Config', 'App is booting with missing credentials. Please use the GUI to configure them.');
   } else {
-    throw new Error(`Missing required credentials: ${missing.join(', ')}`);
+    log.warn('Config', `Missing required credentials: ${missing.join(', ')} — continuing without them; configure via the GUI (also reported by /health).`);
   }
 }
 
@@ -163,7 +163,6 @@ async function save(incoming) {
     return current;
   }
   const merged = deepMerge(current, incoming);
-  validateRequiredCredentials(merged, 'reload');
   const { DEFAULTS: _d, reload: _r, save: _s, templates: _t, ...toWrite } = merged;
   await new Promise((resolve, reject) => {
     writeFileAtomic(
