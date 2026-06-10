@@ -255,5 +255,9 @@ Object.defineProperty(config, 'WEBHOOK_SECRET', { value: (process.env.WEBHOOK_SE
 Object.defineProperty(config, 'COOKIE_SECURE', { value: (process.env.COOKIE_SECURE != null && process.env.COOKIE_SECURE !== '') ? process.env.COOKIE_SECURE : 'auto', enumerable: false, configurable: true });
 // C10: logs directory path. Env-resolved at boot (RESTART required to pick up a change).
 Object.defineProperty(config, 'LOGS_DIR',      { value: (process.env.LOGS_DIR != null && process.env.LOGS_DIR !== '') ? process.env.LOGS_DIR : path.join(__dirname, '../logs'), enumerable: false, configurable: true });
+// FU-4: backups directory path. Env-resolved at boot (RESTART required); default
+// <root>/backups — joins DATA_DIR/LOGS_DIR in the env model. Non-enumerable so
+// save() never persists it and reload() never wipes it.
+Object.defineProperty(config, 'BACKUP_DIR',    { value: (process.env.BACKUP_DIR != null && process.env.BACKUP_DIR !== '') ? process.env.BACKUP_DIR : path.join(__dirname, '../backups'), enumerable: false, configurable: true });
 
 module.exports = config;
