@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { createRequire } from 'module';
 import path from 'path';
+import os from 'os';
 import fs from 'fs';
 
 const require = createRequire(import.meta.url);
@@ -21,7 +22,7 @@ function stub(relPath, exports) {
   require.cache[resolved] = { id: resolved, filename: resolved, loaded: true, exports };
 }
 
-stub('../src/config.js', { batchWindowMs: 1000, tmdb: { language: 'en' } });
+stub('../src/config.js', { DATA_DIR: path.join(os.tmpdir(), 'telgrarr-sweeper-test-' + process.pid), batchWindowMs: 1000, tmdb: { language: 'en' } });
 stub('../src/logger.js', { info() {}, warn() {}, error() {}, audit() {}, setLevel() {} });
 stub('../src/events.js', { emit: (type, ...rest) => { emitCalls.push({ type, rest }); } });
 stub('../src/queue.js', {
@@ -52,10 +53,11 @@ stub('../src/services/notifications.js', {
 stub('../src/templates.js', { getActiveMode: () => 'standard' });
 stub('write-file-atomic', (file, data, cb) => { if (cb) cb(null); });
 
-const srcDir = path.dirname(require.resolve('../src/sweeper.js'));
-const SWEEP_STATE = path.join(srcDir, '../data/sweep-state.json');
+// Guard ANY sweep-state.json path (hardcoded or DATA_DIR-derived) so the test can
+// never read or unlink real app state, regardless of how SWEEP_STATE_FILE resolves.
 const origExists = fs.existsSync;
-fs.existsSync = (p) => (p === SWEEP_STATE ? false : origExists(p));
+fs.existsSync = (p) =>
+  (typeof p === 'string' && p.endsWith('sweep-state.json') ? false : origExists(p));
 afterAll(() => { fs.existsSync = origExists; });
 
 let sweeper;
