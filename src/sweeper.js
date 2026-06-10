@@ -252,8 +252,12 @@ async function runSweep() {
       return;
     }
     try {
-      await refreshLibrary();
-      events.emit(EVENT_TYPES.SWEEP_EMBY, 'info', 'Sweeper', '🔃 Emby library refresh triggered', {});
+      // F.10/O5: emit SWEEP_EMBY only when a refresh actually fired; an unconfigured
+      // Emby skip returns false and must NOT surface a phantom success event.
+      const embyRefreshed = await refreshLibrary();
+      if (embyRefreshed) {
+        events.emit(EVENT_TYPES.SWEEP_EMBY, 'info', 'Sweeper', '🔃 Emby library refresh triggered', {});
+      }
     } catch (err) {
       log.error('Sweeper', `Library Refresh (Emby) → Error → ${err.message}`);
     }
