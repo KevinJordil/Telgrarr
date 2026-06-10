@@ -1,9 +1,13 @@
+// @ts-check
 'use strict';
 
 const config = require('../config');
 const { SETTINGS_SCHEMA } = require('../settings-schema');
 const { maskSecret } = require('./secrets');
 
+/**
+ * @returns {Object} settings with secret fields replaced by the mask sentinel
+ */
 function getMaskedSettings() {
   // Pre-seed root keys in the exact legacy order to pass strict stringified byte-for-byte parity,
   // while remaining Open/Closed to new schema fields being appended dynamically.

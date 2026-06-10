@@ -1,15 +1,29 @@
+// @ts-check
 'use strict';
 
 const SECRET_MASK = '••••••••';
 
+/**
+ * @param {*} val
+ * @returns {boolean}
+ */
 function isMasked(val) {
   return typeof val === 'string' && val.includes(SECRET_MASK);
 }
 
+/**
+ * @param {*} bodyVal
+ * @param {*} configVal
+ * @returns {*}
+ */
 function pickSecret(bodyVal, configVal) {
   return (bodyVal && !isMasked(bodyVal)) ? bodyVal : configVal;
 }
 
+/**
+ * @param {*} val
+ * @returns {*}
+ */
 function maskSecret(val) {
   if (!val || typeof val !== 'string' || val.trim() === '') return val;
   // H1 (SD-6): present secret -> constant mask sentinel (no value-derived
