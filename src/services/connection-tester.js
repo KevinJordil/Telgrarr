@@ -1,9 +1,12 @@
 'use strict';
 
 const axios = require('axios');
+const config = require('../config');
 
-const AI_DEFAULT_ENDPOINT = 'https://models.inference.ai.azure.com/chat/completions';
-const AI_DEFAULT_MODEL = 'gpt-4o-mini';
+// R02/R13: single source of truth for these defaults is DEFAULTS.translator (config),
+// not a second hardcoded copy.
+const AI_DEFAULT_ENDPOINT = config.DEFAULTS.translator.endpoint;
+const AI_DEFAULT_MODEL = config.DEFAULTS.translator.model;
 
 async function testTelegram(botToken, chatId) {
   try {
