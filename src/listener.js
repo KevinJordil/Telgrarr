@@ -120,9 +120,21 @@ app.get('*', (req, res) => {
 
 // -- Start --------------------------------------------------------------------
 function startListener() {
-  app.listen(config.PORT, config.HOST, () => {
+  const server = app.listen(config.PORT, config.HOST, () => {
     log.info('Listener', 'Running on ' + config.HOST + ':' + config.PORT);
   });
+  // H0: fail-soft on bind error. A free port never emits 'error' (parity with
+  // today). EADDRINUSE => one actionable line + clean non-zero exit (no raw stack
+  // dump). Any other bind error is surfaced, never swallowed (Rule 10).
+  server.on('error', (err) => {
+    if (err && err.code === 'EADDRINUSE') {
+      log.error('Listener', 'Bind → port ' + config.PORT + ' in use → set PORT env var or edit Port in Settings then restart');
+    } else {
+      log.error('Listener', 'Bind → failed → ' + ((err && (err.code || err.message)) || String(err)));
+    }
+    process.exit(1);
+  });
+  return server;
 }
 
 module.exports = { startListener };
