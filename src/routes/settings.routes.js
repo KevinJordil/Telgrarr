@@ -220,4 +220,24 @@ router.post('/settings/test/translator-deepl', requireAuth, async (req, res) => 
   }
 });
 
+// ── POST /api/settings/reveal ────────────────────
+// SD-9: return exactly ONE unmasked secret on explicit, auth-gated action.
+// Never a bulk dump; only schema-declared secret fields are revealable; the
+// secret value is never written to logs.
+const SECRET_KEYS = new Set(
+  SETTINGS_SCHEMA.flatMap(s => s.fields)
+    .filter(f => f.type === 'secret')
+    .map(f => f.key)
+);
+router.post('/settings/reveal', requireAuth, (req, res) => {
+  const key = req.body && req.body.key;
+  if (typeof key !== 'string' || !SECRET_KEYS.has(key)) {
+    log.warn('Settings', 'Secret Reveal → Rejected → Unknown or non-secret field');
+    return res.status(400).json({ error: 'Unknown or non-secret field' });
+  }
+  const value = key.split('.').reduce((o, k) => (o != null ? o[k] : undefined), config);
+  log.info('Settings', `Secret Reveal → Success → Field: ${key}`);
+  return res.json({ key, value: typeof value === 'string' ? value : '' });
+});
+
 module.exports = router;
