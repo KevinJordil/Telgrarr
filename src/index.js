@@ -61,7 +61,9 @@ function checkAndRunBackup() {
     if (!config.backup || !config.backup.enabled) return;
     const backups = backup.listBackups();
     const now = Date.now();
-    const intervalMs = (config.backup.intervalDays || 7) * 24 * 60 * 60 * 1000;
+    // R13: config always merges DEFAULTS.backup.intervalDays; trust it (no duplicated
+    // literal) and an explicit 0 is honored (previously masked to 7 by the || fallback).
+    const intervalMs = config.backup.intervalDays * 24 * 60 * 60 * 1000;
     if (backups.length === 0 || (now - new Date(backups[0].createdAt).getTime() > intervalMs)) {
       log.info('Backup', 'Backup Scheduler → Schedule Met → Background backup initiated');
       backup.createBackup();
