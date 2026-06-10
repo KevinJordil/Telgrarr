@@ -46,15 +46,19 @@ const DEFAULTS = {
   }
 };
 
-const REQUIRED_CREDENTIALS = [
-  ['sonarr',   'apiKey',     'Sonarr API key'],
-  ['sonarr',   'baseUrl',    'Sonarr base URL'],
-  ['radarr',   'apiKey',     'Radarr API key'],
-  ['radarr',   'baseUrl',    'Radarr base URL'],
-  ['telegram', 'botToken',   'Telegram bot token'],
-  ['telegram', 'chatId',     'Telegram chat ID'],
-  ['tmdb',     'apiKey',     'TMDB API key'],
-];
+// G.1: REQUIRED_CREDENTIALS is DERIVED from settings-schema bootRequired hints —
+// the single source of truth for the boot/health required-credential set and its
+// labels. Order follows schema (= GUI Settings) section order, which is the order
+// surfaced in /health checks.config.missing. Add a required credential by setting
+// bootRequired on its schema field; never re-list it here.
+const REQUIRED_CREDENTIALS = SETTINGS_SCHEMA.flatMap(section =>
+  (section.fields || [])
+    .filter(field => field.bootRequired)
+    .map(field => {
+      const dot = field.key.indexOf('.');
+      return [field.key.slice(0, dot), field.key.slice(dot + 1), field.bootRequired];
+    })
+);
 
 function getMissingCredentials(cfg) {
   if (!cfg) cfg = config;
