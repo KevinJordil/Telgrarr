@@ -17,7 +17,7 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
   });
 
   it('exports exactly 7 pure probes', () => {
-    expect(probes.length, `Expected 7 probes, found ${probes.length}: ${probes.join(', ')}`).toBe(7);
+    expect(probes.length, `Expected 8 probes, found ${probes.length}: ${probes.join(', ')}`).toBe(8);
   });
 
   const probeArgs = {
@@ -27,7 +27,8 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
     testEmby: ['http://127.0.0.1:8096/Library/Refresh', 'embykey'],
     testOmdb: ['omdbkey'],
     testTranslatorAi: ['https://api.openai.com/v1/chat/completions', 'gpt-4o-mini', 'aikey'],
-    testTranslatorDeepl: ['deeplkey']
+    testSeerr: ['https://seerr.example'],
+      testTranslatorDeepl: ['deeplkey']
   };
 
   describe.each(probes)('Probe Contract: %s', (probeName) => {
@@ -70,6 +71,8 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
       if (probeName === 'testSonarr' || probeName === 'testRadarr') {
         expect(typeof result.version).toBe('string');
         expect(typeof result.appName).toBe('string');
+      } else if (probeName === 'testSeerr') {
+        expect(typeof result.version).toBe('string');
       } else if (probeName === 'testTranslatorDeepl') {
         expect(typeof result.character_count).toBe('number');
         expect(typeof result.character_limit).toBe('number');

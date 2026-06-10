@@ -68,6 +68,7 @@ const SETTINGS_SCHEMA = [
   },
   {
     id: 'seerr', title: 'Seerr', icon: 'Search',
+    testEndpoint: '/api/settings/test/seerr', testLabel: 'Test Connection',
     fields: [
       { key: 'seerr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'https://your-seerr-instance', required: false, rule: 'url' },
     ],

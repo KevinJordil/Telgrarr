@@ -15,7 +15,7 @@ const { validateSettings } = require('../settings/validator');
 const { needsRestart } = require('../settings/policy');
 const { pickSecret } = require('../settings/secrets');
 const {
-  testTelegram, testSonarr, testRadarr, testEmby, testOmdb,
+  testTelegram, testSonarr, testRadarr, testEmby, testSeerr, testOmdb,
   testTranslatorAi, testTranslatorDeepl,
   AI_DEFAULT_ENDPOINT, AI_DEFAULT_MODEL
 } = require('../services/connection-tester');
@@ -157,6 +157,19 @@ router.post('/settings/test/emby', requireAuth, async (req, res) => {
     return res.json({ success: true, message: result.message });
   } else {
     log.warn('Settings', `Integration Test (Emby) → Failed → ${result.error}`);
+    return res.status(400).json({ success: false, error: result.error });
+  }
+});
+
+// ── POST /api/settings/test/seerr ────────────────────────────
+router.post('/settings/test/seerr', requireAuth, async (req, res) => {
+  const rawUrl = (req.body && req.body.baseUrl) ? req.body.baseUrl : config.seerr.baseUrl;
+  const result = await testSeerr(rawUrl);
+  if (result.success) {
+    log.info('Settings', 'Integration Test (Seerr) → Success → System reachable');
+    return res.json({ success: true, version: result.version });
+  } else {
+    log.warn('Settings', `Integration Test (Seerr) → Failed → ${result.error}`);
     return res.status(400).json({ success: false, error: result.error });
   }
 });

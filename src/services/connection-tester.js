@@ -132,11 +132,26 @@ async function testTranslatorDeepl(deeplApiKey) {
   }
 }
 
+async function testSeerr(baseUrl) {
+  if (!baseUrl || baseUrl.trim() === '') {
+    return { success: false, error: 'Seerr URL is empty' };
+  }
+  try {
+    const cleanUrl = baseUrl.replace(/\/+$/, '');
+    const response = await axios.get(`${cleanUrl}/api/v1/status`, { timeout: 8000 });
+    return { success: true, version: response.data.version };
+  } catch (error) {
+    const msg = error.response ? `HTTP ${error.response.status} — check URL and port` : error.message;
+    return { success: false, error: msg };
+  }
+}
+
 module.exports = {
   testTelegram,
   testSonarr,
   testRadarr,
   testEmby,
+  testSeerr,
   testOmdb,
   testTranslatorAi,
   testTranslatorDeepl,
