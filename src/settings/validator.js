@@ -1,3 +1,4 @@
+// @ts-check
 'use strict';
 
 const { SETTINGS_SCHEMA } = require('../settings-schema');
@@ -35,6 +36,10 @@ function getVal(obj, keyPath) {
   return keyPath.split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), obj);
 }
 
+/**
+ * @param {Object} body settings patch to validate
+ * @returns {Array<{field:string,message:string}>} validation errors (empty = valid)
+ */
 function validateSettings(body) {
   const errors = [];
 
@@ -64,7 +69,7 @@ function validateSettings(body) {
 
   // 2. SCHEMA-DRIVEN BLOCK
   for (const section of SETTINGS_SCHEMA) {
-    for (const field of section.fields) {
+    for (const field of /** @type {any[]} */ (section.fields)) {
       const val = getVal(body, field.key);
       if (val === undefined) continue;
 
