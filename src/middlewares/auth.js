@@ -4,8 +4,9 @@ const fs          = require('fs');
 const path        = require('path');
 const writeAtomic = require('write-file-atomic');
 const { readCookie, COOKIE_NAME } = require('../auth/session-cookie');
+const config = require('../config');
 
-const SESSION_FILE = path.join(__dirname, '../../data/sessions.json');
+const SESSION_FILE = path.join(config.DATA_DIR, 'sessions.json');
 const activeSessions = new Map();
 
 /**

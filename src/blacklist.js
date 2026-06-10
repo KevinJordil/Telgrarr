@@ -4,8 +4,9 @@ const fs       = require('fs');
 const path     = require('path');
 const lockfile = require('proper-lockfile');
 const log      = require('./logger');
+const config   = require('./config');
 
-const BLACKLIST_FILE = path.join(__dirname, '../data/blacklist.json');
+const BLACKLIST_FILE = path.join(config.DATA_DIR, 'blacklist.json');
 
 const EMPTY = () => ({
   sonarr: { ids: [], paths: [] },

@@ -6,7 +6,11 @@ const writeFileAtomic = require('write-file-atomic');
 const EVENT_TYPES     = require('../shared/events.json');
 const VALID_EVENTS    = Object.values(EVENT_TYPES);
 
-const EVENTS_FILE = path.join(__dirname, '../data/events-ring.json');
+// FU-7: env-direct (NOT config.DATA_DIR). events.js loads within the
+// config->logger->events chain; requiring config here would re-form the RD-11
+// cycle. process.env.DATA_DIR resolves to the same value as config.DATA_DIR.
+const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, '../data');
+const EVENTS_FILE = path.join(DATA_DIR, 'events-ring.json');
 
 const bus = new EventEmitter();
 bus.setMaxListeners(20);

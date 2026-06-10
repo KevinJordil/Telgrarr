@@ -4,8 +4,9 @@ const fs              = require('fs');
 const path            = require('path');
 const writeFileAtomic = require('write-file-atomic');
 const log             = require('./logger');
+const config          = require('./config');
 
-const TEMPLATES_FILE = path.join(__dirname, '../data/templates.json');
+const TEMPLATES_FILE = path.join(config.DATA_DIR, 'templates.json');
 
 const DEFAULTS = {
   activeMode: 'default_ar',

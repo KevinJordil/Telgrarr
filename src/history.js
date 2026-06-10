@@ -2,8 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const lockfile = require('proper-lockfile');
 const log = require('./logger');
+const config = require('./config');
 
-const historyFile = path.join(__dirname, '../data/history.json');
+const historyFile = path.join(config.DATA_DIR, 'history.json');
 const MAX_HISTORY = 100;
 
 // 1. In-Memory Cache (Database speed)
