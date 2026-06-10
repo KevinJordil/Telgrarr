@@ -4,27 +4,28 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const config = require('../src/config.js');
 const { getMaskedSettings } = require('../src/settings/serializer.js');
+const { SECRET_MASK } = require('../src/settings/secrets.js');
 
 describe('Serializer Parity Harness (Phase A.3)', () => {
   let originalConfigSnapshot;
 
   beforeEach(() => {
-    // 1. Backup the original config state so we don't bleed into other tests
+    // Backup the original config state so we don't bleed into other tests
     originalConfigSnapshot = JSON.parse(JSON.stringify(config));
 
-    // 2. Inject a fixed fixture directly into the config singleton
+    // Inject a fixed fixture directly into the config singleton
     const fixture = {
       listenerPort: 3400,
       listenerHost: '0.0.0.0',
       batchWindowMs: 180000,
       queueFile: '/fake/path/media_queue.json', // Not in schema, should be ignored
-      sonarr: { baseUrl: 'http://sonarr', apiKey: 'sonarr_secret_key' }, // length 17
-      telegram: { botToken: '123456789:AAExxx', chatId: '-100', delayMs: 3000 }, // length 16
+      sonarr: { baseUrl: 'http://sonarr', apiKey: 'sonarr_secret_key' },
+      telegram: { botToken: '123456789:AAExxx', chatId: '-100', delayMs: 3000 },
       emby: { refreshUrl: '', apiKey: '' },
-      radarr: { baseUrl: 'http://radarr', apiKey: 'radarr_secret_key' }, // length 17
-      tmdb: { apiKey: 'short', language: 'en-US' }, // length 5
+      radarr: { baseUrl: 'http://radarr', apiKey: 'radarr_secret_key' },
+      tmdb: { apiKey: 'short', language: 'en-US' },
       seerr: { baseUrl: '' },
-      omdb: { apiKey: 'omdb_secret' }, // length 11
+      omdb: { apiKey: 'omdb_secret' },
       translator: { endpoint: 'url', model: 'gpt', apiKey: 'ai_secret', deeplApiKey: 'deepl_secret' },
       mediaCache: { ttlDays: 30, maxEntries: 500 },
       backup: { enabled: true, intervalDays: 7, retainCount: 5 },
@@ -53,10 +54,10 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
     Object.assign(config, originalConfigSnapshot);
   });
 
-  it('getMaskedSettings output is byte-stable (key order and masking)', () => {
+  it('getMaskedSettings output is byte-stable (key order and sentinel masking)', () => {
     const result = getMaskedSettings();
 
-    // ── ASSERTION 1: ROOT KEY ORDER (Legacy Byte-Stability) ────────────
+    // --- ASSERTION 1: ROOT KEY ORDER (Legacy Byte-Stability) ---
     const rootKeys = Object.keys(result);
     expect(rootKeys).toEqual([
       'listenerPort',
@@ -75,28 +76,27 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       'logging'
     ]);
 
-    // ── ASSERTION 2: SECRET MASKING LOGIC ──────────────────────────────
-    // From secrets.js:
-    // < 8 chars -> '••••••••'
-    // >= 8 chars -> slice(0, 3) + '••••••••' + slice(-4)
-    
-    expect(result.sonarr.apiKey).toBe('son••••••••_key');   // len 17
-    expect(result.tmdb.apiKey).toBe('••••••••');            // len 5
-    expect(result.telegram.botToken).toBe('123••••••••Exxx'); // len 16
+    // --- ASSERTION 2: SECRET MASKING CONTRACT (H1 / SD-6) ---
+    // Present secret -> constant SECRET_MASK sentinel (no value-derived chars,
+    // regardless of length). Empty stays ''. Real value only via reveal (H1.3).
+    expect(result.sonarr.apiKey).toBe(SECRET_MASK);
+    expect(result.tmdb.apiKey).toBe(SECRET_MASK);
+    expect(result.telegram.botToken).toBe(SECRET_MASK);
+    expect(result.emby.apiKey).toBe('');
 
-    // ── ASSERTION 3: FULL RECURSIVE SHAPE MATCH ────────────────────────
+    // --- ASSERTION 3: FULL RECURSIVE SHAPE MATCH ---
     expect(result).toEqual({
       listenerPort: 3400,
       listenerHost: '0.0.0.0',
       batchWindowMs: 180000,
-      sonarr: { baseUrl: 'http://sonarr', apiKey: 'son••••••••_key' },
-      telegram: { botToken: '123••••••••Exxx', chatId: '-100', delayMs: 3000 },
+      sonarr: { baseUrl: 'http://sonarr', apiKey: SECRET_MASK },
+      telegram: { botToken: SECRET_MASK, chatId: '-100', delayMs: 3000 },
       emby: { refreshUrl: '', apiKey: '' },
-      radarr: { baseUrl: 'http://radarr', apiKey: 'rad••••••••_key' },
-      tmdb: { apiKey: '••••••••', language: 'en-US' },
+      radarr: { baseUrl: 'http://radarr', apiKey: SECRET_MASK },
+      tmdb: { apiKey: SECRET_MASK, language: 'en-US' },
       seerr: { baseUrl: '' },
-      omdb: { apiKey: 'omd••••••••cret' },
-      translator: { endpoint: 'url', model: 'gpt', apiKey: 'ai_••••••••cret', deeplApiKey: 'dee••••••••cret' },
+      omdb: { apiKey: SECRET_MASK },
+      translator: { endpoint: 'url', model: 'gpt', apiKey: SECRET_MASK, deeplApiKey: SECRET_MASK },
       mediaCache: { ttlDays: 30, maxEntries: 500 },
       backup: { enabled: true, intervalDays: 7, retainCount: 5 },
       logging: {
@@ -109,8 +109,7 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       }
     });
 
-    // ── ASSERTION 4: NON-SCHEMA KEYS EXCLUDED ──────────────────────────
-    // queueFile was injected into config but should not leak into settings
+    // --- ASSERTION 4: NON-SCHEMA KEYS EXCLUDED ---
     expect(result.queueFile).toBeUndefined();
   });
 });
