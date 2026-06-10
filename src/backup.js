@@ -7,7 +7,7 @@ const config = require('./config');
 
 const ROOT_DIR   = path.join(__dirname, '..');
 const DATA_DIR   = config.DATA_DIR;
-const BACKUP_DIR = path.join(__dirname, '../backups');
+const BACKUP_DIR = config.BACKUP_DIR;
 
 // Architecture: Strict Manifest Mapping handles files across different directories
 const BACKUP_MANIFEST = [

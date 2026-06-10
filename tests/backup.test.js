@@ -6,9 +6,9 @@ const require = createRequire(import.meta.url);
 
 // O6 / R13 guard: pruneBackups honors config.backup.retainCount exactly — including an
 // explicit 0 (the old `|| 5` masked it). fs is monkeypatched so the test simulates the
-// backups dir without touching real files (BACKUP_DIR is hardcoded to <root>/backups).
+// backups dir without touching real files (BACKUP_DIR is supplied by the stubbed config).
 
-const cfg = { DATA_DIR: '/tmp/telgrarr-backup-test', backup: { retainCount: 5 } };
+const cfg = { DATA_DIR: '/tmp/telgrarr-backup-test', BACKUP_DIR: '/tmp/telgrarr-backup-test/backups', backup: { retainCount: 5 } };
 
 function stub(spec, exports) {
   const r = require.resolve(spec);
