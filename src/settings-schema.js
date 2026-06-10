@@ -40,7 +40,7 @@ const SETTINGS_SCHEMA = [
     testEndpoint: '/api/settings/test/sonarr', testLabel: 'Test Connection',
     fields: [
       { key: 'sonarr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:8989', required: true, rule: 'url' },
-      { key: 'sonarr.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Sonarr API key', required: true },
+      { key: 'sonarr.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Sonarr API key', note: 'Found in Sonarr under Settings → General → API Key.', required: true },
     ],
   },
   {
@@ -48,15 +48,15 @@ const SETTINGS_SCHEMA = [
     testEndpoint: '/api/settings/test/radarr', testLabel: 'Test Connection',
     fields: [
       { key: 'radarr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:7878', required: true, rule: 'url' },
-      { key: 'radarr.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Radarr API key', required: true },
+      { key: 'radarr.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Radarr API key', note: 'Found in Radarr under Settings → General → API Key.', required: true },
     ],
   },
   {
-    id: 'emby', title: 'Emby', icon: 'Play',
+    id: 'emby', title: 'Emby / Jellyfin', icon: 'Play',
     testEndpoint: '/api/settings/test/emby', testLabel: 'Test Connection',
     fields: [
-      { key: 'emby.refreshUrl', label: 'Library Refresh URL', type: 'url', placeholder: 'https://your-emby/Library/Refresh', required: false, rule: 'url' },
-      { key: 'emby.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Emby API key', required: false },
+      { key: 'emby.refreshUrl', label: 'Library Refresh URL', type: 'url', placeholder: 'http://your-emby-or-jellyfin:8096/Library/Refresh', note: 'Emby and Jellyfin both use this endpoint. Find it under Dashboard → API Keys → copy your server URL and append /Library/Refresh. Leave empty to disable library refresh.', required: false, rule: 'url' },
+      { key: 'emby.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Emby or Jellyfin API key', note: 'Generate under Dashboard → API Keys. Required for the refresh to succeed.', required: false },
     ],
   },
   {
@@ -86,8 +86,8 @@ const SETTINGS_SCHEMA = [
     testEndpoint: '/api/settings/test/translator-ai', testLabel: 'Test AI Key',
     fields: [
       { key: 'translator.endpoint', label: 'API Endpoint (OpenAI Compatible)', type: 'url',
-        placeholder: 'https://api.openai.com/v1/chat/completions',
-        note: 'The chat completions endpoint for your AI provider (OpenAI, OpenRouter, Groq, etc.).', required: false, rule: 'url',
+        placeholder: 'https://models.inference.ai.azure.com/chat/completions',
+        note: 'Optional. The chat completions endpoint for your AI provider (OpenAI, OpenRouter, Groq, etc.). Leave empty to use the built-in default endpoint.', required: false, rule: 'url',
         nonWhitespaceIfProvided: true },
       { key: 'translator.model', label: 'AI Model', type: 'text',
         placeholder: 'gpt-4o-mini',
