@@ -75,6 +75,12 @@ function validateRequiredCredentials(cfg, context) {
   }
 }
 
+function warnIncompleteEmby(cfg) {
+  if (cfg.emby?.refreshUrl && !cfg.emby?.apiKey) {
+    log.warn('Config', 'Emby refreshUrl set without apiKey — Emby library refresh disabled until apiKey is provided.');
+  }
+}
+
 function deepMerge(base, override) {
   const out = Object.assign({}, base);
   for (const key of Object.keys(override ?? {})) {
@@ -101,6 +107,7 @@ function loadFromDisk(context = 'boot') {
     const { templates, DEFAULTS: _d, reload: _r, save: _s, ...clean } = raw;
     const merged = deepMerge(DEFAULTS, clean);
     validateRequiredCredentials(merged, context);
+    warnIncompleteEmby(merged);
     return merged;
   } catch (err) {
     if (context === 'boot') {
