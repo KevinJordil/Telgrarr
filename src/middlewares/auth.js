@@ -1,3 +1,4 @@
+// @ts-check
 'use strict';
 const fs          = require('fs');
 const path        = require('path');
@@ -7,6 +8,9 @@ const { readCookie, COOKIE_NAME } = require('../auth/session-cookie');
 const SESSION_FILE = path.join(__dirname, '../../data/sessions.json');
 const activeSessions = new Map();
 
+/**
+ * @returns {void}
+ */
 function loadSessions() {
   try {
     if (fs.existsSync(SESSION_FILE)) {
@@ -23,6 +27,9 @@ function loadSessions() {
 loadSessions();
 
 let _persistTimer = null;
+/**
+ * @returns {void} debounced session flush (30s)
+ */
 function persistSessions() {
   if (_persistTimer) return;
   _persistTimer = setTimeout(() => {
@@ -38,6 +45,9 @@ function persistSessions() {
   }, 30000);
 }
 
+/**
+ * @returns {Promise<void>} immediate session flush (SIGINT)
+ */
 async function flushSessions() {
   if (_persistTimer) {
     clearTimeout(_persistTimer);
@@ -51,6 +61,12 @@ async function flushSessions() {
   });
 }
 
+/**
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ * @returns {void} express middleware: 401 unless a valid session cookie
+ */
 function requireAuth(req, res, next) {
   // C.7c: cookie-only — legacy Bearer accepted-path removed (S4 complete).
   const token = readCookie(req, COOKIE_NAME);

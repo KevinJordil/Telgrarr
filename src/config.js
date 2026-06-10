@@ -1,3 +1,4 @@
+// @ts-check
 'use strict';
 const fs              = require('fs');
 const path            = require('path');
@@ -52,7 +53,7 @@ const DEFAULTS = {
 // surfaced in /health checks.config.missing. Add a required credential by setting
 // bootRequired on its schema field; never re-list it here.
 const REQUIRED_CREDENTIALS = SETTINGS_SCHEMA.flatMap(section =>
-  (section.fields || [])
+  (/** @type {any[]} */ (section.fields || []))
     .filter(field => field.bootRequired)
     .map(field => {
       const dot = field.key.indexOf('.');
@@ -60,6 +61,10 @@ const REQUIRED_CREDENTIALS = SETTINGS_SCHEMA.flatMap(section =>
     })
 );
 
+/**
+ * @param {*} [cfg] config object (defaults to live config)
+ * @returns {string[]} labels of missing required credentials
+ */
 function getMissingCredentials(cfg) {
   if (!cfg) cfg = config;
   const missing = [];
@@ -70,6 +75,11 @@ function getMissingCredentials(cfg) {
   return missing;
 }
 
+/**
+ * @param {*} cfg
+ * @param {string} context "boot" | "reload"
+ * @returns {void}
+ */
 function validateRequiredCredentials(cfg, context) {
   const missing = getMissingCredentials(cfg);
   if (missing.length === 0) return;
@@ -81,12 +91,21 @@ function validateRequiredCredentials(cfg, context) {
   }
 }
 
+/**
+ * @param {*} cfg
+ * @returns {void}
+ */
 function warnIncompleteEmby(cfg) {
   if (cfg.emby?.refreshUrl && !cfg.emby?.apiKey) {
     log.warn('Config', 'Emby refreshUrl set without apiKey — Emby library refresh disabled until apiKey is provided.');
   }
 }
 
+/**
+ * @param {*} base
+ * @param {*} [override]
+ * @returns {*} deep-merged copy
+ */
 function deepMerge(base, override) {
   const out = Object.assign({}, base);
   for (const key of Object.keys(override ?? {})) {
@@ -103,6 +122,10 @@ function deepMerge(base, override) {
   return out;
 }
 
+/**
+ * @param {string} [context] "boot" | "reload"
+ * @returns {*} merged config
+ */
 function loadFromDisk(context = 'boot') {
   if (!fs.existsSync(CONFIG_FILE)) {
     log.warn('Config', 'data/config.json not found — booting with empty defaults.');
@@ -127,6 +150,9 @@ function loadFromDisk(context = 'boot') {
 const config = loadFromDisk('boot');
 log.setLevel(config.logging && config.logging.level);
 
+/**
+ * @returns {void} hot-reload config in place
+ */
 function reload() {
   const fresh = loadFromDisk('reload');
   for (const key of Object.keys(config)) {
@@ -145,6 +171,11 @@ function reload() {
   log.info('Config', 'Hot-reload complete — all modules updated.');
 }
 
+/**
+ * @param {*} current
+ * @param {*} incoming
+ * @returns {boolean}
+ */
 function isDirty(current, incoming) {
   const merged = deepMerge(current, incoming);
   for (const key of Object.keys(incoming)) {
@@ -159,6 +190,10 @@ function isDirty(current, incoming) {
   return false;
 }
 
+/**
+ * @param {*} incoming settings patch
+ * @returns {Promise<*>} saved/merged config
+ */
 async function save(incoming) {
   // H1.2 (SD-6): never persist a mask. For each schema secret field, if the
   // incoming value is the masked sentinel, drop it so the stored value is kept
