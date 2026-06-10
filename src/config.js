@@ -3,6 +3,8 @@ const fs              = require('fs');
 const path            = require('path');
 const writeFileAtomic = require('write-file-atomic');
 const log             = require('./logger');
+const { SETTINGS_SCHEMA } = require('./settings-schema');
+const { isMasked }        = require('./settings/secrets');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../data');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
@@ -154,6 +156,22 @@ function isDirty(current, incoming) {
 }
 
 async function save(incoming) {
+  // H1.2 (SD-6): never persist a mask. For each schema secret field, if the
+  // incoming value is the masked sentinel, drop it so the stored value is kept
+  // (deepMerge falls back to current). Runs before isDirty so an untouched
+  // secret cannot mark the save dirty or overwrite the real key on disk.
+  if (incoming && typeof incoming === 'object') {
+    for (const section of SETTINGS_SCHEMA) {
+      for (const field of section.fields) {
+        if (field.type !== 'secret') continue;
+        const keys = field.key.split('.');
+        let obj = incoming;
+        for (let i = 0; i < keys.length - 1 && obj != null; i++) obj = obj[keys[i]];
+        const leaf = keys[keys.length - 1];
+        if (obj != null && isMasked(obj[leaf])) delete obj[leaf];
+      }
+    }
+  }
   const current = {};
   for (const key of Object.keys(config)) {
     if (typeof config[key] !== 'function') current[key] = config[key];
