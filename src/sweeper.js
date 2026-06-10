@@ -15,7 +15,7 @@ const config    = require('./config');
 const log       = require('./logger');
 const events    = require('./events');
 const EVENT_TYPES = require('../shared/events.json');
-const SWEEP_STATE_FILE = path.join(__dirname, '../data/sweep-state.json');
+const SWEEP_STATE_FILE = path.join(config.DATA_DIR, 'sweep-state.json');
 
 function tracesOf(items) {
   if (!Array.isArray(items)) return '-';
