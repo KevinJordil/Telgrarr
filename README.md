@@ -84,7 +84,7 @@ win.
 | Variable          | Default              | Description |
 | ----------------- | -------------------- | ----------- |
 | `DATA_DIR`        | `<project>/data`     | Where all persistent state lives (config, queue, auth, sessions, ledger, backups). |
-| `PORT`            | `3400`               | HTTP listen port. |
+| `PORT`            | `3400`               | HTTP listen port. If it is already in use, Telgrarr logs one fatal line and exits non-zero (no GUI starts); set a free port via this variable or `.env`, then restart. The in-GUI Port field applies only after a successful boot. |
 | `HOST`            | `0.0.0.0`            | HTTP listen address. |
 | `CORS_ORIGIN`     | _(unset)_            | Empty -> no CORS header -> same-origin only (correct when this process serves the GUI). Set to exactly one origin (scheme + host + port) if the GUI is hosted separately. |
 | `TRUST_PROXY`     | _(off)_              | Express `trust proxy`. Empty / `false` / `0` = off. `true` / `1` = trust one proxy. Numeric N = N hops. IP / CIDR / list also accepted. |
