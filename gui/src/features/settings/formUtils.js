@@ -1,3 +1,12 @@
+export const SECRET_MASK = '••••••••';
+
+// Mirrors backend src/settings/secrets.js SECRET_MASK. Keep in sync: the server
+// serializes a set secret to this sentinel; the GUI uses it to distinguish a
+// stored secret shown as the mask from a new value the user has typed.
+export function isMaskedValue(v) {
+  return typeof v === 'string' && v.includes(SECRET_MASK);
+}
+
 export function getVal(obj, key) {
   if (!obj) return '';
   return key.split('.').reduce((o, k) => (o != null ? o[k] : ''), obj) ?? '';
@@ -27,10 +36,11 @@ export function buildPayload(draft, fields) {
 
 export function isDirty(draft, settings, fields) {
   if (!draft || !settings) return false;
-  return fields.some((field) => {
-    if (field.type === 'secret') return getVal(draft, field.key) !== '';
-    return String(getVal(draft, field.key)) !== String(getVal(settings, field.key));
-  });
+  // H1 (SD-6): secrets compare like any field. An untouched secret holds the
+  // server mask (== settings) so it is not dirty; a typed value differs => dirty.
+  return fields.some((field) =>
+    String(getVal(draft, field.key)) !== String(getVal(settings, field.key))
+  );
 }
 
 export function mergeSettingsIntoDraft(prevDraft, nextSettings, schema) {
@@ -39,8 +49,13 @@ export function mergeSettingsIntoDraft(prevDraft, nextSettings, schema) {
   for (const section of schema) {
     for (const field of section.fields) {
       if (field.type === 'secret') {
-        const existingSecretDraft = prevDraft ? getVal(prevDraft, field.key) : '';
-        nextDraft = setVal(nextDraft, field.key, existingSecretDraft || '');
+        // H1 (SD-6): default a secret draft to the server masked sentinel so a
+        // set key reads as 'set' (not blank). Preserve an unsaved typed edit (a
+        // real value, not the mask) across re-merges.
+        const serverMasked = getVal(nextSettings, field.key);
+        const userTyped = prevDraft ? getVal(prevDraft, field.key) : '';
+        const keepTyped = userTyped && userTyped !== serverMasked && !isMaskedValue(userTyped);
+        nextDraft = setVal(nextDraft, field.key, keepTyped ? userTyped : serverMasked);
       }
     }
   }
