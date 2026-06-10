@@ -18,8 +18,8 @@ const SETTINGS_SCHEMA = [
     id: 'telegram', title: 'Telegram', icon: 'Send',
     testEndpoint: '/api/settings/test/telegram', testLabel: 'Send Test Message',
     fields: [
-      { key: 'telegram.botToken', label: 'Bot Token', type: 'secret', placeholder: '1234567890:AAExxx...', required: true, rule: 'telegramToken' },
-      { key: 'telegram.chatId', label: 'Chat ID', type: 'text', placeholder: '-1001234567890', required: true, rule: 'chatId' },
+      { key: 'telegram.botToken', bootRequired: 'Telegram bot token', label: 'Bot Token', type: 'secret', placeholder: '1234567890:AAExxx...', required: true, rule: 'telegramToken' },
+      { key: 'telegram.chatId', bootRequired: 'Telegram chat ID', label: 'Chat ID', type: 'text', placeholder: '-1001234567890', required: true, rule: 'chatId' },
       { key: 'telegram.delayMs', label: 'Delay Between Messages', type: 'slider',
         min: 500, max: 10000, step: 500, displayFormat: 'ms-to-s',
         note: 'Pause between consecutive messages in one batch.', integer: true,
@@ -39,16 +39,16 @@ const SETTINGS_SCHEMA = [
     id: 'sonarr', title: 'Sonarr', icon: 'Tv',
     testEndpoint: '/api/settings/test/sonarr', testLabel: 'Test Connection',
     fields: [
-      { key: 'sonarr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:8989', required: true, rule: 'url' },
-      { key: 'sonarr.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Sonarr API key', note: 'Found in Sonarr under Settings → General → API Key.', required: true },
+      { key: 'sonarr.baseUrl', bootRequired: 'Sonarr base URL', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:8989', required: true, rule: 'url' },
+      { key: 'sonarr.apiKey', bootRequired: 'Sonarr API key', label: 'API Key', type: 'secret', placeholder: 'Your Sonarr API key', note: 'Found in Sonarr under Settings → General → API Key.', required: true },
     ],
   },
   {
     id: 'radarr', title: 'Radarr', icon: 'Film',
     testEndpoint: '/api/settings/test/radarr', testLabel: 'Test Connection',
     fields: [
-      { key: 'radarr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:7878', required: true, rule: 'url' },
-      { key: 'radarr.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your Radarr API key', note: 'Found in Radarr under Settings → General → API Key.', required: true },
+      { key: 'radarr.baseUrl', bootRequired: 'Radarr base URL', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:7878', required: true, rule: 'url' },
+      { key: 'radarr.apiKey', bootRequired: 'Radarr API key', label: 'API Key', type: 'secret', placeholder: 'Your Radarr API key', note: 'Found in Radarr under Settings → General → API Key.', required: true },
     ],
   },
   {
@@ -62,7 +62,7 @@ const SETTINGS_SCHEMA = [
   {
     id: 'tmdb', title: 'TMDb', icon: 'Star',
     fields: [
-      { key: 'tmdb.apiKey', label: 'API Key', type: 'secret', placeholder: 'Your TMDb v3 API key', required: true },
+      { key: 'tmdb.apiKey', bootRequired: 'TMDB API key', label: 'API Key', type: 'secret', placeholder: 'Your TMDb v3 API key', required: true },
       { key: 'tmdb.language', label: 'Metadata Language', type: 'select', options: TMDB_LANGUAGES },
     ],
   },
