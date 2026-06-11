@@ -79,27 +79,43 @@ function restoreBackup(filename) {
     if (!fs.existsSync(backupPath)) {
       throw new Error('Backup file not found.');
     }
-    
+
     const zip = new AdmZip(backupPath);
     const tempDir = path.join(BACKUP_DIR, '.restore_tmp_' + Date.now());
     fs.mkdirSync(tempDir, { recursive: true });
-    
-    // 1. Extract to isolated temp folder (Eliminates Live-Fire Collision)
-    zip.extractAllTo(tempDir, true);
-    
-    // 2. Atomically swap files into their correct locations (DATA_DIR or ROOT_DIR)
-    for (const item of BACKUP_MANIFEST) {
-      const extractedFile = path.join(tempDir, item.name);
-      const targetFile = path.join(item.dir, item.name);
-      
-      if (fs.existsSync(extractedFile)) {
-        fs.renameSync(extractedFile, targetFile);
+
+    try {
+      // Phase 1 — extract ONLY manifest-named entries (never trusts a zip entry's
+      // path, so a crafted backup cannot path-traverse) and validate each parses
+      // as JSON BEFORE touching any live file (a corrupt/truncated backup must not
+      // brick the app by half-overwriting config.json / auth.json).
+      const staged = [];
+      for (const item of BACKUP_MANIFEST) {
+        const entry = zip.getEntry(item.name);
+        if (!entry) continue;
+        const data = entry.getData();
+        if (item.name.endsWith('.json')) {
+          try {
+            JSON.parse(data.toString('utf8'));
+          } catch (e) {
+            throw new Error(`Corrupt entry in backup: ${item.name}`);
+          }
+        }
+        fs.writeFileSync(path.join(tempDir, item.name), data);
+        staged.push(item);
       }
+      if (staged.length === 0) {
+        throw new Error('Backup contains no recognized data files.');
+      }
+
+      // Phase 2 — swap staged files into place, only after ALL validated.
+      for (const item of staged) {
+        fs.renameSync(path.join(tempDir, item.name), path.join(item.dir, item.name));
+      }
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
     }
-    
-    // 3. Cleanup temp directory
-    fs.rmSync(tempDir, { recursive: true, force: true });
-    
+
     log.audit('Backup', `Backup Restore → Success → Filename: [${filename}]`);
     return { success: true };
   } catch (error) {
