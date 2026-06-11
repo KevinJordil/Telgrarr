@@ -28,6 +28,7 @@ module.exports = {
         // TRUST_PROXY:    '',                         // default: '' (off); 'true' behind one proxy
         // WEBHOOK_SECRET: '',                         // consumed in Phase C (webhook auth)
         // COOKIE_SECURE:  'auto',                     // consumed in Phase C (cookie Secure)
+        // RESTART_CAPABLE: '1',  // GUI self-restart capability. Unset = auto-detect PM2; '1'/'true'/'yes'/'on' forces on (systemd, Docker); '0'/'false'/'no'/'off' forces off.
       },
     },
   ],
