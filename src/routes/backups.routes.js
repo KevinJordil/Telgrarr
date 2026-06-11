@@ -1,10 +1,10 @@
 'use strict';
 const express = require('express');
-const { exec } = require('child_process');
 const router = express.Router();
 const { requireAuth } = require('../middlewares/auth');
 const backupEngine = require('../backup');
 const log = require('../logger');
+const { requestRestart } = require('../services/restart');
 
 router.get('/backups', requireAuth, (req, res) => {
   try {
@@ -37,18 +37,8 @@ router.post('/backups/restore/:filename', requireAuth, (req, res) => {
     
     if (result.success) {
       log.audit('Backup', `Backup Restore → Complete → Triggering Restart`);
+      res.on('finish', () => requestRestart('backup-restore'));
       res.json({ success: true, needsRestart: true });
-      
-      // Agnostic restart command survives Node/NVM upgrades
-      setTimeout(() => {
-        exec('pm2 restart telgrarr', (err) => {
-          if (err) {
-            log.error('Backup', `PM2 Restart → Error → ${err.message}`);
-          } else {
-            log.audit('Backup', `PM2 Restart → Success → System back online`);
-          }
-        });
-      }, 1000);
     } else {
       res.status(400).json(result);
     }

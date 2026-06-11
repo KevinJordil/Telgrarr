@@ -1,8 +1,6 @@
 'use strict';
 
 const express = require('express');
-const { exec } = require('child_process');
-const path = require('path');
 const router = express.Router();
 
 const config = require('../config');
@@ -20,8 +18,7 @@ const {
   AI_DEFAULT_ENDPOINT, AI_DEFAULT_MODEL
 } = require('../services/connection-tester');
 const { SETTINGS_SCHEMA } = require('../settings-schema');
-
-const PM2_BIN = path.join(path.dirname(process.execPath), 'pm2');
+const { requestRestart } = require('../services/restart');
 
 // ── GET /api/settings/schema ─────────────────────────────────────────────────
 router.get('/settings/schema', requireAuth, (req, res) => {
@@ -69,17 +66,7 @@ router.post('/settings', requireAuth, async (req, res) => {
         {}
       );
 
-      res.on('finish', () => {
-        setTimeout(() => {
-          exec(`"${PM2_BIN}" restart telgrarr`, (err) => {
-            if (err) {
-              log.error('Settings', `System Restart → Error → PM2 execution failed: ${err.message}`);
-            } else {
-              log.audit('Settings', 'System Restart → Success → PM2 executed');
-            }
-          });
-        }, 200);
-      });
+      res.on('finish', () => requestRestart('settings-save'));
 
       res.json({
         success: true,
