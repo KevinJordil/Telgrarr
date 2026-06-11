@@ -3,6 +3,7 @@ const path = require('path');
 const readline = require('readline');
 require('./src/load-env')();   // RD-1: honor .env for DATA_DIR (no .env => no-op)
 const { hashNew } = require('./src/auth/credentials');
+const writeFileAtomic = require('write-file-atomic');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const MIN_PASSWORD_LENGTH = 8;   // mirrors auth.routes change/recover (S7)
@@ -64,7 +65,8 @@ async function main() {
 
   const authData = { username, ...hashNew(password) };
   const filePath = path.join(DATA_DIR, 'auth.json');
-  fs.writeFileSync(filePath, JSON.stringify(authData, null, 2));
+  fs.mkdirSync(DATA_DIR, { recursive: true });   // PR-1: fresh clone has no data/ (gitignored)
+  writeFileAtomic.sync(filePath, JSON.stringify(authData, null, 2), { mode: 0o600 });   // PR-2: owner-only
   console.log(`\n✅  SUCCESS: Secure credentials generated and saved to ${filePath}`);
 }
 

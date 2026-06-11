@@ -9,6 +9,10 @@ const { isMasked }        = require('./settings/secrets');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../data');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+// PR-1: data/ is gitignored, so a fresh clone (or fresh DATA_DIR) has no such
+// directory. Ensure it exists at boot so loadFromDisk(), save(), and every other
+// DATA_DIR consumer never ENOENT. recursive:true is idempotent (no-op if present).
+fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const DEFAULTS = {
   listenerPort:  3400,
