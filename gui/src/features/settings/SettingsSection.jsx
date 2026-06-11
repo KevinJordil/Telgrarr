@@ -19,8 +19,6 @@ export default function SettingsSection({
   testStatus,
   sectionIsDirty,
   handleChange,
-  showSecrets,
-  setShowSecrets,
   handleTest,
   handleTestDeepl,
   handleSaveRequest
@@ -60,8 +58,6 @@ export default function SettingsSection({
               field={field}
               value={getVal(draft, field.key)}
               onChange={(v) => handleChange(field.key, v)}
-              showSecret={!!showSecrets[field.key]}
-              onToggleSecret={() => setShowSecrets((p) => ({ ...p, [field.key]: !p[field.key] }))}
             />
           ))}
 

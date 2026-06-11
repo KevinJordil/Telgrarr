@@ -18,7 +18,6 @@ export default function Settings() {
     saveStatus, testStatus,
   } = useSettingsStore();
 
-  const [showSecrets, setShowSecrets] = useState({});
   const [expanded, setExpanded] = useState({});
   const [confirm, setConfirm] = useState({
     open: false,
@@ -140,8 +139,6 @@ export default function Settings() {
             testStatus={testStatus}
             sectionIsDirty={sectionIsDirty}
             handleChange={handleChange}
-            showSecrets={showSecrets}
-            setShowSecrets={setShowSecrets}
             handleTest={handleTest}
             handleTestDeepl={handleTestDeepl}
             handleSaveRequest={handleSaveRequest}
