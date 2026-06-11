@@ -6,6 +6,12 @@ const writeFileAtomic = require('write-file-atomic');
 const EVENT_TYPES     = require('../shared/events.json');
 const VALID_EVENTS    = Object.values(EVENT_TYPES);
 
+// LOGGING CONSTRAINT (R11 divergence — Master §7): this module logs via console.*
+// deliberately. logger.js requires events.js (it mirrors each log line into the SSE
+// event ring), so events.js must NOT require logger — that would re-form a
+// logger->events->logger cycle, and a logging failure could then recurse.
+// console is the only safe sink at this layer. Sibling to RD-11/RD-12.
+
 // FU-7: env-direct (NOT config.DATA_DIR). events.js loads within the
 // config->logger->events chain; requiring config here would re-form the RD-11
 // cycle. process.env.DATA_DIR resolves to the same value as config.DATA_DIR.
