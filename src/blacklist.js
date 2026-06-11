@@ -31,7 +31,11 @@ function readFromDisk() {
 async function writeToDisk(data) {
   let release;
   try {
-    fs.writeFileSync(BLACKLIST_FILE, JSON.stringify(data, null, 2), { flag: 'a' });
+    // proper-lockfile requires the target to exist; create it ONCE if missing.
+    // Do NOT append the payload here — appending to existing content yields
+    // invalid JSON if the lock below fails or the process dies before the
+    // truncating write, silently emptying the blacklist on the next read.
+    if (!fs.existsSync(BLACKLIST_FILE)) fs.writeFileSync(BLACKLIST_FILE, JSON.stringify(EMPTY(), null, 2));
     release = await lockfile.lock(BLACKLIST_FILE, { retries: { retries: 5, minTimeout: 50 } });
     fs.writeFileSync(BLACKLIST_FILE, JSON.stringify(data, null, 2), 'utf8');
   } finally {
