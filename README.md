@@ -83,7 +83,7 @@ win.
 
 | Variable          | Default              | Description |
 | ----------------- | -------------------- | ----------- |
-| `DATA_DIR`        | `<project>/data`     | Where all persistent state lives (config, queue, auth, sessions, ledger, backups). |
+| `DATA_DIR`        | `<project>/data`     | Where all persistent state lives (config, queue, auth, sessions, ledger). |
 | `PORT`            | `3400`               | HTTP listen port. If it is already in use, Telgrarr logs one fatal line and exits non-zero (no GUI starts); set a free port via this variable or `.env`, then restart. The in-GUI Port field applies only after a successful boot. |
 | `HOST`            | `0.0.0.0`            | HTTP listen address. |
 | `CORS_ORIGIN`     | _(unset)_            | Empty -> no CORS header -> same-origin only (correct when this process serves the GUI). Set to exactly one origin (scheme + host + port) if the GUI is hosted separately. |
@@ -218,10 +218,10 @@ HTTP with `X-Forwarded-Proto: https`.
   regenerable media cache is excluded.
 - **Logs** live in `<project>/logs/` (`app.log`, `error.log`, `audit.log`)
   with size-based rotation.
-- **Recovery**: `npm run recover` runs `scripts/gen-recovery.js`, which
-  reconstructs `data/recovery.json` from current state. On startup, the
-  recovery sweep resumes any in-flight queue work after an unclean
-  shutdown.
+- **Recovery**: `npm run recover` runs `scripts/gen-recovery.js`, which writes a single-use, 15-minute
+    password-reset token to `recovery.json` under `DATA_DIR`. Enter it in the
+    GUI **Forgot Password** dialog to set a new password; the token is burned
+    on first use. (Automatic crash/queue recovery is separate and runs on boot.)
 - **Single-instance**: a file lock on `<DATA_DIR>/.telgrarr.lock`
   prevents two processes from sharing one data directory. A second
   instance fails fast on boot.
@@ -248,7 +248,7 @@ the dev server from a non-localhost host.
 Tests:
 
 ~~~bash
-npm run test:run                   # vitest — must pass: 75 tests
+npm run test:run                   # vitest — full unit suite
 npm run test:e2e                   # Playwright end-to-end smoke
 ~~~
 
