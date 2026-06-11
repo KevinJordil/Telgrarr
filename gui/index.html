@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Telgrarr</title>
 
     <link rel="icon" type="image/png" href="/favicon.png" />
@@ -13,6 +13,21 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Telgrarr" />
+    <script>
+      // Pre-paint theme: set data-theme from storage BEFORE first paint (no FOUC).
+      // theme-color meta can't read a CSS var, so it mirrors --color-bg per theme.
+      (function () {
+        try {
+          var valid = { dark: 1, light: 1, neon: 1, telegram: 1 };
+          var t = localStorage.getItem('telgrarr_theme');
+          if (!valid[t]) t = 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+          var bg = { dark: '#0a0a0a', light: '#f8fafc', neon: '#0b0f19', telegram: '#17212b' };
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m && bg[t]) m.setAttribute('content', bg[t]);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
