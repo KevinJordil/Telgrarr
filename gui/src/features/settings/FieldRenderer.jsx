@@ -1,12 +1,94 @@
 import React from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Copy, Check } from 'lucide-react';
+import useSettingsStore from '../../store/settingsStore';
+import { isMaskedValue } from './formUtils';
 
 const DISPLAY_FORMATTERS = {
   'ms-to-s': (v) => `${(v / 1000).toFixed(1)}s`,
   'ms-to-min': (v) => `${Math.round(v / 60000)} min`,
 };
 
-export default function FieldRenderer({ field, value, onChange, showSecret, onToggleSecret }) {
+function SecretInput({ field, value, onChange, base }) {
+  const revealSecret = useSettingsStore((s) => s.revealSecret);
+  const [revealed, setRevealed] = React.useState(null);
+  const [forceShow, setForceShow] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+
+  const masked = isMaskedValue(value);
+  const hasValue = !!(value && String(value).length);
+
+  const fetchReal = async () => {
+    if (revealed !== null) return revealed;
+    setBusy(true);
+    const res = await revealSecret(field.key);
+    setBusy(false);
+    if (res && res.success) { setRevealed(res.value); return res.value; }
+    return null;
+  };
+
+  const handleEye = async () => {
+    if (masked) {
+      if (revealed !== null) setRevealed(null);
+      else await fetchReal();
+    } else {
+      setForceShow((s) => !s);
+    }
+  };
+
+  const handleCopy = async () => {
+    const v = masked ? await fetchReal() : value;
+    if (v) {
+      try {
+        await navigator.clipboard.writeText(v);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      } catch (e) { /* clipboard unavailable */ }
+    }
+  };
+
+  const handleType = (v) => {
+    if (revealed !== null) setRevealed(null);
+    onChange(v);
+  };
+
+  const open = (masked && revealed !== null) || (!masked && forceShow);
+  const displayValue = (masked && revealed !== null) ? revealed : (value || '');
+
+  return (
+    <div className="relative">
+      <input
+        type={open ? 'text' : 'password'}
+        value={displayValue}
+        onChange={(e) => handleType(e.target.value)}
+        placeholder={field.placeholder}
+        className={`${base} pr-20`}
+      />
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleCopy}
+          disabled={!hasValue || busy}
+          title="Copy"
+          className="text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+        >
+          {copied ? <Check className="w-4 h-4 text-telgrarr-purple" /> : <Copy className="w-4 h-4" />}
+        </button>
+        <button
+          type="button"
+          onClick={handleEye}
+          disabled={!hasValue || busy}
+          title={open ? 'Hide' : 'Reveal'}
+          className="text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+        >
+          {open ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function FieldRenderer({ field, value, onChange }) {
   const base = 'w-full bg-telgrarr-black/60 border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-none focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm';
   const displayFn = field.displayFormat ? DISPLAY_FORMATTERS[field.displayFormat] : null;
 
@@ -25,22 +107,7 @@ export default function FieldRenderer({ field, value, onChange, showSecret, onTo
       )}
 
       {field.type === 'secret' && (
-        <div className="relative">
-          <input
-            type={showSecret ? 'text' : 'password'}
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder}
-            className={`${base} pr-11`}
-          />
-          <button
-            type="button"
-            onClick={onToggleSecret}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-telgrarr-muted hover:text-telgrarr-text transition-colors"
-          >
-            {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
+        <SecretInput field={field} value={value} onChange={onChange} base={base} />
       )}
 
       {field.type === 'slider' && (
