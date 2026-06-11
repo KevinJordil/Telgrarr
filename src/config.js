@@ -264,4 +264,23 @@ Object.defineProperty(config, 'LOGS_DIR',      { value: (process.env.LOGS_DIR !=
 // save() never persists it and reload() never wipes it.
 Object.defineProperty(config, 'BACKUP_DIR',    { value: (process.env.BACKUP_DIR != null && process.env.BACKUP_DIR !== '') ? process.env.BACKUP_DIR : path.join(__dirname, '../backups'), enumerable: false, configurable: true });
 
+// H3.1: env-override transparency. Which B.1 portability fields are env-sourced.
+// Predicates MIRROR the B.1 resolution above and must stay in sync with it.
+// Non-enumerable like the B.1 vars, so it never leaks into serialized config (ND-7).
+const _envSet = (k) => process.env[k] != null && process.env[k] !== '';
+Object.defineProperty(config, 'envOverrides', {
+  value: {
+    PORT:           _envSet('PORT'),
+    HOST:           _envSet('HOST'),
+    // CORS_ORIGIN / TRUST_PROXY: an explicitly-set EMPTY value is still env-managed
+    // (RD-2), so match the resolution's "!= null" check (no "!== ''").
+    CORS_ORIGIN:    process.env.CORS_ORIGIN != null,
+    TRUST_PROXY:    process.env.TRUST_PROXY != null,
+    WEBHOOK_SECRET: _envSet('WEBHOOK_SECRET'),
+    COOKIE_SECURE:  _envSet('COOKIE_SECURE'),
+  },
+  enumerable: false,
+  configurable: true,
+});
+
 module.exports = config;
