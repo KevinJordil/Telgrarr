@@ -56,6 +56,7 @@ app.use('/api', require('./routes/blacklist.routes'));
 app.use('/api', require('./routes/templates.routes'));
 app.use('/api', require('./routes/backups.routes'));
 app.use('/api', require('./routes/about.routes'));
+app.use('/api', require('./routes/system.routes'));
 app.use('/api/preview', require('./routes/preview.routes'));
 app.use('/hooks', require('./routes/webhooks.routes'));
 
