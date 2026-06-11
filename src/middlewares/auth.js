@@ -5,6 +5,7 @@ const path        = require('path');
 const writeAtomic = require('write-file-atomic');
 const { readCookie, COOKIE_NAME } = require('../auth/session-cookie');
 const config = require('../config');
+const log = require('../logger');
 
 const SESSION_FILE = path.join(config.DATA_DIR, 'sessions.json');
 const activeSessions = new Map();
@@ -22,7 +23,7 @@ function loadSessions() {
       }
     }
   } catch (err) {
-    console.error('[Auth] Failed to load sessions:', err.message);
+    log.error('Auth', `Sessions Load → Error → ${err.message}`);
   }
 }
 loadSessions();
@@ -38,10 +39,10 @@ function persistSessions() {
     try {
       const data = JSON.stringify(Object.fromEntries(activeSessions), null, 2);
       writeAtomic(SESSION_FILE, data, (err) => {
-        if (err) console.error('[Auth] Failed to save sessions:', err.message);
+        if (err) log.error('Auth', `Sessions Save → Error → ${err.message}`);
       });
     } catch (err) {
-      console.error('[Auth] Serialization error:', err.message);
+      log.error('Auth', `Sessions Serialize → Error → ${err.message}`);
     }
   }, 30000);
 }
