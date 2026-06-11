@@ -19,6 +19,7 @@ const useSettingsStore = create((set) => {
     error: null,
     saveStatus: {},
     testStatus: {},
+    systemInfo: { restartCapable: false, version: null },
 
     fetchSettings: async () => {
       set({ loading: true, error: null });
@@ -132,6 +133,17 @@ const useSettingsStore = create((set) => {
         return { success: true, value: res.data.value };
       } catch (err) {
         return { success: false, error: err.response?.data?.error || err.message };
+      }
+    },
+
+    fetchSystemInfo: async () => {
+      try {
+        const res = await api.get('/system/info');
+        set({ systemInfo: res.data });
+      } catch {
+        // Auxiliary probe: a failure must NOT blank the settings page. Degrade to
+        // the safe default so the GUI offers manual restart, not a false promise.
+        set({ systemInfo: { restartCapable: false, version: null } });
       }
     },
   };
