@@ -2,17 +2,22 @@
 // [H2.1a] Single restart authority (SRP). The ONLY module that decides whether
 // an automatic restart is possible and the ONLY one that triggers one.
 //
-// CAPABILITY is an EXPLICIT operator declaration via RESTART_CAPABLE, never
-// inferred from supervisor internals. A respawning manager (PM2 autorestart,
-// systemd Restart=always, Docker restart policy) sets RESTART_CAPABLE=1.
-// Inferring from PM2 pm_id is intentionally REJECTED: it false-positives when a
-// PM2 app runs autorestart:false, claiming a capability the deployment lacks.
-// Absent the flag we refuse and the caller surfaces manual guidance (SD-4).
+// CAPABILITY: can THIS process come back if it exits? An explicit operator
+// override wins; otherwise auto-detect PM2 (the reference supervisor).
+//   RESTART_CAPABLE=1|true|yes|on  -> force ON  (systemd Restart=always, Docker)
+//   RESTART_CAPABLE=0|false|no|off -> force OFF (PM2 with autorestart disabled)
+//   unset -> capable iff PM2-managed (PM2 injects PM2_HOME and, autorestart on by
+//   default, respawns on exit). The GUI poll has a recovery timeout, so an
+//   over-optimistic "capable" degrades to manual guidance rather than hanging.
 const log = require('../logger');
 
 function isRestartCapable() {
-  const v = String(process.env.RESTART_CAPABLE ?? '').trim().toLowerCase();
-  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+  const raw = process.env.RESTART_CAPABLE;
+  if (raw !== undefined && String(raw).trim() !== '') {
+    const v = String(raw).trim().toLowerCase();
+    return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+  }
+  return Boolean(process.env.PM2_HOME);
 }
 
 // Graceful self-restart by REUSING the existing shutdown orchestrator (index.js
