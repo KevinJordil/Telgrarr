@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, XCircle, Loader2, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, XCircle, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import useSettingsStore from '../store/settingsStore';
 import ConfirmModal from '../components/ConfirmModal';
 import { buildPayload } from '../features/settings/formUtils';
@@ -13,7 +13,7 @@ import useRestartPoll from '../features/settings/hooks/useRestartPoll';
 export default function Settings() {
   const {
     settings, schema, loading, error,
-    fetchSettings, fetchSchema,
+    fetchSettings, fetchSchema, fetchSystemInfo,
     saveSection, testConnection,
     saveStatus, testStatus,
   } = useSettingsStore();
@@ -31,12 +31,13 @@ export default function Settings() {
 
   const { draft, handleChange, sectionIsDirty } = useSettingsDraft(settings, schema);
   const { handleTest, handleTestDeepl } = useConnectionTest(draft, testConnection);
-  const { restarting, startRestartPoll } = useRestartPoll(fetchSettings);
+  const { restarting, manualRestart, startRestartPoll, dismissManualRestart } = useRestartPoll(fetchSettings);
 
   useEffect(() => {
     fetchSettings();
     fetchSchema();
-  }, [fetchSettings, fetchSchema]);
+    fetchSystemInfo();
+  }, [fetchSettings, fetchSchema, fetchSystemInfo]);
 
   const openConfirm = (opts) => {
     setConfirm({
@@ -156,6 +157,26 @@ export default function Settings() {
           <RefreshCw className="w-10 h-10 text-telgrarr-purple animate-spin" />
           <p className="text-telgrarr-text font-semibold">Backend restarting…</p>
           <p className="text-telgrarr-muted text-sm">Do not refresh your browser.</p>
+        </div>
+      )}
+
+      {manualRestart && (
+        <div className="fixed bottom-24 inset-x-4 z-50 mx-auto max-w-lg">
+          <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 backdrop-blur-sm">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-telgrarr-text text-sm font-semibold">Manual restart required</p>
+              <p className="text-telgrarr-muted text-xs mt-0.5">
+                Your changes were saved but will not take effect until the backend restarts. This deployment cannot restart itself; restart the service manually.
+              </p>
+            </div>
+            <button
+              onClick={dismissManualRestart}
+              className="text-telgrarr-muted hover:text-telgrarr-text text-xs font-semibold shrink-0"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
