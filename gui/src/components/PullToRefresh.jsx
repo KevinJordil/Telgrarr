@@ -1,127 +1,103 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 
-export default function PullToRefresh({ children, className = '' }) {
+// Pull-to-refresh wrapper. Owns the page scroll region.
+// - onRefresh: async () => void. If provided, a soft refresh is awaited (no full
+//   page reload). If omitted, falls back to a hard reload (legacy behavior).
+// - disabled: skip the gesture entirely (e.g. edit pages where a refresh would
+//   discard in-progress input).
+export default function PullToRefresh({ children, className = '', onRefresh, disabled = false }) {
   const [pullY, setPullY] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [phase, setPhase] = useState('idle'); // idle | pulling | refreshing
+  const reduceMotion = useReducedMotion();
 
   const startX = useRef(0);
   const startY = useRef(0);
-  const isTracking = useRef(false);
-  const isPulling = useRef(false);
-  const gestureLocked = useRef(false);
+  const tracking = useRef(false);
+  const pulling = useRef(false);
+  const locked = useRef(false);
   const scrollRef = useRef(null);
 
   const THRESHOLD = 80;
-  const MAX_PULL = 150;
-  const LOCKED_Y = 60;
+  const MAX_PULL = 140;
+  const LOCKED_Y = 56;
   const INTENT_SLOP = 10;
   const AXIS_BIAS = 8;
 
-  const resetGesture = () => {
-    isTracking.current = false;
-    isPulling.current = false;
-    gestureLocked.current = false;
-  };
+  const reset = () => { tracking.current = false; pulling.current = false; locked.current = false; };
 
-  const handleTouchStart = (e) => {
+  const settle = () => { setPhase('idle'); setPullY(0); };
+
+  const doRefresh = useCallback(async () => {
+    setPhase('refreshing');
+    setPullY(LOCKED_Y);
+    if (!onRefresh) { window.location.reload(); return; }
+    try { await onRefresh(); } catch (e) { /* swallow — settle regardless */ }
+    settle();
+  }, [onRefresh]);
+
+  const onTouchStart = (e) => {
     const el = scrollRef.current;
-    if (!el || isRefreshing) return;
-
+    if (!el || disabled || phase === 'refreshing') return;
     if (el.scrollTop <= 0) {
       startX.current = e.touches[0].clientX;
       startY.current = e.touches[0].clientY;
-      isTracking.current = true;
-      isPulling.current = false;
-      gestureLocked.current = false;
-    } else {
-      resetGesture();
-      setPullY(0);
-    }
+      tracking.current = true; pulling.current = false; locked.current = false;
+    } else { reset(); }
   };
 
-  const handleTouchEnd = () => {
-    if (!isTracking.current && !isPulling.current) {
-      resetGesture();
-      return;
-    }
-
-    if (isPulling.current && pullY >= THRESHOLD) {
-      setIsRefreshing(true);
-      setPullY(LOCKED_Y);
-      resetGesture();
-      setTimeout(() => {
-        window.location.reload();
-      }, 400);
-      return;
-    }
-
-    resetGesture();
-    setPullY(0);
+  const onTouchEnd = () => {
+    if (pulling.current && pullY >= THRESHOLD) { reset(); doRefresh(); return; }
+    reset();
+    if (phase !== 'refreshing') settle();
   };
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-
-    const preventNative = (e) => {
-      if (isRefreshing || !isTracking.current) return;
-
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      const deltaX = currentX - startX.current;
-      const deltaY = currentY - startY.current;
-      const absX = Math.abs(deltaX);
-      const absY = Math.abs(deltaY);
-
-      if (!gestureLocked.current) {
-        if (absX < INTENT_SLOP && absY < INTENT_SLOP) return;
-
-        if (deltaY > 0 && absY > absX + AXIS_BIAS && el.scrollTop <= 0) {
-          gestureLocked.current = true;
-          isPulling.current = true;
-        } else {
-          resetGesture();
-          setPullY(0);
-          return;
-        }
+    const onMove = (e) => {
+      if (disabled || phase === 'refreshing' || !tracking.current) return;
+      const dx = e.touches[0].clientX - startX.current;
+      const dy = e.touches[0].clientY - startY.current;
+      const ax = Math.abs(dx), ay = Math.abs(dy);
+      if (!locked.current) {
+        if (ax < INTENT_SLOP && ay < INTENT_SLOP) return;
+        if (dy > 0 && ay > ax + AXIS_BIAS && el.scrollTop <= 0) {
+          locked.current = true; pulling.current = true; setPhase('pulling');
+        } else { reset(); return; }
       }
-
-      if (!isPulling.current) return;
-
-      if (deltaY > 0 && el.scrollTop <= 0) {
-        const resistance = deltaY < THRESHOLD
-          ? deltaY
-          : THRESHOLD + (deltaY - THRESHOLD) * 0.4;
-
-        setPullY(Math.min(resistance, MAX_PULL));
-
+      if (!pulling.current) return;
+      if (dy > 0 && el.scrollTop <= 0) {
+        const resist = dy < THRESHOLD ? dy : THRESHOLD + (dy - THRESHOLD) * 0.4;
+        setPullY(Math.min(resist, MAX_PULL));
         if (e.cancelable) e.preventDefault();
-      } else {
-        resetGesture();
-        setPullY(0);
-      }
+      } else { reset(); settle(); }
     };
+    el.addEventListener('touchmove', onMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onMove);
+  }, [disabled, phase]);
 
-    el.addEventListener('touchmove', preventNative, { passive: false });
-    return () => el.removeEventListener('touchmove', preventNative);
-  }, [isRefreshing]);
+  const progress = Math.min(pullY / THRESHOLD, 1);
+  const spinnerActive = phase === 'refreshing' || pullY > 0;
+  const spinnerY = (phase === 'refreshing' ? LOCKED_Y : pullY) - 44;
 
   return (
-    <div className={`relative w-full h-full overflow-hidden bg-transparent ${className}`.trim()}>
-      <div className="absolute top-0 w-full flex justify-center items-start pt-5 z-0">
+    <div className={`relative w-full h-full overflow-hidden ${className}`.trim()}>
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center pt-3">
         <motion.div
+          initial={false}
           animate={{
-            rotate: isRefreshing ? 360 : (pullY / THRESHOLD) * 180,
+            y: spinnerY,
+            opacity: spinnerActive ? (phase === 'refreshing' ? 1 : progress) : 0,
+            rotate: reduceMotion ? 0 : (phase === 'refreshing' ? 360 : progress * 270),
           }}
           transition={
-            isRefreshing
-              ? { repeat: Infinity, duration: 1, ease: 'linear' }
-              : { duration: 0 }
+            phase === 'refreshing' && !reduceMotion
+              ? { rotate: { repeat: Infinity, duration: 0.9, ease: 'linear' }, default: { type: 'spring', stiffness: 400, damping: 32 } }
+              : (phase === 'pulling' ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 32 })
           }
-          className="bg-telgrarr-surface border border-telgrarr-border shadow-md rounded-full p-2 text-telgrarr-purple"
-          style={{ opacity: Math.min(pullY / (THRESHOLD * 0.8), 1) }}
+          className="rounded-full bg-telgrarr-surface border border-telgrarr-border shadow-card p-2 text-telgrarr-purple"
         >
           <RefreshCw className="w-5 h-5" />
         </motion.div>
@@ -129,15 +105,11 @@ export default function PullToRefresh({ children, className = '' }) {
 
       <motion.div
         ref={scrollRef}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        animate={{ y: isRefreshing ? LOCKED_Y : pullY }}
-        transition={
-          isPulling.current
-            ? { duration: 0 }
-            : { type: 'spring', bounce: 0.3, duration: 0.4 }
-        }
-        className="w-full h-full overflow-y-auto overscroll-y-none relative z-10"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        animate={{ y: phase === 'refreshing' ? LOCKED_Y : pullY }}
+        transition={phase === 'pulling' ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 36 }}
+        className="w-full h-full overflow-y-auto overscroll-y-contain relative z-10"
       >
         {children}
       </motion.div>
