@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, XCircle, Loader2, RefreshCw } from 'lucide-react';
 import useSettingsStore from '../store/settingsStore';
 import ConfirmModal from '../components/ConfirmModal';
-import { setVal, buildPayload } from '../features/settings/formUtils';
+import { buildPayload } from '../features/settings/formUtils';
 import SecurityPanel from '../features/settings/panels/SecurityPanel';
 import BackupPanel from '../features/settings/panels/BackupPanel';
 import SettingsSection from '../features/settings/SettingsSection';
@@ -29,7 +29,7 @@ export default function Settings() {
     danger: false,
   });
 
-  const { draft, setDraft, handleChange, sectionIsDirty } = useSettingsDraft(settings, schema);
+  const { draft, handleChange, sectionIsDirty } = useSettingsDraft(settings, schema);
   const { handleTest, handleTestDeepl } = useConnectionTest(draft, testConnection);
   const { restarting, startRestartPoll } = useRestartPoll(fetchSettings);
 
@@ -74,18 +74,10 @@ export default function Settings() {
       onConfirm: async () => {
         const result = await saveSection(sectionId, payload);
         if (result.success) {
-          setDraft((prev) => {
-            let next = { ...prev };
-            const sec = schema.find((s) => s.id === sectionId);
-            if (sec) {
-              sec.fields.forEach((f) => {
-                if (f.type === 'secret') {
-                  next = setVal(next, f.key, '');
-                }
-              });
-            }
-            return next;
-          });
+          // B1-A: do NOT blank secret drafts here. saveSection refreshes
+          // store.settings with the masked response; useSettingsDraft's effect
+          // rebuilds the draft (secrets -> sentinel) via mergeSettingsIntoDraft,
+          // so the field reads as 'set' instead of going blank.
           if (result.needsRestart) startRestartPoll();
         }
       }
