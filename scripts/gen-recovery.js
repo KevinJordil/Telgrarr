@@ -1,9 +1,12 @@
 'use strict';
+const fs          = require('fs');
 const path        = require('path');
 const crypto      = require('crypto');
 const writeAtomic = require('write-file-atomic');
+require('../src/load-env')();   // RD-1: honor .env for DATA_DIR (no .env => no-op)
 
-const RECOVERY_FILE = path.join(__dirname, '../data/recovery.json');
+const DATA_DIR      = process.env.DATA_DIR || path.join(__dirname, '../data');
+const RECOVERY_FILE = path.join(DATA_DIR, 'recovery.json');
 const TTL_MS        = 15 * 60 * 1000;
 
 try {
@@ -11,7 +14,8 @@ try {
   const expiry  = Date.now() + TTL_MS;
   const payload = JSON.stringify({ token, expiry }, null, 2);
 
-  writeAtomic.sync(RECOVERY_FILE, payload);
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  writeAtomic.sync(RECOVERY_FILE, payload, { mode: 0o600 });
 
   const expiresAt = new Date(expiry).toLocaleTimeString();
 

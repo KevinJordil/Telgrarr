@@ -38,7 +38,7 @@ function persistSessions() {
     _persistTimer = null;
     try {
       const data = JSON.stringify(Object.fromEntries(activeSessions), null, 2);
-      writeAtomic(SESSION_FILE, data, (err) => {
+      writeAtomic(SESSION_FILE, data, { mode: 0o600 }, (err) => {
         if (err) log.error('Auth', `Sessions Save → Error → ${err.message}`);
       });
     } catch (err) {
@@ -57,7 +57,7 @@ async function flushSessions() {
   }
   const data = JSON.stringify(Object.fromEntries(activeSessions), null, 2);
   await new Promise((resolve, reject) => {
-    writeAtomic(SESSION_FILE, data, (err) => {
+    writeAtomic(SESSION_FILE, data, { mode: 0o600 }, (err) => {
       if (err) reject(err); else resolve();
     });
   });

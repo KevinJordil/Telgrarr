@@ -228,7 +228,7 @@ async function save(incoming) {
   await new Promise((resolve, reject) => {
     writeFileAtomic(
       CONFIG_FILE,
-      JSON.stringify(toWrite, null, 2),
+      JSON.stringify(toWrite, null, 2), { mode: 0o600 }, /* PR-2: holds secrets — owner-only */
       (err) => { if (err) reject(err); else resolve(); }
     );
   });
