@@ -105,7 +105,7 @@ function RecoveryModal({ onClose }) {
                 </div>
               </div>
               <p className="text-xs text-telgrarr-muted mb-5 leading-relaxed">
-                Run <code className="bg-telgrarr-black/60 px-1.5 py-0.5 rounded text-telgrarr-purple font-mono">cd /home/fhd/software/telgrarr && npm run recover</code> in SSH to generate a one-time token, then enter it below.
+                Run <code className="bg-telgrarr-black/60 px-1.5 py-0.5 rounded text-telgrarr-purple font-mono">npm run recover</code> in SSH to generate a one-time token, then enter it below.
               </p>
               <form onSubmit={handleRecover} className="space-y-4">
                 <div className="space-y-1.5">
