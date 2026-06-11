@@ -6,6 +6,19 @@
   /* 🌙 DEFAULT DARK MODE */
   :root, [data-theme="dark"] {
     --color-bg: 10 10 10;
+    /* U1 design-language lock — theme-aware tokens */
+    --color-elevated: 28 28 31;
+    --color-on-accent: 255 255 255;
+    --color-success: 34 197 94;
+    --color-warning: 245 158 11;
+    --color-danger: 239 68 68;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.40);
+    --shadow-glass: 0 8px 32px 0 rgba(0,0,0,0.37);
+    --motion-fast: 120ms;
+    --motion-base: 200ms;
+    --motion-slow: 320ms;
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
     --color-surface: 23 23 23;
     --color-border: 38 38 38;
     --color-text: 248 250 252;
@@ -18,6 +31,13 @@
   /* ☀️ LIGHT MODE */
   [data-theme="light"] {
     --color-bg: 248 250 252;
+    /* U1 — light overrides (contrast + soft elevation) */
+    --color-elevated: 241 245 249;
+    --color-success: 22 163 74;
+    --color-warning: 217 119 6;
+    --color-danger: 220 38 38;
+    --shadow-card: 0 1px 2px 0 rgba(15,23,42,0.06);
+    --shadow-glass: 0 8px 24px -4px rgba(15,23,42,0.12), 0 2px 6px -2px rgba(15,23,42,0.07);
     --color-surface: 255 255 255;
     --color-border: 226 232 240;
     --color-text: 15 23 42;
@@ -30,6 +50,10 @@
   /* 🌌 MIDNIGHT CYBER (Sleek, modern dark blue/purple) */
   [data-theme="neon"] {
     --color-bg: 11 15 25;
+    /* U1 — neon overrides */
+    --color-elevated: 23 31 48;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.45);
+    --shadow-glass: 0 8px 32px 0 rgba(0,0,0,0.45);
     --color-surface: 17 24 39;
     --color-border: 30 58 138;
     --color-text: 248 250 252;
@@ -42,6 +66,10 @@
   /* ✈️ TELEGRAM NATIVE */
   [data-theme="telegram"] {
     --color-bg: 23 33 43;
+    /* U1 — telegram overrides */
+    --color-elevated: 30 41 54;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.40);
+    --shadow-glass: 0 8px 32px 0 rgba(0,0,0,0.40);
     --color-surface: 36 47 61;
     --color-border: 14 22 33;
     --color-text: 245 245 245;
@@ -71,5 +99,22 @@
 @layer utilities {
   .glass-panel {
     @apply bg-telgrarr-surface/70 backdrop-blur-xl border border-telgrarr-border shadow-glass rounded-2xl;
+  }
+  /* U1 — focus-visible ring convention (apply to interactive elements in U2/U3) */
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-telgrarr-purple focus-visible:ring-offset-telgrarr-black;
+  }
+  /* U1 — real safe-area insets (viewport-fit=cover is set); fixes the no-op class */
+  .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-area-top    { padding-top: env(safe-area-inset-top, 0px); }
+}
+
+/* U1 — global reduced-motion baseline */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
