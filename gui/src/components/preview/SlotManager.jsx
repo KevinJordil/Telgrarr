@@ -6,15 +6,16 @@ export default function SlotManager({ templates, currentView, onSelectView, onAd
   const activeMode = templates?.activeMode || 'default_ar';
   const isDefault = currentView === 'default_ar' || currentView === 'default_en';
   const isActive = currentView === activeMode;
-
   return (
     <div className="bg-telgrarr-surface border border-telgrarr-border rounded-xl p-3 space-y-3">
       <div className="flex items-center space-x-3">
         <div className="flex-1">
+          <label htmlFor="slot-select" className="sr-only">Select template</label>
           <select
+            id="slot-select"
             value={currentView}
             onChange={(e) => onSelectView(e.target.value)}
-            className="w-full bg-telgrarr-black/50 border border-telgrarr-border text-telgrarr-text text-sm rounded-lg block p-2 focus:ring-telgrarr-purple focus:border-telgrarr-purple transition-colors"
+            className="w-full bg-telgrarr-elevated border border-telgrarr-border text-telgrarr-text text-sm rounded-lg block p-2 focus:ring-telgrarr-purple focus:border-telgrarr-purple transition-colors"
           >
             <optgroup label="Protected Defaults">
               <option value="default_ar">🔒 Default (Arabic)</option>
@@ -30,7 +31,8 @@ export default function SlotManager({ templates, currentView, onSelectView, onAd
         <button
           onClick={onAdd}
           disabled={slots.length >= 5}
-          className="p-2 bg-telgrarr-purple hover:bg-purple-600 text-white rounded-lg disabled:opacity-50 transition-colors shadow-sm"
+          className="focus-ring p-2 bg-telgrarr-purple hover:bg-telgrarr-purple-dark text-telgrarr-on-accent rounded-lg disabled:opacity-50 transition-colors shadow-sm"
+          aria-label="Add new slot"
           title="Add New Slot"
         >
           <Plus className="w-5 h-5" />
@@ -39,17 +41,17 @@ export default function SlotManager({ templates, currentView, onSelectView, onAd
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center space-x-2 text-sm">
           {isActive ? (
-            <span className="flex items-center text-green-500 font-medium"><CheckCircle className="w-4 h-4 mr-1" /> Live Setup</span>
+            <span className="flex items-center text-telgrarr-success font-medium"><CheckCircle className="w-4 h-4 mr-1" /> Live Setup</span>
           ) : (
-            <button onClick={onMakeActive} className="text-telgrarr-purple hover:text-telgrarr-text font-medium transition-colors">
+            <button onClick={onMakeActive} className="focus-ring rounded text-telgrarr-purple hover:text-telgrarr-text font-medium transition-colors">
               Make Active Layout
             </button>
           )}
         </div>
         {!isDefault && (
           <div className="flex items-center space-x-2">
-            <button onClick={onRename} className="p-1.5 text-telgrarr-muted hover:text-telgrarr-text rounded bg-telgrarr-surface border border-telgrarr-border transition-colors shadow-sm"><Edit2 className="w-4 h-4" /></button>
-            <button onClick={onDelete} className="p-1.5 text-red-400 hover:text-red-300 rounded bg-red-500/10 border border-red-500/20 transition-colors shadow-sm"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={onRename} aria-label="Rename slot" className="focus-ring p-1.5 text-telgrarr-muted hover:text-telgrarr-text rounded bg-telgrarr-elevated border border-telgrarr-border transition-colors shadow-sm"><Edit2 className="w-4 h-4" /></button>
+            <button onClick={onDelete} aria-label="Delete slot" className="focus-ring p-1.5 text-telgrarr-danger rounded bg-telgrarr-danger/10 hover:bg-telgrarr-danger/20 border border-telgrarr-danger/20 transition-colors shadow-sm"><Trash2 className="w-4 h-4" /></button>
           </div>
         )}
       </div>
