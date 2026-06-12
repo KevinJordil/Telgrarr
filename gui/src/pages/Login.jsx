@@ -7,8 +7,8 @@ import useThemeStore from '../store/themeStore';
 import api from '../api';
 import LoginBackground from '../components/LoginBackground';
 import ThemeSwitcher from '../components/ThemeSwitcher';
-import logoUrlDark  from '../assets/hero-logo-dark.png';
-import logoUrlLight from '../assets/hero-logo-light.png';
+import logoUrlDark  from '../assets/hero-logo-dark.png?format=webp&w=512&quality=80';
+import logoUrlLight from '../assets/hero-logo-light.png?format=webp&w=512&quality=80';
 
 let idSeq = 0;
 

@@ -6,8 +6,8 @@ import useThemeStore from '../store/themeStore';
 import BottomNav from './BottomNav';
 import ThemeSwitcher from './ThemeSwitcher';
 import PullToRefresh from './PullToRefresh';
-import logoUrlDark  from '../assets/header-logo-dark.png';
-import logoUrlLight from '../assets/header-logo-light.png';
+import logoUrlDark  from '../assets/header-logo-dark.png?format=webp&w=128&quality=80';
+import logoUrlLight from '../assets/header-logo-light.png?format=webp&w=128&quality=80';
 
 export default function AuthLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);

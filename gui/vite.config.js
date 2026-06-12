@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { imagetools } from 'vite-imagetools'
 import { fileURLToPath } from 'node:url'
 
 // DEV-ONLY. Production serves the built SPA (gui/dist) SAME-ORIGIN from the Node
@@ -13,7 +14,7 @@ const proxyTarget = process.env.DEV_PROXY_TARGET
   || `http://localhost:${process.env.PORT || '3400'}`
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), imagetools()],
   resolve: {
     alias: {
       '@shared': fileURLToPath(new URL('../shared', import.meta.url)),
