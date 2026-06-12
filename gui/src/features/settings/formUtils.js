@@ -24,11 +24,22 @@ export function setVal(obj, key, value) {
   return result;
 }
 
-export function buildPayload(draft, fields) {
+export function buildPayload(draft, fields, fieldMeta = {}) {
   let payload = {};
   for (const field of fields) {
     const val = getVal(draft, field.key);
     if (field.type === 'secret' && (!val || val === '')) continue;
+    // H4.3b: env-managed fields are read-only - never echo them back to the server.
+    const meta = fieldMeta[field.key];
+    if (meta && meta.editable === false) continue;
+    // H4.3b: an empty envVar-hinted field means "keep current value" (mirrors the
+    // secret-empty convention above; explicit clear is the EDGE open item).
+    if (field.envVar && (val === '' || val == null)) continue;
+    // H4.3b: number inputs emit strings; the backend validator requires integers.
+    if (field.type === 'number') {
+      payload = setVal(payload, field.key, Number(val));
+      continue;
+    }
     payload = setVal(payload, field.key, val);
   }
   return payload;

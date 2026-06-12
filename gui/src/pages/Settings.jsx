@@ -13,9 +13,9 @@ import useRestartPoll from '../features/settings/hooks/useRestartPoll';
 export default function Settings() {
   const {
     settings, schema, loading, error,
-    fetchSettings, fetchSchema, fetchSystemInfo,
+    fetchSettings, fetchSchema, fetchSystemInfo, fetchFieldMeta,
     saveSection, testConnection,
-    saveStatus, testStatus,
+    saveStatus, testStatus, saveErrors, fieldMeta,
   } = useSettingsStore();
 
   const [expanded, setExpanded] = useState({});
@@ -36,7 +36,8 @@ export default function Settings() {
     fetchSettings();
     fetchSchema();
     fetchSystemInfo();
-  }, [fetchSettings, fetchSchema, fetchSystemInfo]);
+    fetchFieldMeta();
+  }, [fetchSettings, fetchSchema, fetchSystemInfo, fetchFieldMeta]);
 
   const openConfirm = (opts) => {
     setConfirm({
@@ -64,7 +65,7 @@ export default function Settings() {
     const section = schema.find((s) => s.id === sectionId);
     if (!section) return;
 
-    const payload = buildPayload(draft, section.fields);
+    const payload = buildPayload(draft, section.fields, fieldMeta);
 
     openConfirm({
       title: `Save ${section.title}`,
@@ -142,6 +143,7 @@ export default function Settings() {
             handleTest={handleTest}
             handleTestDeepl={handleTestDeepl}
             handleSaveRequest={handleSaveRequest}
+            saveErrors={saveErrors}
           />
         ))}
 

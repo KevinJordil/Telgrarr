@@ -21,12 +21,14 @@ export default function SettingsSection({
   handleChange,
   handleTest,
   handleTestDeepl,
-  handleSaveRequest
+  handleSaveRequest,
+  saveErrors
 }) {
   const SectionIcon = ICONS[section.icon] || SettingsIcon;
   const isExpanded = expanded[section.id] !== false;
   const sectionStatus = saveStatus[section.id] || 'idle';
   const sectionTest = testStatus[section.id];
+  const sectionError = saveErrors ? saveErrors[section.id] : null;
   const deeplTest = testStatus['translator-deepl'];
   const dirty = sectionIsDirty(section);
   const reduceMotion = useReducedMotion();
@@ -124,6 +126,12 @@ export default function SettingsSection({
                 </>
               )}
             </button>
+            {sectionStatus === 'error' && sectionError && (
+              <p className="text-xs mt-1.5 flex items-center gap-1.5 text-telgrarr-danger">
+                <XCircle className="w-3 h-3" />
+                {sectionError}
+              </p>
+            )}
           </div>
         </div>
       )}

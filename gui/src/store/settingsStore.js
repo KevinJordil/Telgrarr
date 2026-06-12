@@ -20,6 +20,8 @@ const useSettingsStore = create((set) => {
     saveStatus: {},
     testStatus: {},
     systemInfo: { restartCapable: false, version: null },
+    fieldMeta: {},
+    saveErrors: {},
 
     fetchSettings: async () => {
       set({ loading: true, error: null });
@@ -47,6 +49,7 @@ const useSettingsStore = create((set) => {
 
       set((s) => ({
         saveStatus: { ...s.saveStatus, [sectionId]: 'saving' },
+        saveErrors: { ...s.saveErrors, [sectionId]: null },
       }));
 
       try {
@@ -70,6 +73,7 @@ const useSettingsStore = create((set) => {
 
         set((s) => ({
           saveStatus: { ...s.saveStatus, [sectionId]: 'error' },
+          saveErrors: { ...s.saveErrors, [sectionId]: (err.response?.data?.error || err.message) },
         }));
 
         return {
@@ -133,6 +137,17 @@ const useSettingsStore = create((set) => {
         return { success: true, value: res.data.value };
       } catch (err) {
         return { success: false, error: err.response?.data?.error || err.message };
+      }
+    },
+
+    fetchFieldMeta: async () => {
+      try {
+        const res = await api.get('/settings/meta');
+        set({ fieldMeta: (res.data && res.data.fields) || {} });
+      } catch {
+        // Auxiliary probe: degrade to "all editable" - the backend enforces env
+        // precedence regardless; the GUI just loses the read-only affordance.
+        set({ fieldMeta: {} });
       }
     },
 
