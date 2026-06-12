@@ -50,4 +50,30 @@ describe('webhook secret first-boot auto-gen', () => {
     expect(disk.webhookSecret).toBe('preexisting-fixture-secret');
     expect(config.WEBHOOK_SECRET).toBe('preexisting-fixture-secret');
   });
+
+  // H5.1 - rotation surface
+  it('rotation: generateWebhookSecret is 256-bit base64url, unique per call', async () => {
+    const mod = await import('../src/auth/webhook-token.js');
+    const g = mod.generateWebhookSecret ?? mod.default.generateWebhookSecret;
+    const a = g(), b = g();
+    expect(a).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(a).not.toBe(b);
+  });
+
+  it('rotation: policy flags a changed webhookSecret as restart-required', async () => {
+    const config = await load();
+    const pol = await import('../src/settings/policy.js');
+    const needsRestart = pol.needsRestart ?? pol.default.needsRestart;
+    expect(needsRestart({ webhookSecret: 'rotated-value' })).toBe(true);
+    expect(needsRestart({ webhookSecret: config.webhookSecret })).toBe(false);
+    expect(needsRestart({})).toBe(false);
+  });
+
+  it('rotation: save({ webhookSecret }) persists the new secret to the file tier', async () => {
+    const config = await load();
+    expect(config.webhookSecret).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    await config.save({ webhookSecret: 'rotated-fixture-secret' });
+    const disk = JSON.parse(fs.readFileSync(file(), 'utf8'));
+    expect(disk.webhookSecret).toBe('rotated-fixture-secret');
+  });
 });

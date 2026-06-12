@@ -2,7 +2,7 @@
 'use strict';
 const fs              = require('fs');
 const path            = require('path');
-const crypto          = require('crypto');
+const { generateWebhookSecret } = require('./auth/webhook-token'); // pure crypto, no cycle
 const writeFileAtomic = require('write-file-atomic');
 const log             = require('./logger');
 const { SETTINGS_SCHEMA } = require('./settings-schema');
@@ -168,7 +168,7 @@ function ensureWebhookSecret() {
   const envSecret = process.env.WEBHOOK_SECRET;
   if (envSecret != null && envSecret !== '') return;   // env wins, never persisted (SD-1)
   if (config.webhookSecret) return;                    // already set -> idempotent (SD-11)
-  const secret = crypto.randomBytes(32).toString('base64url'); // 256-bit, URL-safe
+  const secret = generateWebhookSecret(); // single home: auth/webhook-token.js
   config.webhookSecret = secret;
   try {
     writeFileAtomic.sync(

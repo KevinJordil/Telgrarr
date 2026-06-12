@@ -11,7 +11,7 @@ const { requireAuth } = require('../middlewares/auth');
 const { getMaskedSettings, getFieldSources } = require('../settings/serializer');
 const { validateSettings } = require('../settings/validator');
 const { needsRestart, portChangeRequiresPreflight } = require('../settings/policy');
-const { pickSecret } = require('../settings/secrets');
+const { pickSecret, maskSecret } = require('../settings/secrets');
 const {
   testTelegram, testSonarr, testRadarr, testEmby, testSeerr, testOmdb,
   testTranslatorAi, testTranslatorDeepl,
@@ -19,6 +19,7 @@ const {
 } = require('../services/connection-tester');
 const { SETTINGS_SCHEMA } = require('../settings-schema');
 const { requestRestart } = require('../services/restart');
+const { generateWebhookSecret } = require('../auth/webhook-token');
 const { isPortAvailable } = require('../services/port-check');
 
 // ── GET /api/settings/schema ─────────────────────────────────────────────────
@@ -239,15 +240,71 @@ const SECRET_KEYS = new Set(
     .filter(f => f.type === 'secret')
     .map(f => f.key)
 );
+// H5.1 (SD-9): webhookSecret lives OUTSIDE the schema (generated/stored top-level
+// by config.js); whitelist it explicitly so URL-copy/eye reuse the same
+// one-at-a-time reveal path.
+SECRET_KEYS.add('webhookSecret');
 router.post('/settings/reveal', requireAuth, (req, res) => {
   const key = req.body && req.body.key;
   if (typeof key !== 'string' || !SECRET_KEYS.has(key)) {
     log.warn('Settings', 'Secret Reveal → Rejected → Unknown or non-secret field');
     return res.status(400).json({ error: 'Unknown or non-secret field' });
   }
-  const value = key.split('.').reduce((o, k) => (o != null ? o[k] : undefined), config);
+  // H5.1: webhookSecret reveals the EFFECTIVE secret (config.WEBHOOK_SECRET, env
+  // wins) so the copied URL is the one the /hooks guard actually accepts.
+  const value = key === 'webhookSecret'
+    ? config.WEBHOOK_SECRET
+    : key.split('.').reduce((o, k) => (o != null ? o[k] : undefined), config);
   log.info('Settings', `Secret Reveal → Success → Field: ${key}`);
   return res.json({ key, value: typeof value === 'string' ? value : '' });
+});
+
+// ──── GET /api/settings/webhook (H5.1) ────
+// SD-7: SUGGESTED webhook URLs - best-effort (the address the operator is browsing
+// from; TRUST_PROXY-aware via req.protocol) and clearly editable in the GUI, never
+// asserted as truth. The secret segment is MASKED here; the full URL is composed
+// client-side only after an explicit SD-9 reveal.
+router.get('/settings/webhook', requireAuth, (req, res) => {
+  const secretSet = !!config.WEBHOOK_SECRET;
+  const masked = secretSet ? maskSecret(config.WEBHOOK_SECRET) : '';
+  res.json({
+    suggestedBase: `${req.protocol}://${req.get('host')}`,
+    paths: {
+      sonarr: secretSet ? `/hooks/${masked}/sonarr` : '',
+      radarr: secretSet ? `/hooks/${masked}/radarr` : '',
+    },
+    secretSet,
+    envManaged: !!config.envOverrides.WEBHOOK_SECRET,
+  });
+});
+
+// ──── POST /api/settings/webhook/regenerate (H5.1) ────
+// Credential rotation. env-managed secret => 409 (SD-1: env wins; the file tier is
+// inert). WEBHOOK_SECRET is boot-resolved, so rotation is restart-required and
+// reuses the POST /settings finish-hook restart convention (ONE convention). The
+// old secret keeps working until the restart lands, then is rejected.
+router.post('/settings/webhook/regenerate', requireAuth, async (req, res) => {
+  try {
+    if (config.envOverrides.WEBHOOK_SECRET) {
+      log.warn('Settings', 'Webhook Regenerate → Refused → Secret is env-managed (WEBHOOK_SECRET)');
+      return res.status(409).json({ error: 'Webhook secret is managed by the environment (WEBHOOK_SECRET) - change it there', envManaged: true });
+    }
+    const secret = generateWebhookSecret();
+    await config.save({ webhookSecret: secret });
+    log.audit('Settings', 'Webhook Regenerate → Success → New secret persisted, restart required');
+    events.emit(
+      EVENT_TYPES.SETTINGS_RESTART,
+      'warn',
+      'Config',
+      'Restart required - webhook secret regenerated',
+      {}
+    );
+    res.on('finish', () => requestRestart('webhook-regenerate'));
+    res.json({ success: true, needsRestart: true });
+  } catch (err) {
+    log.error('Settings', `Webhook Regenerate → Error → ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

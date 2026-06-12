@@ -30,4 +30,12 @@ function redactUrl(url) {
   return maskHooksUrl(redactQuery(String(url == null ? '' : url)));
 }
 
-module.exports = { tokenValid, maskHooksUrl, redactUrl };
+// H5.1 (SD-11/DRY): the ONE home for webhook-secret generation - consumed by the
+// first-boot bootstrap (config.js ensureWebhookSecret) and the GUI regenerate
+// endpoint. 256-bit base64url: URL-path-safe, so the /hooks/<secret>/ segment
+// needs no encoding and tokenValid compares it byte-for-byte.
+function generateWebhookSecret() {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+module.exports = { tokenValid, maskHooksUrl, redactUrl, generateWebhookSecret };

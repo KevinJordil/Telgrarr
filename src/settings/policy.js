@@ -11,6 +11,9 @@ function needsRestart(incoming) {
   if (incoming.listenerPort !== undefined && incoming.listenerPort !== config.listenerPort) return true;
   if (incoming.listenerHost !== undefined && incoming.listenerHost !== config.listenerHost) return true;
   if (incoming.logging?.level !== undefined && incoming.logging.level !== config.logging.level) return true;
+  // H5.1: WEBHOOK_SECRET is boot-resolved (B.1/C.5) - rotating the file-tier secret
+  // takes effect only on restart, same law as port/host.
+  if (incoming.webhookSecret !== undefined && incoming.webhookSecret !== config.webhookSecret) return true;
   return false;
 }
 
