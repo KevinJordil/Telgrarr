@@ -9,6 +9,7 @@ import SettingsSection from '../features/settings/SettingsSection';
 import useSettingsDraft from '../features/settings/hooks/useSettingsDraft';
 import useConnectionTest from '../features/settings/hooks/useConnectionTest';
 import useRestartPoll from '../features/settings/hooks/useRestartPoll';
+import useNavGuard from '../store/navGuardStore';
 
 export default function Settings() {
   const {
@@ -31,6 +32,7 @@ export default function Settings() {
   const { draft, handleChange, sectionIsDirty } = useSettingsDraft(settings, schema);
   const { handleTest, handleTestDeepl } = useConnectionTest(draft, testConnection);
   const { restarting, manualRestart, startRestartPoll, dismissManualRestart } = useRestartPoll(fetchSettings);
+  const setIntercept = useNavGuard((s) => s.setIntercept);
 
   useEffect(() => {
     fetchSettings();
@@ -61,6 +63,34 @@ export default function Settings() {
       danger: false,
     });
   };
+
+  // Unsaved-changes guard: while any section is dirty, intercept in-app nav
+  // (navGuard) and browser refresh/close (beforeunload) with a discard confirm.
+  useEffect(() => {
+    const isDirtyNow = () => Array.isArray(schema) && schema.some((sec) => sectionIsDirty(sec));
+    setIntercept((proceed) => {
+      if (isDirtyNow()) {
+        openConfirm({
+          title: 'Discard unsaved changes?',
+          message: 'You have unsaved edits on this page. Leaving now will discard them.',
+          confirmLabel: 'Discard & Leave',
+          danger: true,
+          onConfirm: proceed,
+        });
+      } else {
+        proceed();
+      }
+    });
+    const onBeforeUnload = (e) => {
+      if (isDirtyNow()) { e.preventDefault(); e.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      setIntercept(null);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schema, draft, settings]);
 
   const handleSaveRequest = (sectionId) => {
     const section = schema.find((s) => s.id === sectionId);
