@@ -180,7 +180,7 @@ function SliderInput({ field, value, onChange, displayFn }) {
 }
 
 export default function FieldRenderer({ field, value, onChange }) {
-  const base = 'w-full bg-telgrarr-black/60 border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-none focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm';
+  const base = 'w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-none focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm';
   const displayFn = field.displayFormat ? DISPLAY_FORMATTERS[field.displayFormat] : null;
 
   return (
