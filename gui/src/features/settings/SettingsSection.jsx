@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import FieldRenderer from './FieldRenderer';
 import { getVal } from './formUtils';
+import WebhookCard from './WebhookCard';
 
 const ICONS = { Send, Timer, Tv, Film, Play, Star, Search, Lock, Database, Languages, FileText };
 
@@ -22,7 +23,9 @@ export default function SettingsSection({
   handleTest,
   handleTestDeepl,
   handleSaveRequest,
-  saveErrors
+  saveErrors,
+  openConfirm,
+  startRestartPoll
 }) {
   const SectionIcon = ICONS[section.icon] || SettingsIcon;
   const isExpanded = expanded[section.id] !== false;
@@ -82,6 +85,10 @@ export default function SettingsSection({
                 </p>
               )}
             </div>
+          )}
+
+          {(section.id === 'sonarr' || section.id === 'radarr') && (
+            <WebhookCard source={section.id} openConfirm={openConfirm} startRestartPoll={startRestartPoll} />
           )}
 
           {section.id === 'translator' && (

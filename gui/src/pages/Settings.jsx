@@ -13,7 +13,7 @@ import useRestartPoll from '../features/settings/hooks/useRestartPoll';
 export default function Settings() {
   const {
     settings, schema, loading, error,
-    fetchSettings, fetchSchema, fetchSystemInfo, fetchFieldMeta,
+    fetchSettings, fetchSchema, fetchSystemInfo, fetchFieldMeta, fetchWebhookInfo,
     saveSection, testConnection,
     saveStatus, testStatus, saveErrors, fieldMeta,
   } = useSettingsStore();
@@ -37,7 +37,8 @@ export default function Settings() {
     fetchSchema();
     fetchSystemInfo();
     fetchFieldMeta();
-  }, [fetchSettings, fetchSchema, fetchSystemInfo, fetchFieldMeta]);
+    fetchWebhookInfo();
+  }, [fetchSettings, fetchSchema, fetchSystemInfo, fetchFieldMeta, fetchWebhookInfo]);
 
   const openConfirm = (opts) => {
     setConfirm({
@@ -144,6 +145,8 @@ export default function Settings() {
             handleTestDeepl={handleTestDeepl}
             handleSaveRequest={handleSaveRequest}
             saveErrors={saveErrors}
+            openConfirm={openConfirm}
+            startRestartPoll={startRestartPoll}
           />
         ))}
 

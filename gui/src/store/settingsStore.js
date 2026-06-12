@@ -22,6 +22,7 @@ const useSettingsStore = create((set) => {
     systemInfo: { restartCapable: false, version: null },
     fieldMeta: {},
     saveErrors: {},
+    webhookInfo: null,
 
     fetchSettings: async () => {
       set({ loading: true, error: null });
@@ -148,6 +149,26 @@ const useSettingsStore = create((set) => {
         // Auxiliary probe: degrade to "all editable" - the backend enforces env
         // precedence regardless; the GUI just loses the read-only affordance.
         set({ fieldMeta: {} });
+      }
+    },
+
+    fetchWebhookInfo: async () => {
+      try {
+        const res = await api.get('/settings/webhook');
+        set({ webhookInfo: res.data });
+      } catch {
+        // Auxiliary probe: degrade to null - the card simply does not render;
+        // webhook auth is enforced backend-side regardless.
+        set({ webhookInfo: null });
+      }
+    },
+
+    regenerateWebhookSecret: async () => {
+      try {
+        const res = await api.post('/settings/webhook/regenerate');
+        return { success: true, needsRestart: !!res.data.needsRestart };
+      } catch (err) {
+        return { success: false, error: err.response?.data?.error || err.message };
       }
     },
 
