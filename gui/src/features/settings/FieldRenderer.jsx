@@ -71,16 +71,18 @@ function SecretInput({ field, value, onChange, base }) {
           onClick={handleCopy}
           disabled={!hasValue || busy}
           title="Copy"
-          className="text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+          aria-label="Copy"
+          className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
         >
-          {copied ? <Check className="w-4 h-4 text-telgrarr-purple" /> : <Copy className="w-4 h-4" />}
+          {copied ? <Check className="w-4 h-4 text-telgrarr-success" /> : <Copy className="w-4 h-4" />}
         </button>
         <button
           type="button"
           onClick={handleEye}
           disabled={!hasValue || busy}
           title={open ? 'Hide' : 'Reveal'}
-          className="text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+          aria-label={open ? 'Hide' : 'Reveal'}
+          className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
         >
           {open ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
