@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Ban, Search, Folder, Tv, Film, X, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import api from '../api';
@@ -17,6 +17,7 @@ function useDebounce(value, delay) {
 }
 
 export default function Blacklist() {
+  const reduceMotion = useReducedMotion();
   const [tab,     setTab]     = useState('titles');
   const [type,    setType]    = useState('sonarr');
   const [query,   setQuery]   = useState('');
@@ -25,7 +26,6 @@ export default function Blacklist() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
   const [confirm, setConfirm] = useState(null); // { item, action }
-
   const debounced = useDebounce(query, 450);
 
   // ── Search titles ────────────────────────────────────────────────────────────
@@ -66,12 +66,10 @@ export default function Blacklist() {
     const action = item.blacklisted ? 'remove' : 'add';
     setConfirm({ item, action });
   }, []);
-
   const togglePath = useCallback((folder) => {
     const action = folder.blacklisted ? 'remove' : 'add';
     setConfirm({ item: folder, action, isPath: true });
   }, []);
-
   const executeToggle = async () => {
     const { item, action, isPath } = confirm;
     setConfirm(null);
@@ -89,23 +87,23 @@ export default function Blacklist() {
   };
 
   return (
-    <div className="min-h-screen bg-telgrarr-black text-telgrarr-text pb-24">
-
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-telgrarr-black/95 backdrop-blur-md border-b border-telgrarr-border px-4 pt-10 pb-3">
+    <div className="text-telgrarr-text">
+      {/* Sticky header — sticks within the AuthLayout scroll region */}
+      <div className="sticky top-0 z-30 bg-telgrarr-surface/90 backdrop-blur-xl border-b border-telgrarr-border px-4 pt-4 pb-3">
         <div className="flex items-center gap-2 mb-4">
           <Ban className="w-5 h-5 text-telgrarr-purple" strokeWidth={2} />
           <h1 className="text-lg font-semibold tracking-tight">Blacklist</h1>
         </div>
-
         {/* Tab: Titles / Folders */}
-        <div className="flex gap-1 p-1 bg-telgrarr-border/30 rounded-xl mb-3">
+        <div className="flex gap-1 p-1 bg-telgrarr-elevated rounded-xl mb-3" role="tablist" aria-label="Blacklist mode">
           {TABS.map(t => (
             <button
               key={t}
+              role="tab"
+              aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
-                tab === t ? 'bg-telgrarr-purple text-telgrarr-text' : 'text-telgrarr-muted hover:text-telgrarr-text'
+              className={`focus-ring flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
+                tab === t ? 'bg-telgrarr-purple text-telgrarr-on-accent' : 'text-telgrarr-muted hover:text-telgrarr-text'
               }`}
             >
               {t === 'titles' ? <Film className="w-3.5 h-3.5" /> : <Folder className="w-3.5 h-3.5" />}
@@ -113,14 +111,14 @@ export default function Blacklist() {
             </button>
           ))}
         </div>
-
         {/* Sub-tab: Sonarr / Radarr */}
         <div className="flex gap-2">
           {TYPES.map(tp => (
             <button
               key={tp}
+              aria-pressed={type === tp}
               onClick={() => setType(tp)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+              className={`focus-ring flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
                 type === tp
                   ? 'bg-telgrarr-purple/20 text-telgrarr-purple border border-telgrarr-purple/40'
                   : 'text-telgrarr-muted border border-telgrarr-border hover:text-telgrarr-text'
@@ -134,7 +132,6 @@ export default function Blacklist() {
       </div>
 
       <div className="px-4 pt-4 max-w-lg mx-auto">
-
         {/* Search bar — titles only */}
         {tab === 'titles' && (
           <div className="relative mb-4">
@@ -144,30 +141,27 @@ export default function Blacklist() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder={`Search ${type === 'sonarr' ? 'series' : 'movies'}…`}
-              className="w-full bg-telgrarr-border/30 border border-telgrarr-border rounded-xl pl-9 pr-9 py-2.5 text-sm text-telgrarr-text placeholder-telgrarr-muted focus:outline-none focus:border-telgrarr-purple transition-colors"
+              className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl pl-9 pr-9 py-2.5 text-sm text-telgrarr-text placeholder-telgrarr-muted focus:outline-none focus:border-telgrarr-purple transition-colors"
             />
             {query && (
-              <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-telgrarr-muted hover:text-telgrarr-text">
+              <button onClick={() => setQuery('')} aria-label="Clear search" className="focus-ring absolute right-3 top-1/2 -translate-y-1/2 rounded text-telgrarr-muted hover:text-telgrarr-text">
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
         )}
-
         {/* Error */}
         {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+          <div className="mb-4 px-4 py-3 rounded-xl bg-telgrarr-danger/10 border border-telgrarr-danger/30 text-telgrarr-danger text-sm" role="alert">
             {error}
           </div>
         )}
-
         {/* Loading */}
         {loading && (
           <div className="flex justify-center py-12">
             <Loader2 className="w-6 h-6 text-telgrarr-purple animate-spin" />
           </div>
         )}
-
         {/* Title results */}
         {!loading && tab === 'titles' && (
           <AnimatePresence mode="popLayout">
@@ -192,15 +186,15 @@ export default function Blacklist() {
             {results.map((item, i) => (
               <motion.div
                 key={item.id + '-' + item.title}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ delay: i * 0.03 }}
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                transition={{ delay: reduceMotion ? 0 : i * 0.03 }}
                 className="glass-panel rounded-xl mb-2 flex items-center gap-3 p-3"
               >
                 {item.posterUrl
                   ? <img src={item.posterUrl} alt={item.title} className="w-10 h-14 object-cover rounded-lg shrink-0" />
-                  : <div className="w-10 h-14 bg-telgrarr-border rounded-lg shrink-0 flex items-center justify-center">
+                  : <div className="w-10 h-14 bg-telgrarr-elevated rounded-lg shrink-0 flex items-center justify-center">
                       {type === 'sonarr' ? <Tv className="w-4 h-4 text-telgrarr-muted" /> : <Film className="w-4 h-4 text-telgrarr-muted" />}
                     </div>
                 }
@@ -208,18 +202,18 @@ export default function Blacklist() {
                   <p className="text-sm font-medium truncate">{item.title}</p>
                   <p className="text-xs text-telgrarr-muted">{item.year || '—'}</p>
                   {item.id === 0 && (
-                    <p className="text-[10px] text-yellow-500/80 mt-0.5">Not in library</p>
+                    <p className="text-[10px] text-telgrarr-warning mt-0.5">Not in library</p>
                   )}
                 </div>
                 <button
                   onClick={() => item.id !== 0 && toggleId(item)}
                   disabled={item.id === 0}
-                  className={`shrink-0 p-2 rounded-lg transition-all ${
+                  className={`focus-ring shrink-0 p-2 rounded-lg transition-colors ${
                     item.id === 0
                       ? 'opacity-30 cursor-not-allowed'
                       : item.blacklisted
-                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                        : 'bg-telgrarr-border/50 text-telgrarr-muted hover:text-telgrarr-text hover:bg-telgrarr-border'
+                        ? 'bg-telgrarr-danger/20 text-telgrarr-danger hover:bg-telgrarr-danger/30'
+                        : 'bg-telgrarr-elevated text-telgrarr-muted hover:text-telgrarr-text'
                   }`}
                   aria-label={item.blacklisted ? 'Remove from blacklist' : 'Add to blacklist'}
                 >
@@ -232,7 +226,6 @@ export default function Blacklist() {
             ))}
           </AnimatePresence>
         )}
-
         {/* Folder results */}
         {!loading && tab === 'folders' && (
           <AnimatePresence mode="popLayout">
@@ -248,22 +241,22 @@ export default function Blacklist() {
             {folders.map((folder, i) => (
               <motion.div
                 key={folder.path}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                transition={{ delay: reduceMotion ? 0 : i * 0.05 }}
                 className="glass-panel rounded-xl mb-2 flex items-center gap-3 p-4"
               >
-                <Folder className={`w-5 h-5 shrink-0 ${folder.blacklisted ? 'text-red-400' : 'text-telgrarr-muted'}`} />
+                <Folder className={`w-5 h-5 shrink-0 ${folder.blacklisted ? 'text-telgrarr-danger' : 'text-telgrarr-muted'}`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{folder.label}</p>
                   <p className="text-[11px] text-telgrarr-muted truncate">{folder.path}</p>
                 </div>
                 <button
                   onClick={() => togglePath(folder)}
-                  className={`shrink-0 p-2 rounded-lg transition-all ${
+                  className={`focus-ring shrink-0 p-2 rounded-lg transition-colors ${
                     folder.blacklisted
-                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                      : 'bg-telgrarr-border/50 text-telgrarr-muted hover:text-telgrarr-text hover:bg-telgrarr-border'
+                      ? 'bg-telgrarr-danger/20 text-telgrarr-danger hover:bg-telgrarr-danger/30'
+                      : 'bg-telgrarr-elevated text-telgrarr-muted hover:text-telgrarr-text'
                   }`}
                   aria-label={folder.blacklisted ? 'Unblock folder' : 'Block folder'}
                 >
@@ -276,7 +269,6 @@ export default function Blacklist() {
             ))}
           </AnimatePresence>
         )}
-
       </div>
 
       {/* Confirm modal */}
@@ -293,7 +285,6 @@ export default function Blacklist() {
         onConfirm={executeToggle}
         onCancel={() => setConfirm(null)}
       />
-
-          </div>
+    </div>
   );
 }
