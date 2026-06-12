@@ -1,31 +1,37 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Activity, Wifi, WifiOff } from 'lucide-react';
 import EVENT_TYPES from '@shared/events.json';
 
-const TYPE_CONFIG = {
-  [EVENT_TYPES.QUEUE_ITEM_ADDED]:    { color: 'text-blue-400',   bg: 'bg-blue-400/10',   dot: 'bg-blue-400'   },
-  [EVENT_TYPES.QUEUE_TIMER_STARTED]: { color: 'text-indigo-400', bg: 'bg-indigo-400/10', dot: 'bg-indigo-400' },
-  [EVENT_TYPES.QUEUE_FLUSH]:         { color: 'text-cyan-400',   bg: 'bg-cyan-400/10',   dot: 'bg-cyan-400'   },
-  [EVENT_TYPES.QUEUE_CLEARED]:       { color: 'text-orange-400', bg: 'bg-orange-400/10', dot: 'bg-orange-400' },
-  [EVENT_TYPES.QUEUE_DRAINED]:       { color: 'text-telgrarr-muted', bg: 'bg-white/5',   dot: 'bg-gray-500'   },
-  [EVENT_TYPES.SWEEP_STARTED]:       { color: 'text-violet-400', bg: 'bg-violet-400/10', dot: 'bg-violet-400' },
-  [EVENT_TYPES.SWEEP_ITEM_READY]:    { color: 'text-telgrarr-purple', bg: 'bg-telgrarr-purple/10', dot: 'bg-telgrarr-purple' },
-  [EVENT_TYPES.SWEEP_TG_SENT]:       { color: 'text-emerald-400', bg: 'bg-emerald-400/10', dot: 'bg-emerald-400' },
-  [EVENT_TYPES.SWEEP_COMPLETE]:      { color: 'text-green-400',  bg: 'bg-green-400/10',  dot: 'bg-green-400'  },
-  [EVENT_TYPES.SWEEP_TG_ERROR]:      { color: 'text-red-400',    bg: 'bg-red-400/10',    dot: 'bg-red-400'    },
-  [EVENT_TYPES.SWEEP_ERROR]:         { color: 'text-red-400',    bg: 'bg-red-400/10',    dot: 'bg-red-400'    },
-  [EVENT_TYPES.SWEEP_EMBY]:          { color: 'text-sky-400',    bg: 'bg-sky-400/10',    dot: 'bg-sky-400'    },
-  [EVENT_TYPES.AUTH_LOGIN_SUCCESS]:  { color: 'text-green-400',  bg: 'bg-green-400/10',  dot: 'bg-green-400'  },
-  [EVENT_TYPES.AUTH_LOGIN_FAILED]:   { color: 'text-red-400',    bg: 'bg-red-400/10',    dot: 'bg-red-400'    },
-  [EVENT_TYPES.AUTH_PW_CHANGED]:     { color: 'text-yellow-400', bg: 'bg-yellow-400/10', dot: 'bg-yellow-400' },
-  [EVENT_TYPES.SETTINGS_SAVED]:      { color: 'text-sky-400',    bg: 'bg-sky-400/10',    dot: 'bg-sky-400'    },
-  [EVENT_TYPES.SETTINGS_RESTART]:    { color: 'text-orange-400', bg: 'bg-orange-400/10', dot: 'bg-orange-400' },
-  [EVENT_TYPES.LOG_WARN]:            { color: 'text-yellow-400', bg: 'bg-yellow-400/10', dot: 'bg-yellow-400' },
-  [EVENT_TYPES.LOG_ERROR]:           { color: 'text-red-400',    bg: 'bg-red-400/10',    dot: 'bg-red-400'    },
-};
+// Theme-aware semantic palette (5 buckets) — replaces the non-theme raw Tailwind palette hues.
+const OK      = { color: 'text-telgrarr-success', bg: 'bg-telgrarr-success/10', dot: 'bg-telgrarr-success' };
+const ERR     = { color: 'text-telgrarr-danger',  bg: 'bg-telgrarr-danger/10',  dot: 'bg-telgrarr-danger'  };
+const WARN    = { color: 'text-telgrarr-warning', bg: 'bg-telgrarr-warning/10', dot: 'bg-telgrarr-warning' };
+const ACCENT  = { color: 'text-telgrarr-purple',  bg: 'bg-telgrarr-purple/10',  dot: 'bg-telgrarr-purple'  };
+const NEUTRAL = { color: 'text-telgrarr-muted',   bg: 'bg-telgrarr-muted/10',   dot: 'bg-telgrarr-muted'   };
 
-const DEFAULT_CONFIG = { color: 'text-telgrarr-muted', bg: 'bg-white/5', dot: 'bg-gray-600' };
+const TYPE_CONFIG = {
+  [EVENT_TYPES.QUEUE_ITEM_ADDED]:    ACCENT,
+  [EVENT_TYPES.QUEUE_TIMER_STARTED]: ACCENT,
+  [EVENT_TYPES.QUEUE_FLUSH]:         ACCENT,
+  [EVENT_TYPES.QUEUE_CLEARED]:       WARN,
+  [EVENT_TYPES.QUEUE_DRAINED]:       NEUTRAL,
+  [EVENT_TYPES.SWEEP_STARTED]:       ACCENT,
+  [EVENT_TYPES.SWEEP_ITEM_READY]:    ACCENT,
+  [EVENT_TYPES.SWEEP_TG_SENT]:       OK,
+  [EVENT_TYPES.SWEEP_COMPLETE]:      OK,
+  [EVENT_TYPES.SWEEP_TG_ERROR]:      ERR,
+  [EVENT_TYPES.SWEEP_ERROR]:         ERR,
+  [EVENT_TYPES.SWEEP_EMBY]:          ACCENT,
+  [EVENT_TYPES.AUTH_LOGIN_SUCCESS]:  OK,
+  [EVENT_TYPES.AUTH_LOGIN_FAILED]:   ERR,
+  [EVENT_TYPES.AUTH_PW_CHANGED]:     WARN,
+  [EVENT_TYPES.SETTINGS_SAVED]:      OK,
+  [EVENT_TYPES.SETTINGS_RESTART]:    WARN,
+  [EVENT_TYPES.LOG_WARN]:            WARN,
+  [EVENT_TYPES.LOG_ERROR]:           ERR,
+};
+const DEFAULT_CONFIG = NEUTRAL;
 
 function formatTime(iso) {
   try {
@@ -34,8 +40,8 @@ function formatTime(iso) {
 }
 
 export default function LiveFeed({ events, connected }) {
+  const reduceMotion = useReducedMotion();
   const visible = events.filter(e => !e.type.startsWith('log.'));
-
   return (
     <section className="relative z-10 mb-6">
       <div className="flex items-center justify-between mb-3 px-1">
@@ -45,14 +51,13 @@ export default function LiveFeed({ events, connected }) {
         </div>
         <div className="flex items-center gap-1.5">
           {connected
-            ? <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-            : <WifiOff className="w-3.5 h-3.5 text-red-400 animate-pulse" />}
-          <span className={['text-xs font-medium', connected ? 'text-emerald-400' : 'text-red-400'].join(' ')}>
+            ? <Wifi className="w-3.5 h-3.5 text-telgrarr-success" />
+            : <WifiOff className="w-3.5 h-3.5 text-telgrarr-danger animate-pulse" />}
+          <span className={['text-xs font-medium', connected ? 'text-telgrarr-success' : 'text-telgrarr-danger'].join(' ')}>
             {connected ? 'Live' : 'Reconnecting'}
           </span>
         </div>
       </div>
-
       {visible.length === 0 ? (
         <div className="glass-panel rounded-xl p-6 text-center text-telgrarr-muted text-sm">
           <p>Waiting for activity...</p>
@@ -65,9 +70,9 @@ export default function LiveFeed({ events, connected }) {
               return (
                 <motion.div
                   key={evt.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -10 }}
+                  animate={reduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 10 }}
                   transition={{ duration: 0.2 }}
                   className={'flex items-start gap-3 rounded-xl px-3 py-2.5 ' + cfg.bg}
                 >
