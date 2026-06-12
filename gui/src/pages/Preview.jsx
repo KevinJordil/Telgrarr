@@ -5,6 +5,9 @@ import useTemplatesStore from '../store/templatesStore';
 import TelegramMock from '../components/preview/TelegramMock';
 import TemplateEditor from '../components/preview/TemplateEditor';
 import SlotManager from '../components/preview/SlotManager';
+import ConfirmModal from '../components/ConfirmModal';
+import InputModal from '../components/InputModal';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
 const STARTER_AR = `<b>{{headerEmoji}} {{headerText}}</b>
 {{separator}}
@@ -32,8 +35,16 @@ export default function Preview() {
   const [syntaxError, setSyntaxError]       = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [sending, setSending]               = useState(false);
+  const reduceMotion = useReducedMotion();
+  const [modal, setModal]   = useState(null);
+  const [status, setStatus] = useState(null);
   const initializedRef = useRef(false);
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
+  useEffect(() => {
+    if (!status) return;
+    const t = setTimeout(() => setStatus(null), 4000);
+    return () => clearTimeout(t);
+  }, [status]);
   useEffect(() => {
     if (config && !initializedRef.current) {
       initializedRef.current = true;
@@ -73,35 +84,33 @@ export default function Preview() {
     }, 500);
     return () => clearTimeout(timer);
   }, [type, scenario, currentView, draft, config]);
-  const handleAddSlot = async () => {
-    const name = window.prompt('Enter a name for your new preset slot:');
-    if (!name) return;
+  const confirmAddSlot = async (name) => {
+    setModal(null);
     const newSlot = { id: `slot_${Date.now()}`, name, sonarr: STARTER_AR, radarr: STARTER_AR };
     const res = await addSlot(newSlot);
     if (res.success) setCurrentView(newSlot.id);
-    else alert(res.error);
+    else setStatus({ type: 'error', text: res.error });
   };
-  const handleRenameSlot = async () => {
+  const confirmRenameSlot = async (newName) => {
+    setModal(null);
     const slot = config.slots.find(s => s.id === currentView);
-    if (!slot) return;
-    const newName = window.prompt('Enter new name:', slot.name);
-    if (!newName || newName === slot.name) return;
+    if (!slot || newName === slot.name) return;
     const res = await updateSlot(currentView, { name: newName });
-    if (!res.success) alert(res.error);
+    if (!res.success) setStatus({ type: 'error', text: res.error });
   };
-  const handleDeleteSlot = async () => {
-    if (!window.confirm('Are you sure you want to permanently delete this slot?')) return;
+  const confirmDeleteSlot = async () => {
+    setModal(null);
     const res = await deleteSlot(currentView);
     if (res.success) setCurrentView('default_ar');
-    else alert(res.error);
+    else setStatus({ type: 'error', text: res.error });
   };
   const handleMakeActive = async () => {
     const res = await setActiveMode(currentView);
-    if (!res.success) alert(res.error);
+    if (!res.success) setStatus({ type: 'error', text: res.error });
   };
   const saveDraftToSlot = async () => {
     const res = await updateSlot(currentView, { [type]: draft });
-    if (!res.success) alert(res.error);
+    if (!res.success) setStatus({ type: 'error', text: res.error });
   };
   const sendTest = async () => {
     setSending(true);
@@ -110,18 +119,19 @@ export default function Preview() {
       if (currentView === 'default_en') payloadTemplate = 'DEFAULT_EN';
       else if (currentView !== 'default_ar') payloadTemplate = draft || null;
       await api.post('/preview/send', { type, scenario, template: payloadTemplate });
-      alert('Test sent!');
-    } catch (error) { alert('Failed to send test.'); }
+      setStatus({ type: 'success', text: 'Test notification sent.' });
+    } catch (error) { setStatus({ type: 'error', text: 'Failed to send test.' }); }
     setSending(false);
   };
   if (loading || !config) return <div className="flex justify-center items-center py-32"><RefreshCw className="w-8 h-8 animate-spin text-telgrarr-purple" /></div>;
   const isCustom = currentView !== 'default_ar' && currentView !== 'default_en';
+  const currentSlot = config.slots.find(s => s.id === currentView);
   return (
     <div className="text-telgrarr-text px-4 pt-6 overflow-x-hidden relative">
       <div className="max-w-5xl mx-auto md:grid md:grid-cols-12 md:gap-8 relative z-10">
         <div className="md:col-span-7 space-y-6">
           <h1 className="text-2xl font-bold text-telgrarr-text tracking-tight">Style Editor</h1>
-          <SlotManager templates={config} currentView={currentView} onSelectView={setCurrentView} onAdd={handleAddSlot} onRename={handleRenameSlot} onDelete={handleDeleteSlot} onMakeActive={handleMakeActive} />
+          <SlotManager templates={config} currentView={currentView} onSelectView={setCurrentView} onAdd={() => setModal({ kind: 'add' })} onRename={() => setModal({ kind: 'rename' })} onDelete={() => setModal({ kind: 'delete' })} onMakeActive={handleMakeActive} />
           <div className="flex space-x-2 bg-telgrarr-surface p-1 rounded-xl border border-telgrarr-border shadow-card">
             <button onClick={() => { setType('sonarr'); setScenario('single'); }} className={`focus-ring flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-sm font-medium transition-colors ${type === 'sonarr' ? 'bg-telgrarr-purple text-telgrarr-on-accent shadow-md' : 'text-telgrarr-muted hover:bg-telgrarr-border/50'}`}><Tv className="w-4 h-4" /><span>Sonarr</span></button>
             <button onClick={() => { setType('radarr'); setScenario('single'); }} className={`focus-ring flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-sm font-medium transition-colors ${type === 'radarr' ? 'bg-telgrarr-purple text-telgrarr-on-accent shadow-md' : 'text-telgrarr-muted hover:bg-telgrarr-border/50'}`}><Film className="w-4 h-4" /><span>Radarr</span></button>
@@ -153,6 +163,54 @@ export default function Preview() {
           </div>
         </div>
       </div>
+
+      <InputModal
+        isOpen={modal?.kind === 'add'}
+        title="New Preset Slot"
+        label="Slot name"
+        placeholder="e.g. Compact, Detailed…"
+        confirmLabel="Create"
+        maxLength={40}
+        onConfirm={confirmAddSlot}
+        onCancel={() => setModal(null)}
+      />
+      <InputModal
+        isOpen={modal?.kind === 'rename'}
+        title="Rename Slot"
+        label="Slot name"
+        initialValue={currentSlot?.name || ''}
+        confirmLabel="Rename"
+        maxLength={40}
+        onConfirm={confirmRenameSlot}
+        onCancel={() => setModal(null)}
+      />
+      <ConfirmModal
+        isOpen={modal?.kind === 'delete'}
+        title="Delete Slot"
+        message="This permanently deletes this preset slot and cannot be undone."
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDeleteSlot}
+        onCancel={() => setModal(null)}
+      />
+      <AnimatePresence>
+        {status && (
+          <motion.div
+            role="status"
+            aria-live="polite"
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
+            className={`fixed left-1/2 -translate-x-1/2 bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] z-[55] px-4 py-2.5 rounded-xl text-sm font-medium shadow-card border ${
+              status.type === 'success'
+                ? 'bg-telgrarr-success/15 border-telgrarr-success/30 text-telgrarr-success'
+                : 'bg-telgrarr-danger/15 border-telgrarr-danger/30 text-telgrarr-danger'
+            }`}
+          >
+            {status.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
