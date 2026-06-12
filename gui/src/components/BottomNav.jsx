@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Home, Ban, Settings, MoreHorizontal, Sparkles, ScrollText, Info } from 'lucide-react';
 
 const PRIMARY_TABS = [
@@ -21,6 +21,13 @@ export default function BottomNav() {
   const location  = useLocation();
   const navigate  = useNavigate();
   const [open, setOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
   const moreActive = SHEET_PATHS.includes(location.pathname);
 
   function handleTab(path, soon) {
@@ -49,10 +56,10 @@ export default function BottomNav() {
         {open && (
           <motion.div
             key="sheet"
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 36, mass: 0.8 }}
+            initial={reduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+            animate={reduceMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+            transition={reduceMotion ? { duration: 0.15 } : { type: 'spring', stiffness: 380, damping: 36, mass: 0.8 }}
             className="fixed bottom-16 sm:bottom-28 left-0 right-0 z-50 mx-auto max-w-lg px-3 pb-2"
           >
             <div className="glass-panel rounded-2xl overflow-hidden shadow-2xl">
@@ -67,7 +74,7 @@ export default function BottomNav() {
                     onClick={() => handleTab(path, soon)}
                     aria-label={label}
                     className={
-                      'w-full flex items-center gap-4 px-4 py-3.5 transition-all ' +
+                      'focus-ring w-full flex items-center gap-4 px-4 py-3.5 transition-all ' +
                       (soon ? 'opacity-40 cursor-not-allowed ' : 'hover:bg-telgrarr-text/5 active:bg-telgrarr-text/10 ') +
                       (isActive ? 'text-telgrarr-purple' : 'text-telgrarr-text')
                     }
@@ -97,7 +104,7 @@ export default function BottomNav() {
                 onClick={() => handleTab(path, soon)}
                 aria-label={label}
                 className={
-                  'relative flex-1 flex flex-col items-center justify-center gap-1 transition-all ' +
+                  'focus-ring relative flex-1 flex flex-col items-center justify-center gap-1 transition-all ' +
                   (isActive ? 'text-telgrarr-purple' : 'text-telgrarr-muted') +
                   ' hover:text-telgrarr-text active:scale-95'
                 }
@@ -114,8 +121,10 @@ export default function BottomNav() {
           <button
             onClick={() => setOpen(prev => !prev)}
             aria-label="More"
+            aria-expanded={open}
+            aria-haspopup="menu"
             className={
-              'relative flex-1 flex flex-col items-center justify-center gap-1 transition-all ' +
+              'focus-ring relative flex-1 flex flex-col items-center justify-center gap-1 transition-all ' +
               (moreActive || open ? 'text-telgrarr-purple' : 'text-telgrarr-muted') +
               ' hover:text-telgrarr-text active:scale-95'
             }
