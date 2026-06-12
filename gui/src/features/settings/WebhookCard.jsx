@@ -85,9 +85,10 @@ export default function WebhookCard({ source, openConfirm, startRestartPoll }) {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">Base URL (suggested - edit if wrong)</label>
+        <label htmlFor={`webhook-base-${source}`} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">Base URL (suggested - edit if wrong)</label>
         <input
           type="text"
+          id={`webhook-base-${source}`}
           value={effectiveBase}
           onChange={(e) => setBase(e.target.value)}
           placeholder="http://your-server:3400"
@@ -96,25 +97,27 @@ export default function WebhookCard({ source, openConfirm, startRestartPoll }) {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">Webhook URL</label>
+        <label htmlFor={`webhook-url-${source}`} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">Webhook URL</label>
         <div className="relative">
-          <input type="text" value={shownUrl} readOnly className={`${INPUT} pr-20 opacity-80`} />
+          <input type="text" id={`webhook-url-${source}`} value={shownUrl} readOnly className={`${INPUT} pr-20 opacity-80`} />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
             <button
               type="button"
               onClick={handleCopy}
               disabled={busy}
               title="Copy full URL"
-              className="text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+              aria-label="Copy full URL"
+              className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
             >
-              {copied ? <Check className="w-4 h-4 text-telgrarr-purple" /> : <Copy className="w-4 h-4" />}
+              {copied ? <Check className="w-4 h-4 text-telgrarr-success" /> : <Copy className="w-4 h-4" />}
             </button>
             <button
               type="button"
               onClick={handleEye}
               disabled={busy}
               title={secret !== null ? 'Hide secret' : 'Reveal secret'}
-              className="text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+              aria-label={secret !== null ? 'Hide secret' : 'Reveal secret'}
+              className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
             >
               {secret !== null ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
