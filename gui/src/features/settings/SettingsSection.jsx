@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Send, Timer, Tv, Film, Play, Star, Search, Settings as SettingsIcon,
   CheckCircle, XCircle, Loader2, Wifi, Lock,
@@ -29,12 +29,14 @@ export default function SettingsSection({
   const sectionTest = testStatus[section.id];
   const deeplTest = testStatus['translator-deepl'];
   const dirty = sectionIsDirty(section);
+  const reduceMotion = useReducedMotion();
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-panel overflow-hidden">
+    <motion.div initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-panel overflow-hidden">
       <button
         onClick={() => setExpanded((p) => ({ ...p, [section.id]: !isExpanded }))}
-        className="w-full flex items-center justify-between p-4"
+        aria-expanded={isExpanded}
+        className="focus-ring w-full flex items-center justify-between p-4"
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-telgrarr-purple/15 rounded-lg flex items-center justify-center">
@@ -44,8 +46,8 @@ export default function SettingsSection({
           {dirty && <span className="w-1.5 h-1.5 bg-telgrarr-purple rounded-full animate-pulse" />}
         </div>
         <div className="flex items-center gap-2">
-          {sectionStatus === 'saved' && <CheckCircle className="w-4 h-4 text-green-400" />}
-          {sectionStatus === 'error' && <XCircle className="w-4 h-4 text-red-400" />}
+          {sectionStatus === 'saved' && <CheckCircle className="w-4 h-4 text-telgrarr-success" />}
+          {sectionStatus === 'error' && <XCircle className="w-4 h-4 text-telgrarr-danger" />}
           {isExpanded ? <ChevronUp className="w-4 h-4 text-telgrarr-muted" /> : <ChevronDown className="w-4 h-4 text-telgrarr-muted" />}
         </div>
       </button>
@@ -66,13 +68,13 @@ export default function SettingsSection({
               <button
                 onClick={() => handleTest(section)}
                 disabled={sectionTest?.loading}
-                className="flex items-center gap-2 text-sm text-telgrarr-purple hover:text-telgrarr-purple-glow transition-colors disabled:opacity-50"
+                className="focus-ring flex items-center gap-2 text-sm text-telgrarr-purple hover:text-telgrarr-purple-glow transition-colors disabled:opacity-50"
               >
                 {sectionTest?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
                 {section.testLabel}
               </button>
               {sectionTest && !sectionTest.loading && (
-                <p className={`text-xs mt-1.5 flex items-center gap-1.5 ${sectionTest.success ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={`text-xs mt-1.5 flex items-center gap-1.5 ${sectionTest.success ? 'text-telgrarr-success' : 'text-telgrarr-danger'}`}>
                   {sectionTest.success ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                   {sectionTest.message}
                 </p>
@@ -85,13 +87,13 @@ export default function SettingsSection({
               <button
                 onClick={handleTestDeepl}
                 disabled={deeplTest?.loading}
-                className="flex items-center gap-2 text-sm text-telgrarr-purple hover:text-telgrarr-purple-glow transition-colors disabled:opacity-50"
+                className="focus-ring flex items-center gap-2 text-sm text-telgrarr-purple hover:text-telgrarr-purple-glow transition-colors disabled:opacity-50"
               >
                 {deeplTest?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
                 Test DeepL Key
               </button>
               {deeplTest && !deeplTest.loading && (
-                <p className={`text-xs mt-1.5 flex items-center gap-1.5 ${deeplTest.success ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={`text-xs mt-1.5 flex items-center gap-1.5 ${deeplTest.success ? 'text-telgrarr-success' : 'text-telgrarr-danger'}`}>
                   {deeplTest.success ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                   {deeplTest.message}
                 </p>
@@ -103,7 +105,7 @@ export default function SettingsSection({
             <button
               onClick={() => handleSaveRequest(section.id)}
               disabled={!dirty || sectionStatus === 'saving'}
-              className="flex items-center gap-2 px-4 py-2.5 bg-telgrarr-purple hover:bg-telgrarr-purple-glow disabled:opacity-30 disabled:cursor-not-allowed text-telgrarr-text text-sm font-semibold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-telgrarr-purple/20"
+              className="focus-ring flex items-center gap-2 px-4 py-2.5 bg-telgrarr-purple hover:bg-telgrarr-purple-glow disabled:opacity-30 disabled:cursor-not-allowed text-telgrarr-on-accent text-sm font-semibold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-telgrarr-purple/20"
             >
               {sectionStatus === 'saving' ? (
                 <>
