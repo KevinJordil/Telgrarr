@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Home, Ban, Settings, MoreHorizontal, Sparkles, ScrollText, Info } from 'lucide-react';
+import useNavGuard from '../store/navGuardStore';
 
 const PRIMARY_TABS = [
   { id: 'home',     label: 'Home',     icon: Home,     path: '/dashboard' },
@@ -22,6 +23,7 @@ export default function BottomNav() {
   const navigate  = useNavigate();
   const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion();
+  const runGuard = useNavGuard((s) => s.run);
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
@@ -32,8 +34,8 @@ export default function BottomNav() {
 
   function handleTab(path, soon) {
     if (soon) return;
-    setOpen(false);
-    navigate(path);
+    if (path === location.pathname) { setOpen(false); return; }
+    runGuard(() => { setOpen(false); navigate(path); });
   }
 
   return (
