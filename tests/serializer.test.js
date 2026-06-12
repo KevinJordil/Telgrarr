@@ -3,7 +3,7 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const config = require('../src/config.js');
-const { getMaskedSettings } = require('../src/settings/serializer.js');
+const { getMaskedSettings, getFieldSources } = require('../src/settings/serializer.js');
 const { SECRET_MASK } = require('../src/settings/secrets.js');
 
 describe('Serializer Parity Harness (Phase A.3)', () => {
@@ -111,5 +111,29 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
 
     // --- ASSERTION 4: NON-SCHEMA KEYS EXCLUDED ---
     expect(result.queueFile).toBeUndefined();
+  });
+});
+
+describe('getFieldSources (H4.2 env annotation)', () => {
+  let origPort, origHost, origEnv;
+
+  beforeEach(() => {
+    origPort = config.PORT; origHost = config.HOST; origEnv = config.envOverrides;
+    Object.defineProperty(config, 'PORT', { value: 9999, enumerable: false, configurable: true });
+    Object.defineProperty(config, 'HOST', { value: '1.2.3.4', enumerable: false, configurable: true });
+    Object.defineProperty(config, 'envOverrides', { value: { PORT: true, HOST: false }, enumerable: false, configurable: true });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(config, 'PORT', { value: origPort, enumerable: false, configurable: true });
+    Object.defineProperty(config, 'HOST', { value: origHost, enumerable: false, configurable: true });
+    Object.defineProperty(config, 'envOverrides', { value: origEnv, enumerable: false, configurable: true });
+  });
+
+  it('annotates only envVar fields with source/effective/editable', () => {
+    const meta = getFieldSources();
+    expect(Object.keys(meta)).toEqual(['listenerPort', 'listenerHost']);
+    expect(meta.listenerPort).toEqual({ source: 'env', effective: 9999, editable: false });
+    expect(meta.listenerHost).toEqual({ source: 'file', effective: '1.2.3.4', editable: true });
   });
 });

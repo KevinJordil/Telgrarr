@@ -62,4 +62,26 @@ function getMaskedSettings() {
   return settings;
 }
 
-module.exports = { getMaskedSettings };
+/**
+ * H4.2: per-field env-source annotation. For each schema field carrying an
+ * `envVar` hint, report whether the effective value is sourced from the
+ * environment (read-only) or the config file (editable), plus the effective
+ * boot-resolved value. effective is config[envVar] (env wins; B.1), NOT the
+ * file-tier config[field.key]. Secret effective values are masked (H5-defensive).
+ * @returns {Object<string,{source:string,effective:*,editable:boolean}>}
+ */
+function getFieldSources() {
+  const meta = {};
+  for (const section of SETTINGS_SCHEMA) {
+    for (const field of section.fields) {
+      if (!field.envVar) continue;
+      const isEnv = !!(config.envOverrides && config.envOverrides[field.envVar]);
+      let effective = config[field.envVar];
+      if (field.type === 'secret') effective = maskSecret(effective);
+      meta[field.key] = { source: isEnv ? 'env' : 'file', effective, editable: !isEnv };
+    }
+  }
+  return meta;
+}
+
+module.exports = { getMaskedSettings, getFieldSources };

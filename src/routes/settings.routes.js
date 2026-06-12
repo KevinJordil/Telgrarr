@@ -8,7 +8,7 @@ const log = require('../logger');
 const events = require('../events');
 const EVENT_TYPES = require('../../shared/events.json');
 const { requireAuth } = require('../middlewares/auth');
-const { getMaskedSettings } = require('../settings/serializer');
+const { getMaskedSettings, getFieldSources } = require('../settings/serializer');
 const { validateSettings } = require('../settings/validator');
 const { needsRestart } = require('../settings/policy');
 const { pickSecret } = require('../settings/secrets');
@@ -28,6 +28,13 @@ router.get('/settings/schema', requireAuth, (req, res) => {
 // ── GET /api/settings ────────────────────────────────────────────────────────
 router.get('/settings', requireAuth, (req, res) => {
   res.json(getMaskedSettings());
+});
+
+// GET /api/settings/meta (H4.2) - per-field env-source annotation (envVar hint).
+// Read-only, auth-gated, SEPARATE from GET /settings so the settings response
+// stays byte-identical and the annotation can never echo back into config.save().
+router.get('/settings/meta', requireAuth, (req, res) => {
+  res.json({ fields: getFieldSources() });
 });
 
 // ── POST /api/settings ───────────────────────────────────────────────────────
