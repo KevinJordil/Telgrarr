@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Database, ChevronDown, ChevronUp, Loader2, CheckCircle, XCircle, Download, RefreshCw, Trash2 } from 'lucide-react';
 import useSettingsStore from '../../../store/settingsStore';
 import api from '../../../api';
+import SliderInput from '../../../components/SliderInput';
 import { formatBytes } from '../formUtils';
 
 export default function BackupPanel({ openConfirm, startRestartPoll }) {
@@ -12,6 +13,7 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
   const [backupsLoading, setBackupsLoading] = useState(false);
   const [backupConfig, setBackupConfig] = useState({ enabled: true, intervalDays: 7, retainCount: 5 });
   const [backupStatus, setBackupStatus] = useState(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (settings?.backup) setBackupConfig(settings.backup);
@@ -116,21 +118,32 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
     });
   };
 
+  const statusColor = backupStatus
+    ? (backupStatus.loading ? 'text-telgrarr-muted' : backupStatus.success ? 'text-telgrarr-success' : 'text-telgrarr-danger')
+    : '';
+
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-panel overflow-hidden">
-      <button onClick={() => setIsExpanded((p) => !p)} className="w-full flex items-center justify-between p-4">
+    <motion.div
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-panel overflow-hidden"
+    >
+      <button
+        onClick={() => setIsExpanded((p) => !p)}
+        aria-expanded={isExpanded}
+        className="focus-ring w-full flex items-center justify-between p-4"
+      >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-telgrarr-purple/15 rounded-lg flex items-center justify-center">
             <Database className="w-4 h-4 text-telgrarr-purple" />
           </div>
-          <span className="font-semibold text-telgrarr-text">Backup & Restore</span>
+          <span className="font-semibold text-telgrarr-text">Backup &amp; Restore</span>
         </div>
         {isExpanded ? <ChevronUp className="w-4 h-4 text-telgrarr-muted" /> : <ChevronDown className="w-4 h-4 text-telgrarr-muted" />}
       </button>
-
       {isExpanded && (
         <div className="px-4 pb-5 space-y-4 border-t border-telgrarr-border/50 pt-4">
-          <div className="p-4 bg-telgrarr-black/40 rounded-xl border border-telgrarr-border space-y-4">
+          <div className="p-4 bg-telgrarr-elevated rounded-xl border border-telgrarr-border space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-telgrarr-text">Autonomous Scheduler</h3>
@@ -141,78 +154,57 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
                   type="checkbox"
                   checked={backupConfig.enabled}
                   onChange={(e) => setBackupConfig({ ...backupConfig, enabled: e.target.checked })}
+                  aria-label="Enable autonomous backups"
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-telgrarr-black border border-telgrarr-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-telgrarr-muted after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-telgrarr-purple peer-checked:after:bg-white" />
+                <div className="w-9 h-5 bg-telgrarr-black border border-telgrarr-border rounded-full peer peer-focus-visible:ring-2 peer-focus-visible:ring-telgrarr-purple peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-telgrarr-black peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-telgrarr-muted after:border-telgrarr-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-telgrarr-purple peer-checked:after:bg-telgrarr-on-accent peer-checked:after:border-telgrarr-on-accent" />
               </label>
             </div>
-
             {backupConfig.enabled && (
               <>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-telgrarr-muted font-medium uppercase tracking-wider">Interval: {backupConfig.intervalDays} Days</span>
-                  </div>
-                  <input
-                    type="range"
-                    onWheel={(e) => e.currentTarget.blur()}
-                    min="1"
-                    max="30"
-                    value={backupConfig.intervalDays}
-                    onChange={(e) => setBackupConfig({ ...backupConfig, intervalDays: parseInt(e.target.value, 10) })}
-                    className="w-full h-2 bg-telgrarr-border rounded-full appearance-none accent-telgrarr-purple"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-telgrarr-muted font-medium uppercase tracking-wider">Retain Last: {backupConfig.retainCount} Backups</span>
-                  </div>
-                  <input
-                    type="range"
-                    onWheel={(e) => e.currentTarget.blur()}
-                    min="1"
-                    max="20"
-                    value={backupConfig.retainCount}
-                    onChange={(e) => setBackupConfig({ ...backupConfig, retainCount: parseInt(e.target.value, 10) })}
-                    className="w-full h-2 bg-telgrarr-border rounded-full appearance-none accent-telgrarr-purple"
-                  />
-                </div>
+                <SliderInput
+                  field={{ label: 'Backup interval', min: 1, max: 30, step: 1 }}
+                  value={backupConfig.intervalDays}
+                  onChange={(v) => setBackupConfig({ ...backupConfig, intervalDays: v })}
+                  displayFn={(v) => `${v} day${v === 1 ? '' : 's'}`}
+                />
+                <SliderInput
+                  field={{ label: 'Retain last', min: 1, max: 20, step: 1 }}
+                  value={backupConfig.retainCount}
+                  onChange={(v) => setBackupConfig({ ...backupConfig, retainCount: v })}
+                  displayFn={(v) => `${v} backup${v === 1 ? '' : 's'}`}
+                />
               </>
             )}
-
             <button
               onClick={handleSaveBackupConfig}
-              className="w-full py-2 bg-telgrarr-surface border border-telgrarr-border hover:bg-telgrarr-purple/10 text-xs font-semibold rounded-lg transition-colors"
+              className="focus-ring w-full py-2 bg-telgrarr-surface border border-telgrarr-border hover:bg-telgrarr-purple/10 text-xs font-semibold rounded-lg transition-colors"
             >
               Save Backup Settings
             </button>
           </div>
-
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-telgrarr-text">Manual Backup</h3>
               <button
                 onClick={handleCreateBackup}
-                className="flex items-center gap-1.5 text-xs text-telgrarr-purple hover:text-telgrarr-purple-glow font-medium bg-telgrarr-purple/10 px-2 py-1 rounded"
+                className="focus-ring flex items-center gap-1.5 text-xs text-telgrarr-purple hover:text-telgrarr-purple-glow font-medium bg-telgrarr-purple/10 px-2 py-1 rounded"
               >
                 <Download className="w-3.5 h-3.5" /> Create Now
               </button>
             </div>
-
             {backupStatus && (
-              <p className={`text-xs flex items-center gap-1.5 ${backupStatus.loading ? 'text-telgrarr-muted' : backupStatus.success ? 'text-green-400' : 'text-red-400'}`}>
+              <p className={`text-xs flex items-center gap-1.5 ${statusColor}`}>
                 {backupStatus.loading ? <Loader2 className="w-3 h-3 animate-spin" /> : backupStatus.success ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                 {backupStatus.msg}
               </p>
             )}
-
             {backupsLoading ? (
               <div className="flex justify-center p-4">
                 <Loader2 className="w-5 h-5 text-telgrarr-purple animate-spin" />
               </div>
             ) : backups.length === 0 ? (
-              <div className="text-center p-4 bg-telgrarr-black/30 rounded-xl border border-telgrarr-border text-telgrarr-muted text-xs">
+              <div className="text-center p-4 bg-telgrarr-elevated rounded-xl border border-telgrarr-border text-telgrarr-muted text-xs">
                 No backups found.
               </div>
             ) : (
@@ -226,10 +218,10 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 ml-3">
-                      <button onClick={() => handleRestoreBackup(b.filename)} className="p-1.5 text-telgrarr-purple hover:bg-telgrarr-purple/10 rounded" title="Restore">
+                      <button onClick={() => handleRestoreBackup(b.filename)} aria-label={`Restore ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-purple hover:bg-telgrarr-purple/10 rounded">
                         <RefreshCw className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteBackup(b.filename)} className="p-1.5 text-red-400 hover:bg-red-400/10 rounded" title="Delete">
+                      <button onClick={() => handleDeleteBackup(b.filename)} aria-label={`Delete ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-danger hover:bg-telgrarr-danger/10 rounded">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
