@@ -60,6 +60,7 @@ function SecretInput({ field, value, onChange, base }) {
     <div className="relative">
       <input
         type={open ? 'text' : 'password'}
+        id={field.key}
         value={displayValue}
         onChange={(e) => handleType(e.target.value)}
         placeholder={field.placeholder}
@@ -102,9 +103,10 @@ export default function FieldRenderer({ field, value, onChange }) {
   if (meta && meta.editable === false) {
     return (
       <div className="space-y-1.5 pt-3">
-        <label className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</label>
+        <label htmlFor={field.key} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</label>
         <input
           type="text"
+          id={field.key}
           value={String(meta.effective ?? '')}
           disabled
           readOnly
@@ -119,11 +121,12 @@ export default function FieldRenderer({ field, value, onChange }) {
 
   return (
     <div className="space-y-1.5 pt-3">
-      <label className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</label>
+      <label htmlFor={field.key} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</label>
 
       {(field.type === 'text' || field.type === 'url') && (
         <input
           type="text"
+          id={field.key}
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
@@ -134,6 +137,7 @@ export default function FieldRenderer({ field, value, onChange }) {
       {field.type === 'number' && (
         <input
           type="text"
+          id={field.key}
           inputMode="numeric"
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
@@ -151,7 +155,7 @@ export default function FieldRenderer({ field, value, onChange }) {
       )}
 
       {field.type === 'select' && (
-        <select value={value || ''} onChange={(e) => onChange(e.target.value)} className={`${base} cursor-pointer`}>
+        <select id={field.key} value={value || ''} onChange={(e) => onChange(e.target.value)} className={`${base} cursor-pointer`}>
           {(field.options || []).map((opt) => (
             <option key={opt.value} value={opt.value} className="bg-telgrarr-black">
               {opt.label}

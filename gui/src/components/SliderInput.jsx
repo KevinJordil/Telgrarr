@@ -68,6 +68,7 @@ export default function SliderInput({ field, value, onChange, displayFn }) {
       </div>
       <div
         ref={trackRef}
+        id={field.key}
         role="slider"
         tabIndex={0}
         aria-valuemin={min}
