@@ -10,7 +10,7 @@ const EVENT_TYPES = require('../../shared/events.json');
 const { requireAuth } = require('../middlewares/auth');
 const { getMaskedSettings, getFieldSources } = require('../settings/serializer');
 const { validateSettings } = require('../settings/validator');
-const { needsRestart } = require('../settings/policy');
+const { needsRestart, portChangeRequiresPreflight } = require('../settings/policy');
 const { pickSecret } = require('../settings/secrets');
 const {
   testTelegram, testSonarr, testRadarr, testEmby, testSeerr, testOmdb,
@@ -19,6 +19,7 @@ const {
 } = require('../services/connection-tester');
 const { SETTINGS_SCHEMA } = require('../settings-schema');
 const { requestRestart } = require('../services/restart');
+const { isPortAvailable } = require('../services/port-check');
 
 // ── GET /api/settings/schema ─────────────────────────────────────────────────
 router.get('/settings/schema', requireAuth, (req, res) => {
@@ -48,6 +49,21 @@ router.post('/settings', requireAuth, async (req, res) => {
     const errs = validateSettings(incoming);
     if (errs.length > 0) {
       return res.status(400).json({ error: 'Validation failed', details: errs });
+    }
+
+    // H4.3a: port pre-flight. If the operator is changing to a NEW, non-env-managed
+    // port, best-effort test-bind it BEFORE persisting so a save never arms a restart
+    // into the H0 bind-failure exit. TOCTOU-tolerant; H0 remains the backstop.
+    if (portChangeRequiresPreflight(incoming)) {
+      const targetHost = (incoming.listenerHost !== undefined && !config.envOverrides.HOST)
+        ? incoming.listenerHost
+        : config.HOST;
+      const free = await isPortAvailable(incoming.listenerPort, targetHost);
+      if (!free) {
+        log.warn('Settings', `Port Pre-flight → Refused → port ${incoming.listenerPort} not bindable`);
+        return res.status(409).json({ error: `Port ${incoming.listenerPort} looks busy - pick another`, field: 'listenerPort' });
+      }
+      log.info('Settings', `Port Pre-flight → OK → port ${incoming.listenerPort} bindable`);
     }
 
     const restart = needsRestart(incoming);
