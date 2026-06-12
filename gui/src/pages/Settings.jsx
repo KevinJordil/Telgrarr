@@ -94,7 +94,7 @@ export default function Settings() {
 
   if (loading || (!error && (!draft || !schema))) {
     return (
-      <div className="min-h-screen bg-telgrarr-black flex items-center justify-center">
+      <div className="min-h-[60vh] bg-telgrarr-black flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-telgrarr-purple animate-spin" />
       </div>
     );
@@ -102,8 +102,8 @@ export default function Settings() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-telgrarr-black flex flex-col items-center justify-center gap-4 px-6">
-        <XCircle className="w-10 h-10 text-red-400" />
+      <div className="min-h-[60vh] bg-telgrarr-black flex flex-col items-center justify-center gap-4 px-6">
+        <XCircle className="w-10 h-10 text-telgrarr-danger" />
         <p className="text-telgrarr-text font-semibold text-center">Failed to load settings</p>
         <p className="text-telgrarr-muted text-sm text-center">{error}</p>
         <button
@@ -111,7 +111,7 @@ export default function Settings() {
             fetchSettings();
             fetchSchema();
           }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-telgrarr-purple hover:bg-telgrarr-purple-glow text-telgrarr-text text-sm font-semibold rounded-xl transition-all"
+          className="focus-ring flex items-center gap-2 px-4 py-2.5 bg-telgrarr-purple hover:bg-telgrarr-purple-glow text-telgrarr-on-accent text-sm font-semibold rounded-xl transition-all"
         >
           <RefreshCw className="w-4 h-4" /> Retry
         </button>
@@ -120,11 +120,11 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-telgrarr-black text-telgrarr-text pb-24">
+    <div className="bg-telgrarr-black text-telgrarr-text">
       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-telgrarr-purple/10 to-transparent pointer-events-none" />
       <div className="max-w-lg mx-auto px-4 pt-6 md:pt-8 space-y-4 relative z-10">
         <div className="flex items-center gap-3 mb-6 px-1">
-          <SettingsIcon className="w-6 h-6 text-telgrarr-purple drop-shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
+          <SettingsIcon className="w-6 h-6 text-telgrarr-purple" />
           <h1 className="text-2xl font-bold tracking-tight text-telgrarr-text">System Settings</h1>
         </div>
 
@@ -159,8 +159,8 @@ export default function Settings() {
 
       {manualRestart && (
         <div className="fixed bottom-24 inset-x-4 z-50 mx-auto max-w-lg">
-          <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 backdrop-blur-sm">
-            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 rounded-xl border border-telgrarr-warning/40 bg-telgrarr-warning/10 px-4 py-3 backdrop-blur-sm">
+            <AlertTriangle className="w-5 h-5 text-telgrarr-warning shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-telgrarr-text text-sm font-semibold">Manual restart required</p>
               <p className="text-telgrarr-muted text-xs mt-0.5">
@@ -169,7 +169,7 @@ export default function Settings() {
             </div>
             <button
               onClick={dismissManualRestart}
-              className="text-telgrarr-muted hover:text-telgrarr-text text-xs font-semibold shrink-0"
+              className="focus-ring text-telgrarr-muted hover:text-telgrarr-text text-xs font-semibold shrink-0"
             >
               Dismiss
             </button>
