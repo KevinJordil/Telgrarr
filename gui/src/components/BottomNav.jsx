@@ -4,15 +4,15 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Home, Ban, Settings, MoreHorizontal, Sparkles, ScrollText, Info } from 'lucide-react';
 
 const PRIMARY_TABS = [
-  { id: 'home',      label: 'Home',      icon: Home,     path: '/dashboard' },
-  { id: 'blacklist', label: 'Blacklist', icon: Ban,      path: '/blacklist' },
-  { id: 'settings',  label: 'Settings',  icon: Settings, path: '/settings'  },
+  { id: 'home',     label: 'Home',     icon: Home,     path: '/dashboard' },
+  { id: 'preview',  label: 'Preview',  icon: Sparkles, path: '/preview'   },
+  { id: 'settings', label: 'Settings', icon: Settings, path: '/settings'  },
 ];
 
 const SHEET_ITEMS = [
-  { id: 'preview', label: 'Preview', icon: Sparkles,   path: '/preview' },
-  { id: 'logs',    label: 'Logs',    icon: ScrollText, path: '/logs'    },
-  { id: 'about',   label: 'About',   icon: Info,       path: '/about'   },
+  { id: 'blacklist', label: 'Blacklist', icon: Ban,        path: '/blacklist' },
+  { id: 'logs',      label: 'Logs',      icon: ScrollText, path: '/logs'      },
+  { id: 'about',     label: 'About',     icon: Info,       path: '/about'     },
 ];
 
 const SHEET_PATHS = SHEET_ITEMS.map(i => i.path);
