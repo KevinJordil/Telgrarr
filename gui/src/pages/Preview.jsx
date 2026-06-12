@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Film, Tv, Send, Save, RefreshCw } from 'lucide-react';
+import { Film, Tv, Send, Save, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import api from '../api';
 import useTemplatesStore from '../store/templatesStore';
 import TelegramMock from '../components/preview/TelegramMock';
@@ -7,7 +7,6 @@ import TemplateEditor from '../components/preview/TemplateEditor';
 import SlotManager from '../components/preview/SlotManager';
 import ConfirmModal from '../components/ConfirmModal';
 import InputModal from '../components/InputModal';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
 const STARTER_AR = `<b>{{headerEmoji}} {{headerText}}</b>
 {{separator}}
@@ -34,17 +33,21 @@ export default function Preview() {
   const [html, setHtml]                     = useState('');
   const [syntaxError, setSyntaxError]       = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
-  const [sending, setSending]               = useState(false);
-  const reduceMotion = useReducedMotion();
   const [modal, setModal]   = useState(null);
-  const [status, setStatus] = useState(null);
+  const [sendState, setSendState] = useState('idle'); // idle | sending | sent | error
+  const [slotError, setSlotError] = useState(null);
   const initializedRef = useRef(false);
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
   useEffect(() => {
-    if (!status) return;
-    const t = setTimeout(() => setStatus(null), 4000);
+    if (!slotError) return;
+    const t = setTimeout(() => setSlotError(null), 4000);
     return () => clearTimeout(t);
-  }, [status]);
+  }, [slotError]);
+  useEffect(() => {
+    if (sendState !== 'sent' && sendState !== 'error') return;
+    const t = setTimeout(() => setSendState('idle'), 2500);
+    return () => clearTimeout(t);
+  }, [sendState]);
   useEffect(() => {
     if (config && !initializedRef.current) {
       initializedRef.current = true;
@@ -89,39 +92,38 @@ export default function Preview() {
     const newSlot = { id: `slot_${Date.now()}`, name, sonarr: STARTER_AR, radarr: STARTER_AR };
     const res = await addSlot(newSlot);
     if (res.success) setCurrentView(newSlot.id);
-    else setStatus({ type: 'error', text: res.error });
+    else setSlotError(res.error);
   };
   const confirmRenameSlot = async (newName) => {
     setModal(null);
     const slot = config.slots.find(s => s.id === currentView);
     if (!slot || newName === slot.name) return;
     const res = await updateSlot(currentView, { name: newName });
-    if (!res.success) setStatus({ type: 'error', text: res.error });
+    if (!res.success) setSlotError(res.error);
   };
   const confirmDeleteSlot = async () => {
     setModal(null);
     const res = await deleteSlot(currentView);
     if (res.success) setCurrentView('default_ar');
-    else setStatus({ type: 'error', text: res.error });
+    else setSlotError(res.error);
   };
   const handleMakeActive = async () => {
     const res = await setActiveMode(currentView);
-    if (!res.success) setStatus({ type: 'error', text: res.error });
+    if (!res.success) setSlotError(res.error);
   };
   const saveDraftToSlot = async () => {
     const res = await updateSlot(currentView, { [type]: draft });
-    if (!res.success) setStatus({ type: 'error', text: res.error });
+    if (!res.success) setSlotError(res.error);
   };
   const sendTest = async () => {
-    setSending(true);
+    setSendState('sending');
     try {
       let payloadTemplate = 'DEFAULT_AR';
       if (currentView === 'default_en') payloadTemplate = 'DEFAULT_EN';
       else if (currentView !== 'default_ar') payloadTemplate = draft || null;
       await api.post('/preview/send', { type, scenario, template: payloadTemplate });
-      setStatus({ type: 'success', text: 'Test notification sent.' });
-    } catch (error) { setStatus({ type: 'error', text: 'Failed to send test.' }); }
-    setSending(false);
+      setSendState('sent');
+    } catch (error) { setSendState('error'); }
   };
   if (loading || !config) return <div className="flex justify-center items-center py-32"><RefreshCw className="w-8 h-8 animate-spin text-telgrarr-purple" /></div>;
   const isCustom = currentView !== 'default_ar' && currentView !== 'default_en';
@@ -132,6 +134,12 @@ export default function Preview() {
         <div className="md:col-span-7 space-y-6">
           <h1 className="text-2xl font-bold text-telgrarr-text tracking-tight">Style Editor</h1>
           <SlotManager templates={config} currentView={currentView} onSelectView={setCurrentView} onAdd={() => setModal({ kind: 'add' })} onRename={() => setModal({ kind: 'rename' })} onDelete={() => setModal({ kind: 'delete' })} onMakeActive={handleMakeActive} />
+          {slotError && (
+            <p role="alert" className="text-xs text-telgrarr-danger px-1 flex items-center gap-1.5">
+              <XCircle className="w-3.5 h-3.5 shrink-0" />
+              {slotError}
+            </p>
+          )}
           <div className="flex space-x-2 bg-telgrarr-surface p-1 rounded-xl border border-telgrarr-border shadow-card">
             <button onClick={() => { setType('sonarr'); setScenario('single'); }} className={`focus-ring flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-sm font-medium transition-colors ${type === 'sonarr' ? 'bg-telgrarr-purple text-telgrarr-on-accent shadow-md' : 'text-telgrarr-muted hover:bg-telgrarr-border/50'}`}><Tv className="w-4 h-4" /><span>Sonarr</span></button>
             <button onClick={() => { setType('radarr'); setScenario('single'); }} className={`focus-ring flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-sm font-medium transition-colors ${type === 'radarr' ? 'bg-telgrarr-purple text-telgrarr-on-accent shadow-md' : 'text-telgrarr-muted hover:bg-telgrarr-border/50'}`}><Film className="w-4 h-4" /><span>Radarr</span></button>
@@ -156,9 +164,26 @@ export default function Preview() {
         <div className="md:col-span-5 mt-8 md:mt-0 relative">
           <div className="md:sticky md:top-24 space-y-6">
             <TelegramMock html={html} loading={loadingPreview} />
-            <button onClick={sendTest} disabled={sending || loadingPreview || !!syntaxError} className="focus-ring w-full py-3.5 px-4 bg-telgrarr-purple hover:bg-telgrarr-purple-dark disabled:opacity-50 text-telgrarr-on-accent font-semibold rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-telgrarr-purple/20 active:scale-[0.98] transition-all">
-              {sending ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              <span>Send Test Notification</span>
+            <button
+              onClick={sendTest}
+              disabled={sendState === 'sending' || loadingPreview || !!syntaxError}
+              className={`focus-ring w-full py-3.5 px-4 disabled:opacity-50 text-telgrarr-on-accent font-semibold rounded-xl flex items-center justify-center space-x-2 shadow-lg active:scale-[0.98] transition-all ${
+                sendState === 'sent'
+                  ? 'bg-telgrarr-success hover:bg-telgrarr-success'
+                  : sendState === 'error'
+                    ? 'bg-telgrarr-danger hover:bg-telgrarr-danger'
+                    : 'bg-telgrarr-purple hover:bg-telgrarr-purple-dark shadow-telgrarr-purple/20'
+              }`}
+            >
+              {sendState === 'sending' ? (
+                <><RefreshCw className="w-5 h-5 animate-spin" /><span>Sending…</span></>
+              ) : sendState === 'sent' ? (
+                <><CheckCircle className="w-5 h-5" /><span>Sent</span></>
+              ) : sendState === 'error' ? (
+                <><XCircle className="w-5 h-5" /><span>Send failed</span></>
+              ) : (
+                <><Send className="w-5 h-5" /><span>Send Test Notification</span></>
+              )}
             </button>
           </div>
         </div>
@@ -193,24 +218,6 @@ export default function Preview() {
         onConfirm={confirmDeleteSlot}
         onCancel={() => setModal(null)}
       />
-      <AnimatePresence>
-        {status && (
-          <motion.div
-            role="status"
-            aria-live="polite"
-            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
-            className={`fixed left-1/2 -translate-x-1/2 bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] z-[55] px-4 py-2.5 rounded-xl text-sm font-medium shadow-card border ${
-              status.type === 'success'
-                ? 'bg-telgrarr-success/15 border-telgrarr-success/30 text-telgrarr-success'
-                : 'bg-telgrarr-danger/15 border-telgrarr-danger/30 text-telgrarr-danger'
-            }`}
-          >
-            {status.text}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
