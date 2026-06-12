@@ -2,6 +2,7 @@
 'use strict';
 const fs              = require('fs');
 const path            = require('path');
+const crypto          = require('crypto');
 const writeFileAtomic = require('write-file-atomic');
 const log             = require('./logger');
 const { SETTINGS_SCHEMA } = require('./settings-schema');
@@ -151,7 +152,38 @@ function loadFromDisk(context = 'boot') {
   }
 }
 
+/** Strip volatile, never-persisted keys before an atomic write (shared by save()
+ *  and the first-boot secret bootstrap so both emit an identical on-disk shape). */
+function stripVolatile(obj) {
+  const { DEFAULTS: _d, reload: _r, save: _s, templates: _t, ...rest } = obj;
+  return rest;
+}
+
+/** H5.0 (SD-11/SD-1): generate the webhook secret on FIRST boot ONLY when neither env
+ *  nor the config.json file tier supplies one (strictly idempotent). An env-set secret
+ *  is used as-is and NEVER persisted/overwritten (precedence env > file). Removes the
+ *  "401 until you hand-edit config.json" trap on a fresh install without weakening
+ *  closed-by-default (C.5): the only transition is unset -> a freshly generated secret. */
+function ensureWebhookSecret() {
+  const envSecret = process.env.WEBHOOK_SECRET;
+  if (envSecret != null && envSecret !== '') return;   // env wins, never persisted (SD-1)
+  if (config.webhookSecret) return;                    // already set -> idempotent (SD-11)
+  const secret = crypto.randomBytes(32).toString('base64url'); // 256-bit, URL-safe
+  config.webhookSecret = secret;
+  try {
+    writeFileAtomic.sync(
+      CONFIG_FILE,
+      JSON.stringify(stripVolatile(config), null, 2),
+      { mode: 0o600 }   // PR-2: holds secrets -> owner-only
+    );
+    log.audit('Config', 'Webhook secret generated on first boot \u2192 persisted to config.json \u2192 webhook routes authenticated');
+  } catch (err) {
+    log.error('Config', `Failed to persist generated webhook secret: ${err.message}`);
+  }
+}
+
 const config = loadFromDisk('boot');
+ensureWebhookSecret();
 log.setLevel(config.logging && config.logging.level);
 
 /**
@@ -224,7 +256,7 @@ async function save(incoming) {
     return current;
   }
   const merged = deepMerge(current, incoming);
-  const { DEFAULTS: _d, reload: _r, save: _s, templates: _t, ...toWrite } = merged;
+  const toWrite = stripVolatile(merged);
   await new Promise((resolve, reject) => {
     writeFileAtomic(
       CONFIG_FILE,
