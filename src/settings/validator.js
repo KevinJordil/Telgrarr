@@ -2,17 +2,20 @@
 'use strict';
 
 const { SETTINGS_SCHEMA } = require('../settings-schema');
+const net = require('net');
 
-// Non-schema operational-field bounds. These fields (listenerPort and backup.*)
-// are validated explicitly outside the SETTINGS_SCHEMA-driven loop because
-// they're admin/operational and not in the Settings UI. Moving them into the
-// schema would surface them in the GUI, which is out of scope.
-const LISTENER_PORT_MIN   = 1025;
-const LISTENER_PORT_MAX   = 65534;
+// Non-schema operational-field bounds. backup.* is validated explicitly outside
+// the SETTINGS_SCHEMA-driven loop because it is admin/operational. listenerPort
+// migrated INTO the schema (H4.1): now a GUI 'network' field validated by the
+// schema-driven integer block; bounds live on the field, message identical.
 const BACKUP_INTERVAL_MIN = 1;
 const BACKUP_INTERVAL_MAX = 30;
 const BACKUP_RETAIN_MIN   = 1;
 const BACKUP_RETAIN_MAX   = 20;
+
+// Host validity: a valid IPv4/IPv6 (net.isIP) OR a syntactically valid hostname.
+// net.isIP avoids a hand-rolled IP regex (R02). H0 remains the bind-time backstop.
+const HOSTNAME_RE = /^(?=.{1,253}$)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 const RULES = {
   // F.4: URL rule restricted to http(s) only — every consumer (Sonarr, Radarr,
@@ -26,6 +29,10 @@ const RULES = {
     } catch {
       return false;
     }
+  },
+  host: (val) => {
+    const s = String(val);
+    return net.isIP(s) !== 0 || HOSTNAME_RE.test(s);
   },
   telegramToken: (val) => /^\d+:[A-Za-z0-9_-]{30,}$/.test(val),
   chatId: (val) => /^-?\d+$/.test(String(val))
@@ -42,13 +49,6 @@ function getVal(obj, keyPath) {
  */
 function validateSettings(body) {
   const errors = [];
-
-  // 1. NON-SCHEMA EXPLICIT BLOCK
-  if (body.listenerPort !== undefined) {
-    if (!Number.isInteger(body.listenerPort) || body.listenerPort < LISTENER_PORT_MIN || body.listenerPort > LISTENER_PORT_MAX) {
-      errors.push({ field: 'listenerPort', message: `Must be an integer between ${LISTENER_PORT_MIN} and ${LISTENER_PORT_MAX}` });
-    }
-  }
 
   // Backup is not in schema but MUST be validated for behavioral parity
   if (body.backup) {
@@ -125,6 +125,10 @@ function validateSettings(body) {
          } else if (field.rule === 'telegramToken') {
             if (!RULES.telegramToken(val)) {
                errors.push({ field: field.key, message: 'Invalid Telegram bot token format' });
+            }
+         } else if (field.rule === 'host') {
+            if (!RULES.host(val)) {
+               errors.push({ field: field.key, message: 'Must be a valid hostname or IP address' });
             }
          } else if (field.rule === 'chatId') {
             if (!RULES.chatId(val)) {

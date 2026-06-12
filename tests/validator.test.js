@@ -167,6 +167,35 @@ describe('validator parity harness', () => {
 
   // ── CLEAN PASS — valid input produces zero errors ────────────────────────
 
+    // listenerHost rule (H4.1) - host string / IP, optional (empty = default)
+    it('valid listenerHost - 0.0.0.0', () => {
+      const errors = validateSettings({ listenerHost: '0.0.0.0' });
+      expect(errors.filter(e => e.field === 'listenerHost')).toEqual([]);
+    });
+
+    it('valid listenerHost - 127.0.0.1', () => {
+      const errors = validateSettings({ listenerHost: '127.0.0.1' });
+      expect(errors.filter(e => e.field === 'listenerHost')).toEqual([]);
+    });
+
+    it('valid listenerHost - hostname localhost', () => {
+      const errors = validateSettings({ listenerHost: 'localhost' });
+      expect(errors.filter(e => e.field === 'listenerHost')).toEqual([]);
+    });
+
+    it('empty listenerHost - optional, no error (uses default)', () => {
+      const errors = validateSettings({ listenerHost: '' });
+      expect(errors.filter(e => e.field === 'listenerHost')).toEqual([]);
+    });
+
+    it('invalid listenerHost - garbage rejected', () => {
+      expectSingleError(
+        { listenerHost: 'not a host!!' },
+        'listenerHost',
+        'Must be a valid hostname or IP address'
+      );
+    });
+
   it('valid input — no errors', () => {
     const errors = validateSettings({
       listenerPort: 3400,

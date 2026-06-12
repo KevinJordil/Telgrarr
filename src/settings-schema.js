@@ -131,6 +131,17 @@ const SETTINGS_SCHEMA = [
       { key: 'logging.rotation.audit.maxAgeDays', label: 'Audit Log Max Age (Days)', type: 'slider', min: 7, max: 365, step: 1, note: 'Delete audit.log archives older than this.', integer: true },
     ],
   },
+  {
+    id: 'network', title: 'Network', icon: 'Network',
+    fields: [
+      { key: 'listenerPort', envVar: 'PORT', label: 'Listener Port', type: 'number',
+        placeholder: '3400', integer: true, min: 1025, max: 65534,
+        note: 'TCP port the server listens on. Requires restart. If set via the PORT environment variable it is managed by your environment and shown read-only.' },
+      { key: 'listenerHost', envVar: 'HOST', label: 'Listener Host', type: 'text',
+        placeholder: '0.0.0.0', required: false, rule: 'host',
+        note: 'Network interface to bind. 0.0.0.0 = all interfaces; 127.0.0.1 = local only. Leave empty for the default. Requires restart. If set via the HOST environment variable it is managed by your environment and shown read-only.' },
+    ],
+  },
 ];
 
 module.exports = { SETTINGS_SCHEMA, TMDB_LANGUAGES };
