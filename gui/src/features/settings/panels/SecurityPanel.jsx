@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Lock, ChevronDown, ChevronUp, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import api from '../../../api';
 
@@ -7,6 +7,7 @@ export default function SecurityPanel() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [pwForm, setPwForm] = useState({ current: '', newPass: '', confirm: '' });
   const [pwStatus, setPwStatus] = useState(null);
+  const reduceMotion = useReducedMotion();
 
   const handlePasswordChange = async () => {
     if (pwForm.newPass !== pwForm.confirm) {
@@ -17,7 +18,6 @@ export default function SecurityPanel() {
       setPwStatus({ success: false, message: 'Password must be at least 8 characters.' });
       return;
     }
-
     setPwStatus({ loading: true });
     try {
       const res = await api.post('/auth/password', {
@@ -35,9 +35,21 @@ export default function SecurityPanel() {
     }
   };
 
+  const statusColor = pwStatus
+    ? (pwStatus.loading ? 'text-telgrarr-muted' : pwStatus.success ? 'text-telgrarr-success' : 'text-telgrarr-danger')
+    : '';
+
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-panel overflow-hidden">
-      <button onClick={() => setIsExpanded((p) => !p)} className="w-full flex items-center justify-between p-4">
+    <motion.div
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-panel overflow-hidden"
+    >
+      <button
+        onClick={() => setIsExpanded((p) => !p)}
+        aria-expanded={isExpanded}
+        className="focus-ring w-full flex items-center justify-between p-4"
+      >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-telgrarr-purple/15 rounded-lg flex items-center justify-center">
             <Lock className="w-4 h-4 text-telgrarr-purple" />
@@ -46,7 +58,6 @@ export default function SecurityPanel() {
         </div>
         {isExpanded ? <ChevronUp className="w-4 h-4 text-telgrarr-muted" /> : <ChevronDown className="w-4 h-4 text-telgrarr-muted" />}
       </button>
-
       {isExpanded && (
         <div className="px-4 pb-5 space-y-1 border-t border-telgrarr-border/50">
           {[
@@ -61,23 +72,21 @@ export default function SecurityPanel() {
                 value={pwForm[key]}
                 placeholder={placeholder}
                 onChange={(e) => setPwForm((p) => ({ ...p, [key]: e.target.value }))}
-                className="w-full bg-telgrarr-black/60 border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-none focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm"
+                className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-none focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm"
               />
             </div>
           ))}
-
           {pwStatus && (
-            <p className={`text-xs flex items-center gap-1.5 pt-2 ${pwStatus.loading ? 'text-telgrarr-muted' : pwStatus.success ? 'text-green-400' : 'text-red-400'}`}>
+            <p className={`text-xs flex items-center gap-1.5 pt-2 ${statusColor}`}>
               {pwStatus.loading ? <Loader2 className="w-3 h-3 animate-spin" /> : pwStatus.success ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
               {pwStatus.loading ? 'Changing password…' : pwStatus.message}
             </p>
           )}
-
           <div className="pt-3">
             <button
               onClick={handlePasswordChange}
               disabled={!pwForm.current || !pwForm.newPass || !pwForm.confirm || !!pwStatus?.loading}
-              className="flex items-center gap-2 px-4 py-2.5 bg-telgrarr-purple hover:bg-telgrarr-purple-glow disabled:opacity-30 disabled:cursor-not-allowed text-telgrarr-text text-sm font-semibold rounded-xl transition-all active:scale-[0.98]"
+              className="focus-ring flex items-center gap-2 px-4 py-2.5 bg-telgrarr-purple hover:bg-telgrarr-purple-glow disabled:opacity-30 disabled:cursor-not-allowed text-telgrarr-on-accent text-sm font-semibold rounded-xl transition-all active:scale-[0.98]"
             >
               <Lock className="w-4 h-4" />Change Password
             </button>
