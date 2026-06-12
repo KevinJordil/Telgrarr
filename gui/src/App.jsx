@@ -1,14 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useThemeStore from './store/themeStore';
 import useAuthStore  from './store/authStore';
 import Login     from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Settings  from './pages/Settings';
-import Logs      from './pages/Logs';
-import Preview   from './pages/Preview';
-import Blacklist from './pages/Blacklist';
-import About     from './pages/About';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Settings  = lazy(() => import('./pages/Settings'));
+const Logs      = lazy(() => import('./pages/Logs'));
+const Preview   = lazy(() => import('./pages/Preview'));
+const Blacklist = lazy(() => import('./pages/Blacklist'));
+const About     = lazy(() => import('./pages/About'));
 import AuthLayout from './components/AuthLayout';
 
 // -- Redirects unauthenticated users to login, authenticated to their route --

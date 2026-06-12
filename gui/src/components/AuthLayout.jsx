@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import useAuthStore  from '../store/authStore';
@@ -50,7 +50,13 @@ export default function AuthLayout() {
 
       <PullToRefresh className="flex-1" onRefresh={handleRefresh} disabled={ptrDisabled}>
         <main key={refreshKey} className="w-full max-w-3xl mx-auto pb-[calc(5rem_+_env(safe-area-inset-bottom))]">
-          <Outlet />
+          <Suspense fallback={
+            <div className="flex justify-center items-center py-32">
+              <div className="w-8 h-8 rounded-full border-2 border-telgrarr-border border-t-telgrarr-purple animate-spin" />
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </main>
       </PullToRefresh>
 
