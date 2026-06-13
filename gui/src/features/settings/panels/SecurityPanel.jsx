@@ -72,7 +72,7 @@ export default function SecurityPanel() {
                 value={pwForm[key]}
                 placeholder={placeholder}
                 onChange={(e) => setPwForm((p) => ({ ...p, [key]: e.target.value }))}
-                className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-none focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm"
+                className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-hidden focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm"
               />
             </div>
           ))}

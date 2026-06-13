@@ -73,7 +73,7 @@ function SecretInput({ field, value, onChange, base }) {
           disabled={!hasValue || busy}
           title="Copy"
           aria-label="Copy"
-          className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+          className="focus-ring rounded-sm text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
         >
           {copied ? <Check className="w-4 h-4 text-telgrarr-success" /> : <Copy className="w-4 h-4" />}
         </button>
@@ -83,7 +83,7 @@ function SecretInput({ field, value, onChange, base }) {
           disabled={!hasValue || busy}
           title={open ? 'Hide' : 'Reveal'}
           aria-label={open ? 'Hide' : 'Reveal'}
-          className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+          className="focus-ring rounded-sm text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
         >
           {open ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
@@ -93,7 +93,7 @@ function SecretInput({ field, value, onChange, base }) {
 }
 
 export default function FieldRenderer({ field, value, onChange }) {
-  const base = 'w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-none focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm';
+  const base = 'w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-hidden focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm';
   const displayFn = field.displayFormat ? DISPLAY_FORMATTERS[field.displayFormat] : null;
 
   // H4.3b: env-managed fields (GET /settings/meta) render read-only with the

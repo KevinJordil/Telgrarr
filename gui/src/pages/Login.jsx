@@ -83,7 +83,7 @@ function RecoveryModal({ onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-telgrarr-black/60 backdrop-blur-sm px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-telgrarr-black/60 backdrop-blur-xs px-4"
       onClick={(e) => { if (e.target === e.currentTarget && !success) onClose(); }}
       onKeyDown={onKeyDown}
     >
@@ -127,7 +127,7 @@ function RecoveryModal({ onClose }) {
               <div className="flex items-center gap-3 mb-6">
                 <button
                   onClick={onClose}
-                  className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-text transition-colors"
+                  className="focus-ring rounded-sm text-telgrarr-muted hover:text-telgrarr-text transition-colors"
                   aria-label="Back to login"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -138,7 +138,7 @@ function RecoveryModal({ onClose }) {
                 </div>
               </div>
               <p className="text-xs text-telgrarr-muted mb-5 leading-relaxed">
-                Run <code className="bg-telgrarr-elevated px-1.5 py-0.5 rounded text-telgrarr-purple font-mono">npm run recover</code> in SSH to generate a one-time token, then enter it below.
+                Run <code className="bg-telgrarr-elevated px-1.5 py-0.5 rounded-sm text-telgrarr-purple font-mono">npm run recover</code> in SSH to generate a one-time token, then enter it below.
               </p>
               <form onSubmit={handleRecover} className="space-y-4">
                 <div className="space-y-1.5">
@@ -150,7 +150,7 @@ function RecoveryModal({ onClose }) {
                       type="text"
                       value={recoveryToken}
                       onChange={(e) => setRecoveryToken(e.target.value)}
-                      className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 pl-10 pr-4 text-xs text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-none focus:border-telgrarr-purple transition-colors shadow-inner font-mono tracking-tight"
+                      className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 pl-10 pr-4 text-xs text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner font-mono tracking-tight"
                       placeholder="Paste 64-character token from terminal"
                       autoComplete="off"
                       required
@@ -165,7 +165,7 @@ function RecoveryModal({ onClose }) {
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 pl-10 pr-4 text-sm text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-none focus:border-telgrarr-purple transition-colors shadow-inner"
+                      className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 pl-10 pr-4 text-sm text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner"
                       placeholder="Min. 8 characters"
                       autoComplete="new-password"
                       required
@@ -180,7 +180,7 @@ function RecoveryModal({ onClose }) {
                       type="password"
                       value={confirmPw}
                       onChange={(e) => setConfirmPw(e.target.value)}
-                      className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 pl-10 pr-4 text-sm text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-none focus:border-telgrarr-purple transition-colors shadow-inner"
+                      className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 pl-10 pr-4 text-sm text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner"
                       placeholder="••••••••"
                       autoComplete="new-password"
                       required
@@ -267,7 +267,7 @@ export default function Login() {
               initial={reduceMotion ? { scale: 1 } : { scale: 0.8 }} animate={{ scale: 1 }} transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 15 }}
               src={logoUrl} alt="Telgrarr Logo" className="w-36 h-36 md:w-44 md:h-44 mb-0 object-contain relative z-10"
             />
-            <h1 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-telgrarr-text to-telgrarr-purple tracking-widest relative z-10">TELGRARR</h1>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-telgrarr-text to-telgrarr-purple tracking-widest relative z-10">TELGRARR</h1>
           </div>
           <form onSubmit={handleLogin} className="space-y-4 md:space-y-5">
             <div className="space-y-1.5">
@@ -275,7 +275,7 @@ export default function Login() {
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-telgrarr-muted" />
                 <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 md:py-3.5 pl-10 md:pl-11 pr-4 text-sm md:text-base text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-none focus:border-telgrarr-purple transition-colors shadow-inner"
+                  className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 md:py-3.5 pl-10 md:pl-11 pr-4 text-sm md:text-base text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner"
                   placeholder="Enter username" autoComplete="username" required
                 />
               </div>
@@ -285,7 +285,7 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-telgrarr-muted" />
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 md:py-3.5 pl-10 md:pl-11 pr-4 text-sm md:text-base text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-none focus:border-telgrarr-purple transition-colors shadow-inner"
+                  className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 md:py-3.5 pl-10 md:pl-11 pr-4 text-sm md:text-base text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner"
                   placeholder="••••••••" autoComplete="current-password" required
                 />
               </div>
@@ -303,7 +303,7 @@ export default function Login() {
           </form>
           <button
             onClick={() => setShowRecovery(true)}
-            className="focus-ring rounded mt-5 text-xs text-telgrarr-muted hover:text-telgrarr-purple transition-colors self-center tracking-wide"
+            className="focus-ring rounded-sm mt-5 text-xs text-telgrarr-muted hover:text-telgrarr-purple transition-colors self-center tracking-wide"
           >
             Forgot password?
           </button>

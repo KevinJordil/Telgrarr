@@ -48,7 +48,7 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-telgrarr-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-telgrarr-black/60 backdrop-blur-xs"
           onClick={onCancel}
           onKeyDown={onKeyDown}
         >
@@ -66,7 +66,7 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3 mb-4">
-              <AlertTriangle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${danger ? 'text-telgrarr-danger' : 'text-telgrarr-purple'}`} />
+              <AlertTriangle className={`w-5 h-5 mt-0.5 shrink-0 ${danger ? 'text-telgrarr-danger' : 'text-telgrarr-purple'}`} />
               <div>
                 <h3 id={titleId} className="font-semibold text-telgrarr-text">{title}</h3>
                 {message && <p id={descId} className="text-sm text-telgrarr-muted mt-1">{message}</p>}

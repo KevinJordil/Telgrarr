@@ -78,14 +78,14 @@ export default function Logs() {
         <div className="px-4 py-2 flex gap-2">
           <div className="relative flex-1">
             <label htmlFor="log-level" className="sr-only">Filter by level</label>
-            <select id="log-level" value={level} onChange={e => setLevel(e.target.value)} className="w-full appearance-none bg-telgrarr-elevated border border-telgrarr-border rounded-lg py-2 pl-3 pr-8 text-xs font-medium text-telgrarr-text focus:outline-none focus:border-telgrarr-purple transition-colors">
+            <select id="log-level" value={level} onChange={e => setLevel(e.target.value)} className="w-full appearance-none bg-telgrarr-elevated border border-telgrarr-border rounded-lg py-2 pl-3 pr-8 text-xs font-medium text-telgrarr-text focus:outline-hidden focus:border-telgrarr-purple transition-colors">
               {LEVELS.map(l => <option key={l} value={l}>Level: {l.toUpperCase()}</option>)}
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-telgrarr-muted pointer-events-none" />
           </div>
           <div className="relative flex-1">
             <label htmlFor="log-module" className="sr-only">Filter by module</label>
-            <select id="log-module" value={module} onChange={e => setModule(e.target.value)} className="w-full appearance-none bg-telgrarr-elevated border border-telgrarr-border rounded-lg py-2 pl-3 pr-8 text-xs font-medium text-telgrarr-text focus:outline-none focus:border-telgrarr-purple transition-colors">
+            <select id="log-module" value={module} onChange={e => setModule(e.target.value)} className="w-full appearance-none bg-telgrarr-elevated border border-telgrarr-border rounded-lg py-2 pl-3 pr-8 text-xs font-medium text-telgrarr-text focus:outline-hidden focus:border-telgrarr-purple transition-colors">
               {MODULES.map(m => <option key={m} value={m}>Mod: {m}</option>)}
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-telgrarr-muted pointer-events-none" />
@@ -117,8 +117,8 @@ export default function Logs() {
                 <span className={'mt-1.5 w-1.5 h-1.5 rounded-full flex-none ' + style.dot} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ' + style.badge}>{entry.level}</span>
-                    <span className="text-[10px] text-telgrarr-muted font-mono bg-telgrarr-elevated px-1.5 py-0.5 rounded">{entry.module}</span>
+                    <span className={'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm ' + style.badge}>{entry.level}</span>
+                    <span className="text-[10px] text-telgrarr-muted font-mono bg-telgrarr-elevated px-1.5 py-0.5 rounded-sm">{entry.module}</span>
                     <span className="text-[10px] text-telgrarr-muted font-mono ml-auto">{formatTime(entry.timestamp)}</span>
                   </div>
                   <p className="text-xs text-telgrarr-text/90 whitespace-pre-wrap break-all leading-relaxed font-mono">{entry.message}</p>

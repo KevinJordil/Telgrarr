@@ -29,10 +29,10 @@ export default function AuthLayout() {
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-telgrarr-black text-telgrarr-text transition-colors duration-300">
 
-      <header className="sticky top-0 z-40 bg-telgrarr-surface/80 backdrop-blur-xl border-b border-telgrarr-border px-4 pb-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))] flex items-center justify-between shadow-sm">
+      <header className="sticky top-0 z-40 bg-telgrarr-surface/80 backdrop-blur-xl border-b border-telgrarr-border px-4 pb-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))] flex items-center justify-between shadow-xs">
         <div className="flex items-center space-x-2.5">
           <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
-          <span className="font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-telgrarr-text to-telgrarr-purple text-lg">
+          <span className="font-extrabold tracking-widest text-transparent bg-clip-text bg-linear-to-r from-telgrarr-text to-telgrarr-purple text-lg">
             TELGRARR
           </span>
         </div>
@@ -41,7 +41,7 @@ export default function AuthLayout() {
           <button
             onClick={logout}
             aria-label="Log out"
-            className="focus-ring flex items-center justify-center p-2 rounded-xl bg-telgrarr-danger/10 border border-telgrarr-danger/20 text-telgrarr-danger hover:bg-telgrarr-danger/20 transition-colors shadow-sm"
+            className="focus-ring flex items-center justify-center p-2 rounded-xl bg-telgrarr-danger/10 border border-telgrarr-danger/20 text-telgrarr-danger hover:bg-telgrarr-danger/20 transition-colors shadow-xs"
           >
             <LogOut className="w-5 h-5" />
           </button>

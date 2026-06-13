@@ -56,7 +56,7 @@ function CopyButton({ text }) {
   return (
     <button
       onClick={handleCopy}
-      className="focus-ring rounded flex items-center gap-1.5 text-xs text-telgrarr-muted hover:text-telgrarr-purple transition-colors mt-1"
+      className="focus-ring rounded-sm flex items-center gap-1.5 text-xs text-telgrarr-muted hover:text-telgrarr-purple transition-colors mt-1"
       aria-label="Copy recovery command"
     >
       {copied
@@ -105,7 +105,7 @@ export default function About() {
             href={REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-purple transition-colors"
+            className="focus-ring rounded-sm text-telgrarr-muted hover:text-telgrarr-purple transition-colors"
             aria-label="View source on GitHub"
             title="View source on GitHub"
           >
@@ -114,7 +114,7 @@ export default function About() {
           <button
             onClick={fetchAbout}
             disabled={loading}
-            className="focus-ring rounded flex items-center gap-1.5 text-xs text-telgrarr-muted hover:text-telgrarr-purple transition-colors disabled:opacity-50"
+            className="focus-ring rounded-sm flex items-center gap-1.5 text-xs text-telgrarr-muted hover:text-telgrarr-purple transition-colors disabled:opacity-50"
             aria-label="Refresh system info"
           >
             <RefreshCw className={'w-3.5 h-3.5 ' + (loading ? 'animate-spin' : '')} />

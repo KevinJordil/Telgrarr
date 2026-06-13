@@ -54,7 +54,7 @@ export default function QueueWidget({ queueState }) {
           className="relative z-10 mb-6 mx-1"
         >
           <div className="bg-telgrarr-surface border border-telgrarr-purple/30 rounded-2xl p-4 shadow-glass flex items-center gap-4">
-            {/* SVG ring countdown */}
+            {/* SVG ring-3 countdown */}
             <div className="relative flex-none w-12 h-12">
               <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
                 <circle cx="24" cy="24" r="20" fill="none" className="stroke-telgrarr-border" strokeWidth="3.5" />

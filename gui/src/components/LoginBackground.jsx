@@ -50,7 +50,7 @@ export default function LoginBackground() {
           className="opacity-75"
         />
       </svg>
-      <div className="absolute inset-0 bg-gradient-to-b from-telgrarr-surface/35 via-telgrarr-black/10 to-telgrarr-black/45" />
+      <div className="absolute inset-0 bg-linear-to-b from-telgrarr-surface/35 via-telgrarr-black/10 to-telgrarr-black/45" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-transparent via-telgrarr-black/20 to-telgrarr-black/35" />
       <motion.div
         animate={reduceMotion ? undefined : {

@@ -188,7 +188,7 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
               <h3 className="text-sm font-semibold text-telgrarr-text">Manual Backup</h3>
               <button
                 onClick={handleCreateBackup}
-                className="focus-ring flex items-center gap-1.5 text-xs text-telgrarr-purple hover:text-telgrarr-purple-glow font-medium bg-telgrarr-purple/10 px-2 py-1 rounded"
+                className="focus-ring flex items-center gap-1.5 text-xs text-telgrarr-purple hover:text-telgrarr-purple-glow font-medium bg-telgrarr-purple/10 px-2 py-1 rounded-sm"
               >
                 <Download className="w-3.5 h-3.5" /> Create Now
               </button>
@@ -218,10 +218,10 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 ml-3">
-                      <button onClick={() => handleRestoreBackup(b.filename)} aria-label={`Restore ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-purple hover:bg-telgrarr-purple/10 rounded">
+                      <button onClick={() => handleRestoreBackup(b.filename)} aria-label={`Restore ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-purple hover:bg-telgrarr-purple/10 rounded-sm">
                         <RefreshCw className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteBackup(b.filename)} aria-label={`Delete ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-danger hover:bg-telgrarr-danger/10 rounded">
+                      <button onClick={() => handleDeleteBackup(b.filename)} aria-label={`Delete ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-danger hover:bg-telgrarr-danger/10 rounded-sm">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

@@ -153,7 +153,7 @@ export default function Settings() {
 
   return (
     <div className="bg-telgrarr-black text-telgrarr-text">
-      <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-telgrarr-purple/10 to-transparent pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-64 bg-linear-to-b from-telgrarr-purple/10 to-transparent pointer-events-none" />
       <div className="max-w-lg mx-auto px-4 pt-6 md:pt-8 space-y-4 relative z-10">
         <div className="flex items-center gap-3 mb-6 px-1">
           <SettingsIcon className="w-6 h-6 text-telgrarr-purple" />
@@ -185,7 +185,7 @@ export default function Settings() {
       </div>
 
       {restarting && (
-        <div className="fixed inset-0 z-50 bg-telgrarr-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+        <div className="fixed inset-0 z-50 bg-telgrarr-black/80 backdrop-blur-xs flex flex-col items-center justify-center gap-4">
           <RefreshCw className="w-10 h-10 text-telgrarr-purple animate-spin" />
           <p className="text-telgrarr-text font-semibold">Backend restarting…</p>
           <p className="text-telgrarr-muted text-sm">Do not refresh your browser.</p>
@@ -194,7 +194,7 @@ export default function Settings() {
 
       {manualRestart && (
         <div className="fixed bottom-24 inset-x-4 z-50 mx-auto max-w-lg">
-          <div className="flex items-start gap-3 rounded-xl border border-telgrarr-warning/40 bg-telgrarr-warning/10 px-4 py-3 backdrop-blur-sm">
+          <div className="flex items-start gap-3 rounded-xl border border-telgrarr-warning/40 bg-telgrarr-warning/10 px-4 py-3 backdrop-blur-xs">
             <AlertTriangle className="w-5 h-5 text-telgrarr-warning shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-telgrarr-text text-sm font-semibold">Manual restart required</p>

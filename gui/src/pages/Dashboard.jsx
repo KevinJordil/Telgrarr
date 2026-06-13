@@ -29,7 +29,7 @@ export default function Dashboard() {
 
   return (
     <div className="bg-telgrarr-black text-telgrarr-text p-4 overflow-x-hidden relative">
-      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-telgrarr-purple/10 to-transparent pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-96 bg-linear-to-b from-telgrarr-purple/10 to-transparent pointer-events-none" />
       <QueueWidget queueState={queueState} />
       <section className="relative z-10 mb-8 max-w-5xl mx-auto">
         <div className="flex items-center gap-2 mb-4 px-1">
@@ -65,7 +65,7 @@ export default function Dashboard() {
                       <Film className="w-8 h-8 text-telgrarr-muted" />
                     </div>
                   )}
-                  <div className="absolute top-2 right-2 bg-telgrarr-black/80 backdrop-blur-md px-2 py-1 rounded-md border border-telgrarr-border flex items-center gap-1 shadow-sm">
+                  <div className="absolute top-2 right-2 bg-telgrarr-black/80 backdrop-blur-md px-2 py-1 rounded-md border border-telgrarr-border flex items-center gap-1 shadow-xs">
                     {item.type === 'movie' ? <Film className="w-3 h-3 text-telgrarr-purple" /> : <Tv className="w-3 h-3 text-telgrarr-purple" />}
                   </div>
                 </div>

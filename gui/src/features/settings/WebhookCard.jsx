@@ -10,7 +10,7 @@ import { SECRET_MASK } from './formUtils';
 const LABELS = { sonarr: 'Sonarr', radarr: 'Radarr' };
 
 const INPUT =
-  'w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-none focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm';
+  'w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-hidden focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm';
 
 export default function WebhookCard({ source, openConfirm, startRestartPoll }) {
   const webhookInfo = useSettingsStore((s) => s.webhookInfo);
@@ -107,7 +107,7 @@ export default function WebhookCard({ source, openConfirm, startRestartPoll }) {
               disabled={busy}
               title="Copy full URL"
               aria-label="Copy full URL"
-              className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+              className="focus-ring rounded-sm text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
             >
               {copied ? <Check className="w-4 h-4 text-telgrarr-success" /> : <Copy className="w-4 h-4" />}
             </button>
@@ -117,7 +117,7 @@ export default function WebhookCard({ source, openConfirm, startRestartPoll }) {
               disabled={busy}
               title={secret !== null ? 'Hide secret' : 'Reveal secret'}
               aria-label={secret !== null ? 'Hide secret' : 'Reveal secret'}
-              className="focus-ring rounded text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+              className="focus-ring rounded-sm text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
             >
               {secret !== null ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>

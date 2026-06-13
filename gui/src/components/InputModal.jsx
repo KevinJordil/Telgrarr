@@ -71,7 +71,7 @@ export default function InputModal({
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-telgrarr-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-telgrarr-black/60 backdrop-blur-xs"
           onClick={onCancel}
           onKeyDown={onKeyDown}
         >
@@ -99,7 +99,7 @@ export default function InputModal({
                 placeholder={placeholder}
                 maxLength={maxLength}
                 autoComplete="off"
-                className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl px-3 py-2.5 text-sm text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-none focus:border-telgrarr-purple transition-colors"
+                className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl px-3 py-2.5 text-sm text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors"
               />
               {error && <p className="text-xs text-telgrarr-danger mt-2">{error}</p>}
               <div className="flex gap-3 mt-6">

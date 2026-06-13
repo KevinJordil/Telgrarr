@@ -147,7 +147,7 @@ export default function Preview() {
           {type === 'sonarr' && (
             <div className="flex space-x-2">
               {['single', 'multi', 'multiseason'].map((scen) => (
-                <button key={scen} onClick={() => setScenario(scen)} className={`focus-ring flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${scenario === scen ? 'bg-telgrarr-surface border-telgrarr-purple text-telgrarr-purple shadow-sm' : 'bg-transparent border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-text'}`}>
+                <button key={scen} onClick={() => setScenario(scen)} className={`focus-ring flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${scenario === scen ? 'bg-telgrarr-surface border-telgrarr-purple text-telgrarr-purple shadow-xs' : 'bg-transparent border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-text'}`}>
                   {scen === 'single' ? '1 Ep' : scen === 'multi' ? 'Multi-Ep' : 'Multi-Season'}
                 </button>
               ))}

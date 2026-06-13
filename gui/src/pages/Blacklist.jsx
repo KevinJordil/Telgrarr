@@ -141,10 +141,10 @@ export default function Blacklist() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder={`Search ${type === 'sonarr' ? 'series' : 'movies'}…`}
-              className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl pl-9 pr-9 py-2.5 text-sm text-telgrarr-text placeholder-telgrarr-muted focus:outline-none focus:border-telgrarr-purple transition-colors"
+              className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl pl-9 pr-9 py-2.5 text-sm text-telgrarr-text placeholder-telgrarr-muted focus:outline-hidden focus:border-telgrarr-purple transition-colors"
             />
             {query && (
-              <button onClick={() => setQuery('')} aria-label="Clear search" className="focus-ring absolute right-3 top-1/2 -translate-y-1/2 rounded text-telgrarr-muted hover:text-telgrarr-text">
+              <button onClick={() => setQuery('')} aria-label="Clear search" className="focus-ring absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-telgrarr-muted hover:text-telgrarr-text">
                 <X className="w-4 h-4" />
               </button>
             )}

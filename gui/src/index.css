@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
 @layer base {
   /* 🌙 DEFAULT DARK MODE */
@@ -100,9 +99,9 @@
   .glass-panel {
     @apply bg-telgrarr-surface/70 backdrop-blur-xl border border-telgrarr-border shadow-glass rounded-2xl;
   }
-  /* U1 — focus-visible ring convention (apply to interactive elements in U2/U3) */
+  /* U1 — focus-visible ring-3 convention (apply to interactive elements in U2/U3) */
   .focus-ring {
-    @apply outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-telgrarr-purple focus-visible:ring-offset-telgrarr-black;
+    @apply outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-telgrarr-purple focus-visible:ring-offset-telgrarr-black;
   }
   /* U1 — real safe-area insets (viewport-fit=cover is set); fixes the no-op class */
   .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }

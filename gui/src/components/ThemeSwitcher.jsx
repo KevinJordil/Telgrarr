@@ -30,7 +30,7 @@ export default function ThemeSwitcher() {
     <div className="relative z-50" ref={menuRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center p-2 rounded-xl bg-telgrarr-surface border border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-text transition-colors shadow-sm"
+        className="flex items-center justify-center p-2 rounded-xl bg-telgrarr-surface border border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-text transition-colors shadow-xs"
         title="Change Theme"
       >
         <ActiveIcon className="w-5 h-5" />
