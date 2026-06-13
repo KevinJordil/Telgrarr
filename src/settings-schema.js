@@ -145,6 +145,24 @@ const SETTINGS_SCHEMA = [
         note: 'The address Sonarr/Radarr and your browser use to reach TELGRARR. Used to build the copy-ready webhook URLs in the Sonarr and Radarr sections. Leave empty to auto-detect from your current address.' },
     ],
   },
+  {
+    id: 'advanced', title: 'Advanced / Deployment', icon: 'Lock',
+    fields: [
+      { key: 'corsOrigin', envVar: 'CORS_ORIGIN', label: 'CORS Origin', type: 'url', required: false, rule: 'url',
+        placeholder: 'https://app.example.com',
+        note: 'Allow browser requests from ONE exact origin (scheme + host + port). Leave empty for same-origin only (the safe default). Requires restart. Read-only if set via the CORS_ORIGIN environment variable.' },
+      { key: 'trustProxy', envVar: 'TRUST_PROXY', label: 'Trust Proxy', type: 'text', required: false, rule: 'trustProxy',
+        placeholder: 'false',
+        note: 'Trust X-Forwarded-* headers from a front proxy. Empty or false = off (safe). Use true, a hop count, or a proxy IP/CIDR ONLY behind a proxy you control - on a directly exposed server it lets clients spoof their IP. Requires restart.' },
+      { key: 'cookieSecure', envVar: 'COOKIE_SECURE', label: 'Secure Cookies', type: 'select',
+        options: [
+          { value: 'auto', label: 'Auto - Secure only over HTTPS (recommended)' },
+          { value: 'true', label: 'Always - require HTTPS' },
+          { value: 'false', label: 'Never - allow plain HTTP' },
+        ],
+        note: 'Controls the Secure flag on the session cookie. Auto enables it when the request is HTTPS. Requires restart.' },
+    ],
+  },
 ];
 
 module.exports = { SETTINGS_SCHEMA, TMDB_LANGUAGES };

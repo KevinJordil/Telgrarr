@@ -35,7 +35,14 @@ const RULES = {
     return net.isIP(s) !== 0 || HOSTNAME_RE.test(s);
   },
   telegramToken: (val) => /^\d+:[A-Za-z0-9_-]{30,}$/.test(val),
-  chatId: (val) => /^-?\d+$/.test(String(val))
+  chatId: (val) => /^-?\d+$/.test(String(val)),
+  trustProxy: (val) => {
+    const s = String(val).trim();
+    if (s === '' || s === 'true' || s === 'false') return true;
+    if (/^\d+$/.test(s)) return Number(s) >= 0;
+    const ip = s.split('/')[0];
+    return net.isIP(ip) !== 0;
+  }
 };
 
 function getVal(obj, keyPath) {
@@ -129,6 +136,10 @@ function validateSettings(body) {
          } else if (field.rule === 'host') {
             if (!RULES.host(val)) {
                errors.push({ field: field.key, message: 'Must be a valid hostname or IP address' });
+            }
+         } else if (field.rule === 'trustProxy') {
+            if (!RULES.trustProxy(val)) {
+               errors.push({ field: field.key, message: 'Must be empty, true, false, a hop count, or a proxy IP/CIDR' });
             }
          } else if (field.rule === 'chatId') {
             if (!RULES.chatId(val)) {

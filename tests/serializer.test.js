@@ -20,6 +20,9 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       batchWindowMs: 180000,
       queueFile: '/fake/path/media_queue.json', // Not in schema, should be ignored
       publicBaseUrl: '',
+      corsOrigin: '',
+      trustProxy: '',
+      cookieSecure: 'auto',
       sonarr: { baseUrl: 'http://sonarr', apiKey: 'sonarr_secret_key' },
       telegram: { botToken: '123456789:AAExxx', chatId: '-100', delayMs: 3000 },
       emby: { refreshUrl: '', apiKey: '' },
@@ -75,7 +78,10 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       'mediaCache',
       'backup',
       'logging',
-      'publicBaseUrl'
+      'publicBaseUrl',
+      'corsOrigin',
+      'trustProxy',
+      'cookieSecure'
     ]);
 
     // --- ASSERTION 2: SECRET MASKING CONTRACT (H1 / SD-6) ---
@@ -99,6 +105,9 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       seerr: { baseUrl: '' },
       omdb: { apiKey: SECRET_MASK },
       publicBaseUrl: '',
+      corsOrigin: '',
+      trustProxy: '',
+      cookieSecure: 'auto',
       translator: { endpoint: 'url', model: 'gpt', apiKey: SECRET_MASK, deeplApiKey: SECRET_MASK },
       mediaCache: { ttlDays: 30, maxEntries: 500 },
       backup: { enabled: true, intervalDays: 7, retainCount: 5 },
@@ -135,7 +144,7 @@ describe('getFieldSources (H4.2 env annotation)', () => {
 
   it('annotates only envVar fields with source/effective/editable', () => {
     const meta = getFieldSources();
-    expect(Object.keys(meta)).toEqual(['listenerPort', 'listenerHost']);
+    expect(Object.keys(meta)).toEqual(['listenerPort', 'listenerHost', 'corsOrigin', 'trustProxy', 'cookieSecure']);
     expect(meta.listenerPort).toEqual({ source: 'env', effective: 9999, editable: false });
     expect(meta.listenerHost).toEqual({ source: 'file', effective: '1.2.3.4', editable: true });
   });

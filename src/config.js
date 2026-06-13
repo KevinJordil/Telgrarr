@@ -19,6 +19,9 @@ const DEFAULTS = {
   listenerPort:  3400,
   listenerHost:  '0.0.0.0',
   publicBaseUrl: '',
+  corsOrigin:    '',
+  trustProxy:    '',
+  cookieSecure:  'auto',
   batchWindowMs: 180000,
   queueFile:     path.join(__dirname, '../media_queue.json'),
   sonarr:     { baseUrl: '', apiKey: '' },
@@ -281,15 +284,15 @@ config.getMissingCredentials = getMissingCredentials;
 Object.defineProperty(config, 'DATA_DIR',    { value: DATA_DIR, enumerable: false, configurable: true });
 Object.defineProperty(config, 'PORT',        { value: (process.env.PORT != null && process.env.PORT !== '') ? Number(process.env.PORT) : config.listenerPort, enumerable: false, configurable: true });
 Object.defineProperty(config, 'HOST',        { value: (process.env.HOST != null && process.env.HOST !== '') ? process.env.HOST : config.listenerHost, enumerable: false, configurable: true });
-Object.defineProperty(config, 'CORS_ORIGIN', { value: process.env.CORS_ORIGIN != null ? process.env.CORS_ORIGIN : '', enumerable: false, configurable: true });
-Object.defineProperty(config, 'TRUST_PROXY', { value: process.env.TRUST_PROXY != null ? process.env.TRUST_PROXY : '', enumerable: false, configurable: true });
+Object.defineProperty(config, 'CORS_ORIGIN', { value: process.env.CORS_ORIGIN != null ? process.env.CORS_ORIGIN : (config.corsOrigin || ''), enumerable: false, configurable: true });
+Object.defineProperty(config, 'TRUST_PROXY', { value: process.env.TRUST_PROXY != null ? process.env.TRUST_PROXY : (config.trustProxy || ''), enumerable: false, configurable: true });
 // C.5: webhook auth secret (env -> config.json webhookSecret -> ''). Empty =>
 // routes return 401 (closed-by-default). Resolved at boot like the B.1 vars: a
 // RESTART is required to pick up a change (hot-reload does not recompute these).
 Object.defineProperty(config, 'WEBHOOK_SECRET', { value: (process.env.WEBHOOK_SECRET != null && process.env.WEBHOOK_SECRET !== '') ? process.env.WEBHOOK_SECRET : (config.webhookSecret || ''), enumerable: false, configurable: true });
 // C.7 / RD-4: cookie Secure policy. 'auto' (default) => Secure when the request is
 // HTTPS (req.secure / X-Forwarded-Proto); 'true'/'false' force it. Boot-resolved.
-Object.defineProperty(config, 'COOKIE_SECURE', { value: (process.env.COOKIE_SECURE != null && process.env.COOKIE_SECURE !== '') ? process.env.COOKIE_SECURE : 'auto', enumerable: false, configurable: true });
+Object.defineProperty(config, 'COOKIE_SECURE', { value: (process.env.COOKIE_SECURE != null && process.env.COOKIE_SECURE !== '') ? process.env.COOKIE_SECURE : (config.cookieSecure || 'auto'), enumerable: false, configurable: true });
 // C10: logs directory path. Env-resolved at boot (RESTART required to pick up a change).
 Object.defineProperty(config, 'LOGS_DIR',      { value: (process.env.LOGS_DIR != null && process.env.LOGS_DIR !== '') ? process.env.LOGS_DIR : path.join(__dirname, '../logs'), enumerable: false, configurable: true });
 // FU-4: backups directory path. Env-resolved at boot (RESTART required); default

@@ -14,6 +14,9 @@ function needsRestart(incoming) {
   // H5.1: WEBHOOK_SECRET is boot-resolved (B.1/C.5) - rotating the file-tier secret
   // takes effect only on restart, same law as port/host.
   if (incoming.webhookSecret !== undefined && incoming.webhookSecret !== config.webhookSecret) return true;
+  if (incoming.corsOrigin !== undefined && incoming.corsOrigin !== config.corsOrigin) return true;
+  if (incoming.trustProxy !== undefined && incoming.trustProxy !== config.trustProxy) return true;
+  if (incoming.cookieSecure !== undefined && incoming.cookieSecure !== config.cookieSecure) return true;
   return false;
 }
 
