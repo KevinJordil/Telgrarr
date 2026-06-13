@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Ban, Search, Folder, Tv, Film, X, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import api from '../api';

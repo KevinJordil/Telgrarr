@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Home, Ban, Settings, MoreHorizontal, Sparkles, ScrollText, Info } from 'lucide-react';
 import useNavGuard from '../store/navGuardStore';
 

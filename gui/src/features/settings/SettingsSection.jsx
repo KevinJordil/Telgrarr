@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import {
   Send, Timer, Tv, Film, Play, Star, Search, Settings as SettingsIcon,
   CheckCircle, XCircle, Loader2, Wifi, Lock,

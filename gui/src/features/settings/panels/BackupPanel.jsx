@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import { Database, ChevronDown, ChevronUp, Loader2, CheckCircle, XCircle, Download, RefreshCw, Trash2 } from 'lucide-react';
 import useSettingsStore from '../../../store/settingsStore';
 import api from '../../../api';

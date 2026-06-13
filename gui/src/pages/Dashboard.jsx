@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import { Clock, Film, Tv } from 'lucide-react';
 import api from '../api';
 import useSSE from '../hooks/useSSE';

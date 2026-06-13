@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import { Lock, ChevronDown, ChevronUp, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import api from '../../../api';
 

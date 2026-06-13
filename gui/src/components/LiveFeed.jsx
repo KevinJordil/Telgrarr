@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Activity, Wifi, WifiOff } from 'lucide-react';
 import EVENT_TYPES from '@shared/events.json';
 

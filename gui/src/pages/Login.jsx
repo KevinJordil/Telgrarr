@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Lock, User, Loader2, KeyRound, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import useAuthStore  from '../store/authStore';

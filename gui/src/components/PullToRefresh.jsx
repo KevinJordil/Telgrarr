@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import { RefreshCw } from 'lucide-react';
 
 // Pull-to-refresh wrapper. Owns the page scroll region.

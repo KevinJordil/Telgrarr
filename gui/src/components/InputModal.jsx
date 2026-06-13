@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 
 let idSeq = 0;
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import { ScrollText, ChevronDown, Filter } from 'lucide-react';
 import useSSE from '../hooks/useSSE';
 import api from '../api';
