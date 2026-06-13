@@ -27,6 +27,24 @@ function persistNow() {
   }
 }
 
+// H7.1: single session-mint path for first-run auto-login. The existing /login keeps
+// its inline mint (security-critical + test-covered - deliberately not refactored here).
+function issueSession(req, res) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+  activeSessions.set(token, Date.now() + thirtyDays);
+  persistNow();
+  res.cookie(COOKIE_NAME, token, cookieOptions(req, config.COOKIE_SECURE, thirtyDays));
+  return token;
+}
+
+// H7.1: first-run gate. "Configured" == auth.json EXISTS (existence, not parseability):
+// the public setup route must NEVER overwrite an existing credential file. A corrupt
+// auth.json is recovered via `npm run recover` / setup-auth, never via this route.
+function isAuthConfigured() {
+  return fs.existsSync(AUTH_FILE);
+}
+
 // -- POST /api/login ----------------------------------------------------------
 router.post('/login', async (req, res) => {
   try {
@@ -190,6 +208,49 @@ router.post('/logout', (req, res) => {
     res.json({ success: true });
   } catch (err) {
     log.error('Auth', `Logout → Error → ${err.message}`);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// -- GET /api/auth/setup-status -----------------------------------------------
+// Public, read-only. Leaks ONLY whether first-run setup is still open (a boolean).
+router.get('/auth/setup-status', (req, res) => {
+  res.json({ configured: isAuthConfigured() });
+});
+
+// -- POST /api/auth/setup -----------------------------------------------------
+// First-run admin creation. OPEN only while no auth.json exists; once created the file
+// exists so every later call returns 409 (permanently closed). Never overwrites creds.
+// Single-instance (RD-8) + a synchronous check->hash->write section (no await between
+// the existence check and the write) make the guard race-free. Auto-logs-in on success.
+router.post('/auth/setup', (req, res) => {
+  try {
+    if (isAuthConfigured()) {
+      return res.status(409).json({ error: 'Setup already complete' });
+    }
+    const { username, password, confirm } = req.body || {};
+    const uname = (username || '').trim();
+    if (!uname) {
+      return res.status(400).json({ error: 'Username cannot be empty' });
+    }
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+    if (password !== confirm) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+    fs.mkdirSync(config.DATA_DIR, { recursive: true });
+    writeAtomic.sync(
+      AUTH_FILE,
+      JSON.stringify({ username: uname, ...hashNew(password) }, null, 2),
+      { mode: 0o600 }
+    );
+    issueSession(req, res);
+    log.audit('Auth', `First-Run Setup \u2192 Success \u2192 Admin account created: [${uname}]`);
+    events.emit(EVENT_TYPES.AUTH_LOGIN_SUCCESS, 'info', 'Auth', `First-run admin account created: [${uname}]`, { username: uname });
+    res.json({ success: true });
+  } catch (err) {
+    log.error('Auth', `First-Run Setup \u2192 Error \u2192 ${err.message}`);
     res.status(500).json({ error: 'Internal error' });
   }
 });
