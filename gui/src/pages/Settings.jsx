@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, XCircle, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Settings as SettingsIcon, XCircle, Loader2, RefreshCw, AlertTriangle, Clapperboard, Send, Database, Workflow, ServerCog } from 'lucide-react';
 import useSettingsStore from '../store/settingsStore';
 import ConfirmModal from '../components/ConfirmModal';
 import { buildPayload } from '../features/settings/formUtils';
@@ -10,6 +10,17 @@ import useSettingsDraft from '../features/settings/hooks/useSettingsDraft';
 import useConnectionTest from '../features/settings/hooks/useConnectionTest';
 import useRestartPoll from '../features/settings/hooks/useRestartPoll';
 import useNavGuard from '../store/navGuardStore';
+
+// H8: presentation-only IA grouping. Section ids/keys/API unchanged (ND-7); this
+// only clusters the existing flat section list under labelled group headers. New
+// sections not listed here fall through to the "Other" group (never dropped).
+const SETTINGS_GROUPS = [
+  { id: 'services',      label: 'Services',      Icon: Clapperboard, sections: ['sonarr', 'radarr', 'emby', 'seerr'] },
+  { id: 'notifications', label: 'Notifications', Icon: Send,         sections: ['telegram'] },
+  { id: 'metadata',      label: 'Metadata',      Icon: Database,     sections: ['tmdb', 'omdb', 'translator'] },
+  { id: 'processing',    label: 'Processing',    Icon: Workflow,     sections: ['queue', 'mediaCache'] },
+  { id: 'system',        label: 'System',        Icon: ServerCog,    sections: ['network', 'advanced', 'logging'], panels: true },
+];
 
 export default function Settings() {
   const {
@@ -161,28 +172,63 @@ export default function Settings() {
           <h1 className="text-2xl font-bold tracking-tight text-telgrarr-text">System Settings</h1>
         </div>
 
-        {schema.map((section) => (
-          <SettingsSection
-            key={section.id}
-            section={section}
-            draft={draft}
-            expanded={expanded}
-            setExpanded={setExpanded}
-            saveStatus={saveStatus}
-            testStatus={testStatus}
-            sectionIsDirty={sectionIsDirty}
-            handleChange={handleChange}
-            handleTest={handleTest}
-            handleTestDeepl={handleTestDeepl}
-            handleSaveRequest={handleSaveRequest}
-            saveErrors={saveErrors}
-            openConfirm={openConfirm}
-            startRestartPoll={startRestartPoll}
-          />
-        ))}
-
-        <BackupPanel openConfirm={openConfirm} startRestartPoll={startRestartPoll} />
-        <SecurityPanel />
+        {(() => {
+            const byId = Object.fromEntries(schema.map((s) => [s.id, s]));
+            const claimed = new Set(SETTINGS_GROUPS.flatMap((g) => g.sections));
+            const orphans = schema.filter((s) => !claimed.has(s.id));
+            const renderSection = (section) => (
+              <SettingsSection
+                key={section.id}
+                section={section}
+                draft={draft}
+                expanded={expanded}
+                setExpanded={setExpanded}
+                saveStatus={saveStatus}
+                testStatus={testStatus}
+                sectionIsDirty={sectionIsDirty}
+                handleChange={handleChange}
+                handleTest={handleTest}
+                handleTestDeepl={handleTestDeepl}
+                handleSaveRequest={handleSaveRequest}
+                saveErrors={saveErrors}
+                openConfirm={openConfirm}
+                startRestartPoll={startRestartPoll}
+              />
+            );
+            return (
+              <>
+                {SETTINGS_GROUPS.map((group) => {
+                  const secs = group.sections.map((id) => byId[id]).filter(Boolean);
+                  if (secs.length === 0 && !group.panels) return null;
+                  const GroupIcon = group.Icon;
+                  return (
+                    <div key={group.id} className="space-y-4">
+                      <div className="flex items-center gap-2 px-1 pt-4">
+                        <GroupIcon className="w-4 h-4 text-telgrarr-muted" />
+                        <h2 className="text-xs font-semibold uppercase tracking-wider text-telgrarr-muted">{group.label}</h2>
+                      </div>
+                      {secs.map(renderSection)}
+                      {group.panels && (
+                        <>
+                          <BackupPanel openConfirm={openConfirm} startRestartPoll={startRestartPoll} />
+                          <SecurityPanel />
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+                {orphans.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 px-1 pt-4">
+                      <SettingsIcon className="w-4 h-4 text-telgrarr-muted" />
+                      <h2 className="text-xs font-semibold uppercase tracking-wider text-telgrarr-muted">Other</h2>
+                    </div>
+                    {orphans.map(renderSection)}
+                  </div>
+                )}
+              </>
+            );
+          })()}
       </div>
 
       {restarting && (
