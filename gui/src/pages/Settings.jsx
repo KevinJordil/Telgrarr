@@ -111,6 +111,7 @@ export default function Settings() {
           // rebuilds the draft (secrets -> sentinel) via mergeSettingsIntoDraft,
           // so the field reads as 'set' instead of going blank.
           if (result.needsRestart) startRestartPoll();
+          if (sectionId === 'network') fetchWebhookInfo();
         }
       }
     });

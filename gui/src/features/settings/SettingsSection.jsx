@@ -8,6 +8,7 @@ import {
 import FieldRenderer from './FieldRenderer';
 import { getVal } from './formUtils';
 import WebhookCard from './WebhookCard';
+import WebhookSecretField from './WebhookSecretField';
 
 const ICONS = { Send, Timer, Tv, Film, Play, Star, Search, Lock, Database, Languages, FileText, Server };
 
@@ -88,7 +89,11 @@ export default function SettingsSection({
           )}
 
           {(section.id === 'sonarr' || section.id === 'radarr') && (
-            <WebhookCard source={section.id} openConfirm={openConfirm} startRestartPoll={startRestartPoll} />
+            <WebhookCard source={section.id} />
+          )}
+
+          {section.id === 'network' && (
+            <WebhookSecretField openConfirm={openConfirm} startRestartPoll={startRestartPoll} />
           )}
 
           {section.id === 'translator' && (

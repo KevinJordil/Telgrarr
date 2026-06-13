@@ -1,148 +1,76 @@
 import React from 'react';
-import { Eye, EyeOff, Copy, Check, RefreshCw, Webhook } from 'lucide-react';
+import { Lock, Copy, Check, Webhook } from 'lucide-react';
 import useSettingsStore from '../../store/settingsStore';
-import { SECRET_MASK } from './formUtils';
+import { copyText } from './clipboard';
 
-// H5.2 (SD-7): suggested webhook URL card for the Sonarr/Radarr settings sections.
-// The base URL is a BEST-EFFORT suggestion (the address this browser reached the
-// GUI on) and is clearly editable; the secret path segment stays masked until an
-// explicit SD-9 reveal (one secret, on demand, transient component state only).
-const LABELS = { sonarr: 'Sonarr', radarr: 'Radarr' };
+// H5.3c (SD-7/SD-15): copy-only, locked webhook link for the Sonarr/Radarr sections.
+// The secret is owned by Server settings; here it is shown masked and never edited.
+// Copy composes the real working URL via a one-shot SD-9 reveal (transient, not stored).
+const APP = { sonarr: 'Sonarr', radarr: 'Radarr' };
 
-const INPUT =
-  'w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text placeholder-telgrarr-muted/40 focus:outline-hidden focus:border-telgrarr-purple focus:ring-1 focus:ring-telgrarr-purple transition-all text-sm';
-
-export default function WebhookCard({ source, openConfirm, startRestartPoll }) {
+export default function WebhookCard({ source }) {
   const webhookInfo = useSettingsStore((s) => s.webhookInfo);
   const revealSecret = useSettingsStore((s) => s.revealSecret);
-  const regenerateWebhookSecret = useSettingsStore((s) => s.regenerateWebhookSecret);
 
-  const [base, setBase] = React.useState(null);     // null => use suggestion
-  const [secret, setSecret] = React.useState(null); // revealed plaintext (transient)
   const [busy, setBusy] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [error, setError] = React.useState(null);
 
-  if (!webhookInfo || !webhookInfo.paths || !webhookInfo.paths[source]) return null;
-
-  const maskedPath = webhookInfo.paths[source];
-  const effectiveBase = base !== null ? base : (webhookInfo.suggestedBase || '');
-  const cleanBase = effectiveBase.replace(/\/+$/, '');
-  const pathWith = (s) => maskedPath.replace(SECRET_MASK, s);
-  const shownUrl = cleanBase + (secret !== null ? pathWith(secret) : maskedPath);
-
-  const fetchSecret = async () => {
-    if (secret !== null) return secret;
-    setBusy(true);
-    const res = await revealSecret('webhookSecret');
-    setBusy(false);
-    if (res && res.success) { setSecret(res.value); return res.value; }
-    setError((res && res.error) || 'Reveal failed');
+  if (!webhookInfo || !webhookInfo.secretSet || !webhookInfo.paths || !webhookInfo.paths[source]) {
     return null;
-  };
+  }
 
-  const handleEye = async () => {
-    if (secret !== null) { setSecret(null); return; }
-    setError(null);
-    await fetchSecret();
-  };
+  const app = APP[source] || source;
+  const base = (webhookInfo.suggestedBase || '').replace(/\/+$/, '');
+  const maskedPath = webhookInfo.paths[source];
+  const maskedUrl = base + maskedPath;
+  const derived = webhookInfo.baseSource === 'derived';
 
   const handleCopy = async () => {
     setError(null);
-    const s = await fetchSecret();
-    if (!s) return;
-    try {
-      await navigator.clipboard.writeText(cleanBase + pathWith(s));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch (e) { /* clipboard unavailable */ }
-  };
-
-  const handleRegenerate = () => {
-    openConfirm({
-      title: 'Regenerate webhook secret',
-      message: 'Existing Sonarr and Radarr webhooks stop working after the restart. Paste the new URL into both apps afterwards.',
-      confirmLabel: 'Regenerate',
-      danger: true,
-      onConfirm: async () => {
-        setError(null);
-        const result = await regenerateWebhookSecret();
-        if (result.success) {
-          setSecret(null); // rotated: any revealed plaintext is stale
-          if (result.needsRestart) startRestartPoll();
-        } else {
-          setError(result.error || 'Regenerate failed');
-        }
-      },
-    });
+    setBusy(true);
+    const res = await revealSecret('webhookSecret');
+    setBusy(false);
+    if (!res || !res.success || !res.value) {
+      setError('Could not retrieve the secret - try again.');
+      return;
+    }
+    const realPath = maskedPath.replace(/\/hooks\/[^/]+\//, () => '/hooks/' + res.value + '/');
+    const ok = await copyText(base + realPath);
+    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1500); }
+    else setError('Copy failed - select the URL and copy it manually.');
   };
 
   return (
-    <div className="mt-4 p-4 rounded-xl border border-telgrarr-border/50 bg-telgrarr-elevated/40 space-y-3">
+    <div className="mt-5 pt-4 border-t border-telgrarr-border/50 space-y-2">
       <div className="flex items-center gap-2">
         <Webhook className="w-4 h-4 text-telgrarr-purple" />
-        <span className="text-sm font-semibold text-telgrarr-text">{LABELS[source]} Webhook</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-telgrarr-muted">{app} Webhook URL</span>
       </div>
 
-      <div className="space-y-1.5">
-        <label htmlFor={`webhook-base-${source}`} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">Base URL (suggested - edit if wrong)</label>
-        <input
-          type="text"
-          id={`webhook-base-${source}`}
-          value={effectiveBase}
-          onChange={(e) => setBase(e.target.value)}
-          placeholder="http://your-server:3400"
-          className={INPUT}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <label htmlFor={`webhook-url-${source}`} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">Webhook URL</label>
-        <div className="relative">
-          <input type="text" id={`webhook-url-${source}`} value={shownUrl} readOnly className={`${INPUT} pr-20 opacity-80`} />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleCopy}
-              disabled={busy}
-              title="Copy full URL"
-              aria-label="Copy full URL"
-              className="focus-ring rounded-sm text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
-            >
-              {copied ? <Check className="w-4 h-4 text-telgrarr-success" /> : <Copy className="w-4 h-4" />}
-            </button>
-            <button
-              type="button"
-              onClick={handleEye}
-              disabled={busy}
-              title={secret !== null ? 'Hide secret' : 'Reveal secret'}
-              aria-label={secret !== null ? 'Hide secret' : 'Reveal secret'}
-              className="focus-ring rounded-sm text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
-            >
-              {secret !== null ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-        <p className="text-xs text-telgrarr-muted/70 leading-relaxed">
-          Paste into {LABELS[source]} under Settings - Connect - add Webhook (method POST), then use its Test button.
-        </p>
-      </div>
-
-      {webhookInfo.envManaged ? (
-        <p className="text-xs text-telgrarr-muted/70 leading-relaxed">
-          Secret managed by environment (WEBHOOK_SECRET). Change the variable and restart to rotate it.
-        </p>
-      ) : (
+      <div className="flex items-center gap-2 w-full bg-telgrarr-elevated/60 border border-telgrarr-border rounded-xl py-3 pl-4 pr-3">
+        <Lock className="w-3.5 h-3.5 text-telgrarr-muted shrink-0" />
+        <code className="flex-1 min-w-0 truncate text-xs font-mono text-telgrarr-muted select-all">{maskedUrl}</code>
         <button
           type="button"
-          onClick={handleRegenerate}
-          className="focus-ring flex items-center gap-2 text-sm text-telgrarr-danger hover:text-telgrarr-danger/80 transition-colors"
+          onClick={handleCopy}
+          disabled={busy}
+          title="Copy webhook URL"
+          className="focus-ring shrink-0 flex items-center gap-1.5 text-xs font-semibold text-telgrarr-purple hover:text-telgrarr-purple-glow transition-colors disabled:opacity-40"
         >
-          <RefreshCw className="w-4 h-4" />
-          Regenerate secret
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? 'Copied' : 'Copy'}
         </button>
-      )}
+      </div>
 
+      <p className="text-xs text-telgrarr-muted/70 leading-relaxed">
+        In {app}, open Settings, Connect and add a Webhook (method: POST) with this URL. The secret is managed in Server settings.
+      </p>
+      {derived && (
+        <p className="text-xs text-telgrarr-muted/70 leading-relaxed">
+          Base address auto-detected from your current connection. If {app} cannot reach it, set a Public Base URL in Server settings.
+        </p>
+      )}
       {error && <p className="text-xs text-telgrarr-danger">{error}</p>}
     </div>
   );
