@@ -267,8 +267,16 @@ router.post('/settings/reveal', requireAuth, (req, res) => {
 router.get('/settings/webhook', requireAuth, (req, res) => {
   const secretSet = !!config.WEBHOOK_SECRET;
   const masked = secretSet ? maskSecret(config.WEBHOOK_SECRET) : '';
+  // H5.3a (SD-14): prefer the operator-configured publicBaseUrl (hot-reloaded, read
+  // per-request); else the address this request arrived on. baseSource tells the GUI
+  // whether the base is configured or auto-detected.
+  const configuredBase = (config.publicBaseUrl && config.publicBaseUrl.trim())
+    ? config.publicBaseUrl.trim().replace(/\/+$/, '')
+    : '';
+  const suggestedBase = configuredBase || `${req.protocol}://${req.get('host')}`;
   res.json({
-    suggestedBase: `${req.protocol}://${req.get('host')}`,
+    suggestedBase,
+    baseSource: configuredBase ? 'configured' : 'derived',
     paths: {
       sonarr: secretSet ? `/hooks/${masked}/sonarr` : '',
       radarr: secretSet ? `/hooks/${masked}/radarr` : '',

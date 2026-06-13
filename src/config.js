@@ -18,6 +18,7 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 const DEFAULTS = {
   listenerPort:  3400,
   listenerHost:  '0.0.0.0',
+  publicBaseUrl: '',
   batchWindowMs: 180000,
   queueFile:     path.join(__dirname, '../media_queue.json'),
   sonarr:     { baseUrl: '', apiKey: '' },

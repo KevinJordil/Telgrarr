@@ -19,6 +19,7 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       listenerHost: '0.0.0.0',
       batchWindowMs: 180000,
       queueFile: '/fake/path/media_queue.json', // Not in schema, should be ignored
+      publicBaseUrl: '',
       sonarr: { baseUrl: 'http://sonarr', apiKey: 'sonarr_secret_key' },
       telegram: { botToken: '123456789:AAExxx', chatId: '-100', delayMs: 3000 },
       emby: { refreshUrl: '', apiKey: '' },
@@ -73,7 +74,8 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       'translator',
       'mediaCache',
       'backup',
-      'logging'
+      'logging',
+      'publicBaseUrl'
     ]);
 
     // --- ASSERTION 2: SECRET MASKING CONTRACT (H1 / SD-6) ---
@@ -96,6 +98,7 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       tmdb: { apiKey: SECRET_MASK, language: 'en-US' },
       seerr: { baseUrl: '' },
       omdb: { apiKey: SECRET_MASK },
+      publicBaseUrl: '',
       translator: { endpoint: 'url', model: 'gpt', apiKey: SECRET_MASK, deeplApiKey: SECRET_MASK },
       mediaCache: { ttlDays: 30, maxEntries: 500 },
       backup: { enabled: true, intervalDays: 7, retainCount: 5 },

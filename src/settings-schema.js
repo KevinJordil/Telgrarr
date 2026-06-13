@@ -140,6 +140,9 @@ const SETTINGS_SCHEMA = [
       { key: 'listenerHost', envVar: 'HOST', label: 'Listener Host', type: 'text',
         placeholder: '0.0.0.0', required: false, rule: 'host',
         note: 'Network interface to bind. 0.0.0.0 = all interfaces; 127.0.0.1 = local only. Leave empty for the default. Requires restart. If set via the HOST environment variable it is managed by your environment and shown read-only.' },
+      { key: 'publicBaseUrl', label: 'Public Base URL', type: 'url', required: false, rule: 'url',
+        placeholder: 'https://telgrarr.example.com',
+        note: 'The address Sonarr/Radarr and your browser use to reach TELGRARR. Used to build the copy-ready webhook URLs in the Sonarr and Radarr sections. Leave empty to auto-detect from your current address.' },
     ],
   },
 ];
