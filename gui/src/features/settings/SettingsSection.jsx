@@ -3,13 +3,13 @@ import { motion, useReducedMotion } from 'motion/react';
 import {
   Send, Timer, Tv, Film, Play, Star, Search, Settings as SettingsIcon,
   CheckCircle, XCircle, Loader2, Wifi, Lock,
-  ChevronDown, ChevronUp, Database, Languages, FileText, Save
+  ChevronDown, ChevronUp, Database, Languages, FileText, Save, Server
 } from 'lucide-react';
 import FieldRenderer from './FieldRenderer';
 import { getVal } from './formUtils';
 import WebhookCard from './WebhookCard';
 
-const ICONS = { Send, Timer, Tv, Film, Play, Star, Search, Lock, Database, Languages, FileText };
+const ICONS = { Send, Timer, Tv, Film, Play, Star, Search, Lock, Database, Languages, FileText, Server };
 
 export default function SettingsSection({
   section,

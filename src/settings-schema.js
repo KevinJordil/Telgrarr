@@ -132,7 +132,7 @@ const SETTINGS_SCHEMA = [
     ],
   },
   {
-    id: 'network', title: 'Network', icon: 'Network',
+    id: 'network', title: 'Server', icon: 'Server',
     fields: [
       { key: 'listenerPort', envVar: 'PORT', label: 'Listener Port', type: 'number',
         placeholder: '3400', integer: true, min: 1025, max: 65534,
