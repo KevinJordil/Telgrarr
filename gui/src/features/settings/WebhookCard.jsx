@@ -74,7 +74,7 @@ export default function WebhookCard({ source }) {
           type="button"
           onClick={handleEye}
           disabled={busy}
-          title={revealed !== null ? 'Hide secret' : 'Reveal secret'}
+          aria-label={revealed !== null ? 'Hide secret' : 'Reveal secret'} title={revealed !== null ? 'Hide secret' : 'Reveal secret'}
           className="focus-ring shrink-0 text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
         >
           {revealed !== null ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

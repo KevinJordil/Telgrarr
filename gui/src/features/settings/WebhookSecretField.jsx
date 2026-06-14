@@ -80,12 +80,12 @@ export default function WebhookSecretField({ openConfirm, startRestartPoll }) {
           className={`${inputBase} ${open ? 'font-mono' : ''} pr-20 opacity-90 cursor-default`}
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          <button type="button" onClick={handleCopy} disabled={!secretSet || busy} title="Copy secret"
-            className="text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40">
+          <button type="button" onClick={handleCopy} disabled={!secretSet || busy} aria-label="Copy secret" title="Copy secret"
+            className="focus-ring text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40">
             {copied ? <Check className="w-4 h-4 text-telgrarr-purple" /> : <Copy className="w-4 h-4" />}
           </button>
-          <button type="button" onClick={handleEye} disabled={!secretSet || busy} title={open ? 'Hide' : 'Reveal'}
-            className="text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40">
+          <button type="button" onClick={handleEye} disabled={!secretSet || busy} aria-label={open ? 'Hide' : 'Reveal'} title={open ? 'Hide' : 'Reveal'}
+            className="focus-ring text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40">
             {open ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
