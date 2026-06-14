@@ -28,12 +28,16 @@ export function buildPayload(draft, fields, fieldMeta = {}) {
   let payload = {};
   for (const field of fields) {
     const val = getVal(draft, field.key);
-    if (field.type === 'secret' && (!val || val === '')) continue;
+    // EDGE-1: do NOT strip an empty secret. An untouched set secret carries the mask
+    // sentinel (the backend keeps it); a deliberately blanked field is '' and must reach
+    // the backend so pickSecret can honour an explicit clear (the *arr "remove the API
+    // key" action, fully GUI-controlled). An unset secret is '' -> backend stores '' (no-op).
     // H4.3b: env-managed fields are read-only - never echo them back to the server.
     const meta = fieldMeta[field.key];
     if (meta && meta.editable === false) continue;
-    // H4.3b: an empty envVar-hinted field means "keep current value" (mirrors the
-    // secret-empty convention above; explicit clear is the EDGE open item).
+    // H4.3b: an empty envVar-hinted field still means "keep current value" (its explicit
+    // clear is a separate follow-on, EDGE-2). No schema secret carries an envVar hint, so
+    // this branch never re-strips the EDGE-1 secret clear handled above.
     if (field.envVar && (val === '' || val == null)) continue;
     // H4.3b: number inputs emit strings; the backend validator requires integers.
     if (field.type === 'number') {

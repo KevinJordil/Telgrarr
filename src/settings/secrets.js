@@ -12,12 +12,17 @@ function isMasked(val) {
 }
 
 /**
- * @param {*} bodyVal
- * @param {*} configVal
+ * EDGE-1: decide whether an incoming secret value replaces or preserves the stored one.
+ * - absent (undefined/null) or the unchanged mask sentinel -> keep stored (H1/SD-6: an
+ *   untouched masked field must never blank a key).
+ * - any explicitly submitted value wins, INCLUDING '' which is a deliberate clear.
+ * @param {*} bodyVal   request-body value (undefined when the field was omitted)
+ * @param {*} configVal currently stored value
  * @returns {*}
  */
 function pickSecret(bodyVal, configVal) {
-  return (bodyVal && !isMasked(bodyVal)) ? bodyVal : configVal;
+  if (bodyVal == null || isMasked(bodyVal)) return configVal;
+  return bodyVal;
 }
 
 /**
