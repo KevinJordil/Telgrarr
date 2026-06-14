@@ -104,7 +104,11 @@ export default function Preview() {
   const confirmDeleteSlot = async () => {
     setModal(null);
     const res = await deleteSlot(currentView);
-    if (res.success) setCurrentView('default_ar');
+    if (res.success) {
+      localStorage.removeItem(`telgrarr_draft_${currentView}_sonarr`);
+      localStorage.removeItem(`telgrarr_draft_${currentView}_radarr`);
+      setCurrentView('default_ar');
+    }
     else setSlotError(res.error);
   };
   const handleMakeActive = async () => {
