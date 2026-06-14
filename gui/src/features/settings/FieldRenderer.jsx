@@ -3,6 +3,7 @@ import { Eye, EyeOff, Copy, Check } from 'lucide-react';
 import useSettingsStore from '../../store/settingsStore';
 import { isMaskedValue } from './formUtils';
 import SliderInput from '../../components/SliderInput';
+import { copyText } from './clipboard';
 
 const DISPLAY_FORMATTERS = {
   'ms-to-s': (v) => `${(v / 1000).toFixed(1)}s`,
@@ -39,15 +40,13 @@ function SecretInput({ field, value, onChange, base }) {
 
   const handleCopy = async () => {
     const v = masked ? await fetchReal() : value;
-    if (v) {
-      try {
-        await navigator.clipboard.writeText(v);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      } catch (e) { /* clipboard unavailable */ }
+    if (!v) return;
+    const ok = await copyText(v);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     }
   };
-
   const handleType = (v) => {
     if (revealed !== null) setRevealed(null);
     onChange(v);
