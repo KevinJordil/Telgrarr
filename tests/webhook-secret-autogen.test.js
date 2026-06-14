@@ -3,9 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-// H5.0 (SD-11/SD-1): webhook secret is auto-generated + persisted on FIRST boot only
-// when neither env nor the config.json file tier supplies one. env-set wins and is
-// never persisted; an existing file secret is left untouched (idempotent).
+// Webhook secret = an *arr-style API key: file-tier owned + GUI-regenerable. It is
+// auto-generated on first boot when none is saved; the WEBHOOK_SECRET env var is an
+// OPTIONAL first-run SEED only. Once saved, the file value is authoritative and env
+// is ignored (so a GUI Regenerate always sticks). Supersedes SD-11's env-wins rule.
 describe('webhook secret first-boot auto-gen', () => {
   let dir;
   const saved = {};
@@ -26,13 +27,25 @@ describe('webhook secret first-boot auto-gen', () => {
   const load = async () => (await import('../src/config.js')).default;
   const file = () => path.join(dir, 'config.json');
 
-  it('env-set: no generation, nothing persisted, env value is effective', async () => {
+  it('env-set on first boot: SEEDS the file tier from env, then file-authoritative', async () => {
     process.env.WEBHOOK_SECRET = 'env-secret-fixture';
     vi.resetModules();
     const config = await load();
-    expect(fs.existsSync(file())).toBe(false);
-    expect(config.webhookSecret).toBeUndefined();
+    expect(fs.existsSync(file())).toBe(true);
+    const disk = JSON.parse(fs.readFileSync(file(), 'utf8'));
+    expect(disk.webhookSecret).toBe('env-secret-fixture');
+    expect(config.webhookSecret).toBe('env-secret-fixture');
     expect(config.WEBHOOK_SECRET).toBe('env-secret-fixture');
+  });
+
+  it('env-set but a saved secret already exists: file wins, env ignored', async () => {
+    fs.writeFileSync(file(), JSON.stringify({ webhookSecret: 'saved-fixture-secret' }));
+    process.env.WEBHOOK_SECRET = 'env-secret-fixture';
+    vi.resetModules();
+    const config = await load();
+    const disk = JSON.parse(fs.readFileSync(file(), 'utf8'));
+    expect(disk.webhookSecret).toBe('saved-fixture-secret');
+    expect(config.WEBHOOK_SECRET).toBe('saved-fixture-secret');
   });
 
   it('both empty: generates a 256-bit base64url secret, persists it, effective matches', async () => {

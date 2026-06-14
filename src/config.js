@@ -169,10 +169,10 @@ function stripVolatile(obj) {
  *  "401 until you hand-edit config.json" trap on a fresh install without weakening
  *  closed-by-default (C.5): the only transition is unset -> a freshly generated secret. */
 function ensureWebhookSecret() {
+  if (config.webhookSecret) return;                    // already saved -> idempotent
   const envSecret = process.env.WEBHOOK_SECRET;
-  if (envSecret != null && envSecret !== '') return;   // env wins, never persisted (SD-1)
-  if (config.webhookSecret) return;                    // already set -> idempotent (SD-11)
-  const secret = generateWebhookSecret(); // single home: auth/webhook-token.js
+  const seeded = (envSecret != null && envSecret !== '');
+  const secret = seeded ? envSecret : generateWebhookSecret(); // single home: auth/webhook-token.js
   config.webhookSecret = secret;
   try {
     writeFileAtomic.sync(
@@ -180,7 +180,7 @@ function ensureWebhookSecret() {
       JSON.stringify(stripVolatile(config), null, 2),
       { mode: 0o600 }   // PR-2: holds secrets -> owner-only
     );
-    log.audit('Config', 'Webhook secret generated on first boot \u2192 persisted to config.json \u2192 webhook routes authenticated');
+    log.audit('Config', 'Webhook secret initialized on first boot \u2192 persisted to config.json \u2192 webhook routes authenticated');
   } catch (err) {
     log.error('Config', `Failed to persist generated webhook secret: ${err.message}`);
   }
@@ -286,10 +286,10 @@ Object.defineProperty(config, 'PORT',        { value: (process.env.PORT != null 
 Object.defineProperty(config, 'HOST',        { value: (process.env.HOST != null && process.env.HOST !== '') ? process.env.HOST : config.listenerHost, enumerable: false, configurable: true });
 Object.defineProperty(config, 'CORS_ORIGIN', { value: process.env.CORS_ORIGIN != null ? process.env.CORS_ORIGIN : (config.corsOrigin || ''), enumerable: false, configurable: true });
 Object.defineProperty(config, 'TRUST_PROXY', { value: process.env.TRUST_PROXY != null ? process.env.TRUST_PROXY : (config.trustProxy || ''), enumerable: false, configurable: true });
-// C.5: webhook auth secret (env -> config.json webhookSecret -> ''). Empty =>
+// Webhook auth secret: config.json webhookSecret -> '' (env only SEEDS first boot). Empty =>
 // routes return 401 (closed-by-default). Resolved at boot like the B.1 vars: a
 // RESTART is required to pick up a change (hot-reload does not recompute these).
-Object.defineProperty(config, 'WEBHOOK_SECRET', { value: (process.env.WEBHOOK_SECRET != null && process.env.WEBHOOK_SECRET !== '') ? process.env.WEBHOOK_SECRET : (config.webhookSecret || ''), enumerable: false, configurable: true });
+Object.defineProperty(config, 'WEBHOOK_SECRET', { value: (config.webhookSecret || ''), enumerable: false, configurable: true });
 // C.7 / RD-4: cookie Secure policy. 'auto' (default) => Secure when the request is
 // HTTPS (req.secure / X-Forwarded-Proto); 'true'/'false' force it. Boot-resolved.
 Object.defineProperty(config, 'COOKIE_SECURE', { value: (process.env.COOKIE_SECURE != null && process.env.COOKIE_SECURE !== '') ? process.env.COOKIE_SECURE : (config.cookieSecure || 'auto'), enumerable: false, configurable: true });

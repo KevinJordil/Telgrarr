@@ -282,7 +282,6 @@ router.get('/settings/webhook', requireAuth, (req, res) => {
       radarr: secretSet ? `/hooks/${masked}/radarr` : '',
     },
     secretSet,
-    envManaged: !!config.envOverrides.WEBHOOK_SECRET,
   });
 });
 
@@ -293,10 +292,6 @@ router.get('/settings/webhook', requireAuth, (req, res) => {
 // old secret keeps working until the restart lands, then is rejected.
 router.post('/settings/webhook/regenerate', requireAuth, async (req, res) => {
   try {
-    if (config.envOverrides.WEBHOOK_SECRET) {
-      log.warn('Settings', 'Webhook Regenerate → Refused → Secret is env-managed (WEBHOOK_SECRET)');
-      return res.status(409).json({ error: 'Webhook secret is managed by the environment (WEBHOOK_SECRET) - change it there', envManaged: true });
-    }
     const secret = generateWebhookSecret();
     await config.save({ webhookSecret: secret });
     log.audit('Settings', 'Webhook Regenerate → Success → New secret persisted, restart required');
