@@ -117,3 +117,55 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================================
+   Login frame rework (approved): travelling filament + ambient halo.
+   Token-driven (--color-accent / --color-accent-glow); reduced-motion safe.
+   ============================================================================ */
+@property --login-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes tg-filament { to { --login-angle: 360deg; } }
+@keyframes tg-halo-breathe {
+  0%, 100% { opacity: .40; transform: scale(1) translateY(0); }
+  50%      { opacity: .74; transform: scale(1.06) translateY(-2%); }
+}
+.login-halo {
+  position: absolute; inset: -14% -10%; z-index: -1; border-radius: 44px;
+  pointer-events: none; will-change: transform, opacity;
+  background:
+    radial-gradient(58% 55% at 28% 18%, rgb(var(--color-accent) / .60), transparent 70%),
+    radial-gradient(55% 50% at 82% 82%, rgb(var(--color-accent-glow) / .42), transparent 70%);
+  filter: blur(48px); opacity: .55;
+  animation: tg-halo-breathe 7.5s ease-in-out infinite;
+}
+.login-frame::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.4px;
+  pointer-events: none;
+  background: conic-gradient(from var(--login-angle),
+    transparent 0deg, transparent 56deg,
+    rgb(var(--color-accent-glow) / 0) 72deg,
+    rgb(var(--color-accent-glow) / .95) 98deg,
+    rgb(var(--color-accent) / 1) 112deg,
+    rgb(var(--color-accent-glow) / 0) 142deg,
+    transparent 162deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: tg-filament 7s linear infinite;
+}
+.login-frame::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.4px;
+  pointer-events: none; background: rgb(var(--color-accent) / .14);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-halo { animation: none; opacity: .58; }
+  .login-frame::before {
+    animation: none;
+    background: conic-gradient(from 0deg,
+      rgb(var(--color-accent) / .34), rgb(var(--color-accent-glow) / .12) 90deg,
+      rgb(var(--color-accent) / .34) 180deg, rgb(var(--color-accent-glow) / .12) 270deg,
+      rgb(var(--color-accent) / .34) 360deg);
+  }
+}
