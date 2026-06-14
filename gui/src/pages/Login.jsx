@@ -96,13 +96,10 @@ function RecoveryModal({ onClose }) {
         animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1,    y: 0  }}
         exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 16 }}
         transition={reduceMotion ? { duration: 0.15 } : { duration: 0.25, ease: 'easeOut' }}
-        className="relative w-full max-w-md rounded-[2rem] p-[2px] shadow-glass overflow-hidden group"
+        className="relative w-full max-w-md"
       >
-        <div
-          className="absolute -inset-[100%] animate-[spin_8s_linear_infinite] motion-reduce:animate-none will-change-transform z-0 opacity-70 group-hover:opacity-100 transition-opacity duration-500"
-          style={{ backgroundImage: 'conic-gradient(from 0deg, transparent 75%, rgb(var(--color-accent)) 100%)' }}
-        />
-        <div className="relative z-10 w-full bg-telgrarr-surface/95 backdrop-blur-3xl rounded-[calc(2rem-2px)] p-6 md:p-8 flex flex-col transition-colors duration-300">
+        <div className="login-halo" aria-hidden="true" />
+        <div className="login-frame relative z-10 w-full bg-telgrarr-surface/[0.82] backdrop-blur-3xl rounded-[26px] p-6 md:p-8 flex flex-col border border-telgrarr-border/[0.85] shadow-glass transition-colors duration-300">
           {success ? (
             <motion.div
               initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
@@ -255,13 +252,10 @@ export default function Login() {
         initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reduceMotion ? { duration: 0.2 } : { duration: 0.8, ease: 'easeOut' }}
-        className="relative w-full max-w-md mx-4 rounded-[2rem] p-[2px] shadow-glass overflow-hidden group"
+        className="relative w-full max-w-md mx-4"
       >
-        <div
-          className="absolute -inset-[100%] animate-[spin_8s_linear_infinite] motion-reduce:animate-none will-change-transform z-0 opacity-70 group-hover:opacity-100 transition-opacity duration-500"
-          style={{ backgroundImage: 'conic-gradient(from 0deg, transparent 75%, rgb(var(--color-accent)) 100%)' }}
-        />
-        <div className="relative z-10 w-full h-full bg-telgrarr-surface/95 backdrop-blur-3xl rounded-[calc(2rem-2px)] p-6 md:p-8 flex flex-col transition-colors duration-300">
+        <div className="login-halo" aria-hidden="true" />
+        <div className="login-frame relative z-10 w-full h-full bg-telgrarr-surface/[0.82] backdrop-blur-3xl rounded-[26px] p-6 md:p-8 flex flex-col border border-telgrarr-border/[0.85] shadow-glass transition-colors duration-300">
           <div className="flex flex-col items-center mb-8">
             <motion.img
               initial={reduceMotion ? { scale: 1 } : { scale: 0.8 }} animate={{ scale: 1 }} transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 15 }}
