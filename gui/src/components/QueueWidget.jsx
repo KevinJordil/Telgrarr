@@ -22,6 +22,7 @@ export default function QueueWidget({ queueState }) {
   const { active, expiresAt } = queueState;
   const remaining = useCountdown(expiresAt);
   const [flushing, setFlushing] = useState(false);
+  const [error, setError] = useState(null);
   const reduceMotion = useReducedMotion();
   const totalMs  = 300000; // 5 min default — visual only
   const progress = remaining !== null ? Math.max(0, Math.min(1, remaining / totalMs)) : 1;
@@ -35,12 +36,14 @@ export default function QueueWidget({ queueState }) {
   const dash = circumference * (1 - progress);
 
   async function handleFlush() {
+    setError(null);
     setFlushing(true);
-    try { await api.post('/queue/flush'); } catch (_) {}
+    try { await api.post('/queue/flush'); } catch (e) { setError(e.response?.data?.error || 'Could not send now — try again.'); }
     setTimeout(() => setFlushing(false), 1500);
   }
   async function handleClear() {
-    try { await api.post('/queue/clear'); } catch (_) {}
+    setError(null);
+    try { await api.post('/queue/clear'); } catch (e) { setError(e.response?.data?.error || 'Could not discard the queue — try again.'); }
   }
 
   return (
@@ -54,7 +57,7 @@ export default function QueueWidget({ queueState }) {
           className="relative z-10 mb-6 mx-1"
         >
           <div className="bg-telgrarr-surface border border-telgrarr-purple/30 rounded-2xl p-4 shadow-glass flex items-center gap-4">
-            {/* SVG ring-3 countdown */}
+            {/* SVG countdown ring */}
             <div className="relative flex-none w-12 h-12">
               <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
                 <circle cx="24" cy="24" r="20" fill="none" className="stroke-telgrarr-border" strokeWidth="3.5" />
@@ -94,6 +97,9 @@ export default function QueueWidget({ queueState }) {
               </button>
             </div>
           </div>
+          {error && (
+            <p className="mt-2 px-1 text-xs text-telgrarr-danger">{error}</p>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
