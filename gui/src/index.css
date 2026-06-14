@@ -99,7 +99,7 @@
   .glass-panel {
     @apply bg-telgrarr-surface/70 backdrop-blur-xl border border-telgrarr-border shadow-glass rounded-2xl;
   }
-  /* U1 — focus-visible ring-3 convention (apply to interactive elements in U2/U3) */
+  /* U1 — focus-visible ring-2 convention (apply to interactive elements in U2/U3) */
   .focus-ring {
     @apply outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-telgrarr-purple focus-visible:ring-offset-telgrarr-black;
   }
