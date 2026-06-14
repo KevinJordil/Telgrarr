@@ -1,8 +1,10 @@
 import React, { useEffect, lazy } from 'react';
+import { Loader2 } from 'lucide-react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useThemeStore from './store/themeStore';
 import useAuthStore  from './store/authStore';
 import Login     from './pages/Login';
+import Onboarding from './pages/Onboarding';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Settings  = lazy(() => import('./pages/Settings'));
 const Logs      = lazy(() => import('./pages/Logs'));
@@ -26,23 +28,43 @@ function CatchAll() {
 
 export default function App() {
   const initTheme = useThemeStore((s) => s.initTheme);
+  const setupNeeded      = useAuthStore((s) => s.setupNeeded);
+  const checkSetupStatus = useAuthStore((s) => s.checkSetupStatus);
   useEffect(() => {
     initTheme();
-  }, [initTheme]);
+    checkSetupStatus();
+  }, [initTheme, checkSetupStatus]);
+
+  // H7.2: gate first paint on the setup check. null = pending -> loader; true -> Onboarding.
+  if (setupNeeded === null) {
+    return (
+      <div className="min-h-[100dvh] bg-telgrarr-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-telgrarr-purple animate-spin" aria-label="Loading" />
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/"  element={<Login />} />
-        <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/settings"  element={<Settings />} />
-          <Route path="/logs"      element={<Logs />} />
-          <Route path="/preview"   element={<Preview />} />
-          <Route path="/blacklist" element={<Blacklist />} />
-          <Route path="/about"     element={<About />} />
-        </Route>
-        <Route path="*" element={<CatchAll />} />
-      </Routes>
+      {setupNeeded ? (
+          <Routes>
+            <Route path="/" element={<Onboarding />} />
+            <Route path="*" element={<Onboarding />} />
+          </Routes>
+        ) : (
+          <Routes>
+            <Route path="/"  element={<Login />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/settings"  element={<Settings />} />
+              <Route path="/logs"      element={<Logs />} />
+              <Route path="/preview"   element={<Preview />} />
+              <Route path="/blacklist" element={<Blacklist />} />
+              <Route path="/about"     element={<About />} />
+            </Route>
+            <Route path="*" element={<CatchAll />} />
+          </Routes>
+        )}
     </BrowserRouter>
   );
 }
