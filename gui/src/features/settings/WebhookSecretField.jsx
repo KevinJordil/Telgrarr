@@ -1,12 +1,12 @@
 import React from 'react';
-import { Eye, EyeOff, Copy, Check, RefreshCw, Lock } from 'lucide-react';
+import { Eye, EyeOff, Copy, Check, RefreshCw } from 'lucide-react';
 import useSettingsStore from '../../store/settingsStore';
 import { SECRET_MASK } from './formUtils';
 import { copyText } from './clipboard';
 
-// H5.3c (SD-15/SD-17): TELGRARR's webhook secret = its API key. Regenerate-only (never
-// hand-typed), masked with reveal + copy. When provided via the WEBHOOK_SECRET env var
-// it is locked (SD-1) and shown informationally - no imperative to edit a file.
+// TELGRARR's webhook secret = its API key: auto-generated, Regenerate-only (never
+// hand-typed), masked with reveal + copy. Fully GUI-managed - the WEBHOOK_SECRET env
+// var only seeds the first run, after which the saved value is authoritative.
 export default function WebhookSecretField({ openConfirm, startRestartPoll }) {
   const webhookInfo = useSettingsStore((s) => s.webhookInfo);
   const revealSecret = useSettingsStore((s) => s.revealSecret);
@@ -18,7 +18,7 @@ export default function WebhookSecretField({ openConfirm, startRestartPoll }) {
   const [error, setError] = React.useState(null);
 
   if (!webhookInfo) return null;
-  const { secretSet, envManaged } = webhookInfo;
+  const { secretSet } = webhookInfo;
   const inputBase = 'w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 px-4 text-telgrarr-text text-sm';
 
   const fetchReal = async () => {
@@ -91,22 +91,13 @@ export default function WebhookSecretField({ openConfirm, startRestartPoll }) {
         </div>
       </div>
 
-      {envManaged ? (
-        <p className="text-xs text-telgrarr-muted/70 leading-relaxed flex items-start gap-1.5">
-          <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          Set by the WEBHOOK_SECRET environment variable and managed by your deployment.
-        </p>
-      ) : (
-        <>
-          <p className="text-xs text-telgrarr-muted/70 leading-relaxed">
-            Auto-generated. This is TELGRARR's API key - it authenticates the Sonarr and Radarr webhook URLs. Regenerating requires a restart.
-          </p>
-          <button type="button" onClick={handleRegenerate}
-            className="focus-ring flex items-center gap-2 text-sm text-telgrarr-danger hover:text-telgrarr-danger/80 transition-colors">
-            <RefreshCw className="w-4 h-4" /> Regenerate secret
-          </button>
-        </>
-      )}
+      <p className="text-xs text-telgrarr-muted/70 leading-relaxed">
+        Auto-generated. This is TELGRARR's API key - it authenticates the Sonarr and Radarr webhook URLs. Regenerating requires a restart.
+      </p>
+      <button type="button" onClick={handleRegenerate}
+        className="focus-ring flex items-center gap-2 text-sm text-telgrarr-danger hover:text-telgrarr-danger/80 transition-colors">
+        <RefreshCw className="w-4 h-4" /> Regenerate secret
+      </button>
       {error && <p className="text-xs text-telgrarr-danger">{error}</p>}
     </div>
   );

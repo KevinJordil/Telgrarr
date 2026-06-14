@@ -28,7 +28,7 @@ inspection, history, blacklist management, and a live SSE event feed.
 git clone https://github.com/Fahad-Beta/telgrarr.git
 cd telgrarr
 cp .env.example .env
-# Edit .env: set WEBHOOK_SECRET (required) and TRUST_PROXY=true if you
+# Edit .env (all optional): WEBHOOK_SECRET auto-generates; set TRUST_PROXY=true if you
 # will be running behind a reverse proxy / TLS terminator.
 docker compose up -d --build
 docker compose exec telgrarr node setup-auth.js   # first-run auth bootstrap
@@ -58,7 +58,7 @@ cd gui && npm install && npm run build && cd ..
 
 # Configuration
 cp .env.example .env
-$EDITOR .env                       # set WEBHOOK_SECRET and any overrides
+$EDITOR .env                       # optional overrides (WEBHOOK_SECRET auto-generates)
 
 # First-run auth (interactive, hidden prompt)
 node setup-auth.js
@@ -88,7 +88,7 @@ win.
 | `HOST`            | `0.0.0.0`            | HTTP listen address. |
 | `CORS_ORIGIN`     | _(unset)_            | Empty -> no CORS header -> same-origin only (correct when this process serves the GUI). Set to exactly one origin (scheme + host + port) if the GUI is hosted separately. |
 | `TRUST_PROXY`     | _(off)_              | Express `trust proxy`. Empty / `false` / `0` = off. `true` / `1` = trust one proxy. Numeric N = N hops. IP / CIDR / list also accepted. |
-| `WEBHOOK_SECRET`  | _(unset)_            | Shared secret authenticating Sonarr / Radarr webhooks. **While unset, the webhook endpoints stay closed (HTTP 401).** |
+| `WEBHOOK_SECRET`  | _(unset)_            | The webhook auth secret, like an *arr API key. **Auto-generated on first boot** and managed in the GUI (Settings -> System -> Server: reveal / copy / Regenerate). A set value only seeds the first run; the saved value is authoritative thereafter. |
 | `COOKIE_SECURE`   | `auto`               | Session-cookie `Secure` flag. `auto` sets Secure on HTTPS requests (direct or via `X-Forwarded-Proto`); `true` / `false` force on / off. |
 | `NODE_ENV`        | `production`         | Standard Node convention. Use `production` for any real deployment. |
 
@@ -113,7 +113,7 @@ history or process listings. Re-run any time to rotate.
 
 ## Webhook Setup
 
-After setting `WEBHOOK_SECRET`, configure Sonarr / Radarr to POST to:
+The webhook secret is auto-generated on first run - copy the ready-made URLs from **Settings -> System -> Server** (reveal to see the secret). To build them by hand, configure Sonarr / Radarr to POST to:
 
 ~~~
 https://<your-host>/hooks/<WEBHOOK_SECRET>/sonarr
