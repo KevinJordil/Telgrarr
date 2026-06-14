@@ -17,7 +17,6 @@ export default function useSettingsDraft(settings, schema) {
 
   return {
     draft,
-    setDraft,
     handleChange,
     sectionIsDirty
   };
