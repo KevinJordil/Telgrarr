@@ -13,7 +13,7 @@ const useTemplatesStore = create((set, get) => ({
       const res = await api.get('/templates');
       set({ templates: res.data, loading: false });
     } catch (err) {
-      set({ loading: false, error: err.message });
+      set({ loading: false, error: err.response?.data?.error || err.message });
     }
   },
 

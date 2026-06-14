@@ -32,8 +32,7 @@ export default function BottomNav() {
   }, [open]);
   const moreActive = SHEET_PATHS.includes(location.pathname);
 
-  function handleTab(path, soon) {
-    if (soon) return;
+  function handleTab(path) {
     if (path === location.pathname) { setOpen(false); return; }
     runGuard(() => { setOpen(false); navigate(path); });
   }
@@ -68,22 +67,22 @@ export default function BottomNav() {
               <div className="px-4 pt-4 pb-1">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-telgrarr-muted">More</p>
               </div>
-              {SHEET_ITEMS.map(({ id, label, icon: Icon, path, soon }) => {
+              {SHEET_ITEMS.map(({ id, label, icon: Icon, path }) => {
                 const isActive = location.pathname === path;
                 return (
                   <button
                     key={id}
-                    onClick={() => handleTab(path, soon)}
+                    onClick={() => handleTab(path)}
                     aria-label={label}
                     className={
                       'focus-ring w-full flex items-center gap-4 px-4 py-3.5 transition-all ' +
-                      (soon ? 'opacity-40 cursor-not-allowed ' : 'hover:bg-telgrarr-text/5 active:bg-telgrarr-text/10 ') +
+                      'hover:bg-telgrarr-text/5 active:bg-telgrarr-text/10 ' +
                       (isActive ? 'text-telgrarr-purple' : 'text-telgrarr-text')
                     }
                   >
                     <Icon className="w-5 h-5 shrink-0" strokeWidth={isActive ? 2.5 : 1.8} />
                     <span className="text-sm font-medium">{label}</span>
-                    {isActive && !soon && (
+                    {isActive && (
                       <span className="ml-auto w-1.5 h-1.5 rounded-full bg-telgrarr-purple" />
                     )}
                   </button>
@@ -98,12 +97,12 @@ export default function BottomNav() {
       {/* RESPONSIVE OPTIMIZATION: The macOS Floating Dock upgrade */}
       <nav className="fixed bottom-0 sm:bottom-6 left-0 right-0 z-50 bg-telgrarr-black/95 sm:bg-telgrarr-surface/85 backdrop-blur-xl border-t sm:border border-telgrarr-border safe-area-bottom sm:max-w-md sm:mx-auto sm:rounded-2xl sm:shadow-glass overflow-hidden transition-all duration-300">
         <div className="flex items-stretch h-16 w-full">
-          {PRIMARY_TABS.map(({ id, label, icon: Icon, path, soon }) => {
+          {PRIMARY_TABS.map(({ id, label, icon: Icon, path }) => {
             const isActive = location.pathname === path;
             return (
               <button
                 key={id}
-                onClick={() => handleTab(path, soon)}
+                onClick={() => handleTab(path)}
                 aria-label={label}
                 className={
                   'focus-ring relative flex-1 flex flex-col items-center justify-center gap-1 transition-all ' +

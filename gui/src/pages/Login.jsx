@@ -99,7 +99,7 @@ function RecoveryModal({ onClose }) {
         className="relative w-full max-w-md rounded-[2rem] p-[2px] shadow-glass overflow-hidden group"
       >
         <div
-          className="absolute -inset-[100%] animate-[spin_8s_linear_infinite] will-change-transform z-0 opacity-70 group-hover:opacity-100 transition-opacity duration-500"
+          className="absolute -inset-[100%] animate-[spin_8s_linear_infinite] motion-reduce:animate-none will-change-transform z-0 opacity-70 group-hover:opacity-100 transition-opacity duration-500"
           style={{ backgroundImage: 'conic-gradient(from 0deg, transparent 75%, rgb(var(--color-accent)) 100%)' }}
         />
         <div className="relative z-10 w-full bg-telgrarr-surface/95 backdrop-blur-3xl rounded-[calc(2rem-2px)] p-6 md:p-8 flex flex-col transition-colors duration-300">
@@ -258,7 +258,7 @@ export default function Login() {
         className="relative w-full max-w-md mx-4 rounded-[2rem] p-[2px] shadow-glass overflow-hidden group"
       >
         <div
-          className="absolute -inset-[100%] animate-[spin_8s_linear_infinite] will-change-transform z-0 opacity-70 group-hover:opacity-100 transition-opacity duration-500"
+          className="absolute -inset-[100%] animate-[spin_8s_linear_infinite] motion-reduce:animate-none will-change-transform z-0 opacity-70 group-hover:opacity-100 transition-opacity duration-500"
           style={{ backgroundImage: 'conic-gradient(from 0deg, transparent 75%, rgb(var(--color-accent)) 100%)' }}
         />
         <div className="relative z-10 w-full h-full bg-telgrarr-surface/95 backdrop-blur-3xl rounded-[calc(2rem-2px)] p-6 md:p-8 flex flex-col transition-colors duration-300">
