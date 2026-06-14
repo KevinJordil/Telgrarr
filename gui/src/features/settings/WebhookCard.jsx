@@ -1,9 +1,9 @@
 import React from 'react';
-import { Lock, Copy, Check, Webhook } from 'lucide-react';
+import { Lock, Copy, Check, Webhook, Eye, EyeOff } from 'lucide-react';
 import useSettingsStore from '../../store/settingsStore';
 import { copyText } from './clipboard';
 
-// H5.3c (SD-7/SD-15): copy-only, locked webhook link for the Sonarr/Radarr sections.
+// H5.3c (SD-7/SD-15): reveal/copy, locked webhook link for the Sonarr/Radarr sections.
 // The secret is owned by Server settings; here it is shown masked and never edited.
 // Copy composes the real working URL via a one-shot SD-9 reveal (transient, not stored).
 const APP = { sonarr: 'Sonarr', radarr: 'Radarr' };
@@ -15,6 +15,7 @@ export default function WebhookCard({ source }) {
   const [busy, setBusy] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [error, setError] = React.useState(null);
+  const [revealed, setRevealed] = React.useState(null);
 
   if (!webhookInfo || !webhookInfo.secretSet || !webhookInfo.paths || !webhookInfo.paths[source]) {
     return null;
@@ -25,17 +26,35 @@ export default function WebhookCard({ source }) {
   const maskedPath = webhookInfo.paths[source];
   const maskedUrl = base + maskedPath;
   const derived = webhookInfo.baseSource === 'derived';
+  const displayUrl = revealed !== null
+    ? base + maskedPath.replace(/\/hooks\/[^/]+\//, () => '/hooks/' + revealed + '/')
+    : maskedUrl;
 
-  const handleCopy = async () => {
+  const fetchReal = async () => {
+    if (revealed !== null) return revealed;
     setError(null);
     setBusy(true);
     const res = await revealSecret('webhookSecret');
     setBusy(false);
     if (!res || !res.success || !res.value) {
       setError('Could not retrieve the secret - try again.');
-      return;
+      return null;
     }
-    const realPath = maskedPath.replace(/\/hooks\/[^/]+\//, () => '/hooks/' + res.value + '/');
+    setRevealed(res.value);
+    return res.value;
+  };
+
+  const handleEye = async () => {
+    setError(null);
+    if (revealed !== null) setRevealed(null);
+    else await fetchReal();
+  };
+
+  const handleCopy = async () => {
+    setError(null);
+    const v = await fetchReal();
+    if (!v) return;
+    const realPath = maskedPath.replace(/\/hooks\/[^/]+\//, () => '/hooks/' + v + '/');
     const ok = await copyText(base + realPath);
     if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1500); }
     else setError('Copy failed - select the URL and copy it manually.');
@@ -50,7 +69,16 @@ export default function WebhookCard({ source }) {
 
       <div className="flex items-center gap-2 w-full bg-telgrarr-elevated/60 border border-telgrarr-border rounded-xl py-3 pl-4 pr-3">
         <Lock className="w-3.5 h-3.5 text-telgrarr-muted shrink-0" />
-        <code className="flex-1 min-w-0 truncate text-xs font-mono text-telgrarr-muted select-all">{maskedUrl}</code>
+        <code className="flex-1 min-w-0 truncate text-xs font-mono text-telgrarr-muted select-all">{displayUrl}</code>
+        <button
+          type="button"
+          onClick={handleEye}
+          disabled={busy}
+          title={revealed !== null ? 'Hide secret' : 'Reveal secret'}
+          className="focus-ring shrink-0 text-telgrarr-muted hover:text-telgrarr-text transition-colors disabled:opacity-40"
+        >
+          {revealed !== null ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
         <button
           type="button"
           onClick={handleCopy}
