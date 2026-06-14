@@ -142,13 +142,13 @@ function RecoveryModal({ onClose }) {
               </p>
               <form onSubmit={handleRecover} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-telgrarr-muted font-medium pl-1">Recovery Token</label>
+                  <label htmlFor="recover-token" className="text-xs text-telgrarr-muted font-medium pl-1">Recovery Token</label>
                   <div className="relative">
                     <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-telgrarr-muted" />
                     <input
                       ref={firstRef}
                       type="text"
-                      value={recoveryToken}
+                      id="recover-token" value={recoveryToken}
                       onChange={(e) => setRecoveryToken(e.target.value)}
                       className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 pl-10 pr-4 text-xs text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner font-mono tracking-tight"
                       placeholder="Paste 64-character token from terminal"
@@ -158,12 +158,12 @@ function RecoveryModal({ onClose }) {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs text-telgrarr-muted font-medium pl-1">New Password</label>
+                  <label htmlFor="recover-new" className="text-xs text-telgrarr-muted font-medium pl-1">New Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-telgrarr-muted" />
                     <input
                       type="password"
-                      value={newPassword}
+                      id="recover-new" value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 pl-10 pr-4 text-sm text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner"
                       placeholder="Min. 8 characters"
@@ -173,12 +173,12 @@ function RecoveryModal({ onClose }) {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs text-telgrarr-muted font-medium pl-1">Confirm New Password</label>
+                  <label htmlFor="recover-confirm" className="text-xs text-telgrarr-muted font-medium pl-1">Confirm New Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-telgrarr-muted" />
                     <input
                       type="password"
-                      value={confirmPw}
+                      id="recover-confirm" value={confirmPw}
                       onChange={(e) => setConfirmPw(e.target.value)}
                       className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 pl-10 pr-4 text-sm text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner"
                       placeholder="••••••••"
@@ -271,20 +271,20 @@ export default function Login() {
           </div>
           <form onSubmit={handleLogin} className="space-y-4 md:space-y-5">
             <div className="space-y-1.5">
-              <label className="text-xs md:text-sm text-telgrarr-muted font-medium pl-1">Username</label>
+              <label htmlFor="login-username" className="text-xs md:text-sm text-telgrarr-muted font-medium pl-1">Username</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-telgrarr-muted" />
-                <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
+                <input type="text" id="login-username" value={username} onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 md:py-3.5 pl-10 md:pl-11 pr-4 text-sm md:text-base text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner"
                   placeholder="Enter username" autoComplete="username" required
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs md:text-sm text-telgrarr-muted font-medium pl-1">Password</label>
+              <label htmlFor="login-password" className="text-xs md:text-sm text-telgrarr-muted font-medium pl-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-telgrarr-muted" />
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                <input type="password" id="login-password" value={password} onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 md:py-3.5 pl-10 md:pl-11 pr-4 text-sm md:text-base text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner"
                   placeholder="••••••••" autoComplete="current-password" required
                 />
