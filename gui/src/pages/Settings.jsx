@@ -78,7 +78,7 @@ export default function Settings() {
   // Unsaved-changes guard: while any section is dirty, intercept in-app nav
   // (navGuard) and browser refresh/close (beforeunload) with a discard confirm.
   useEffect(() => {
-    const isDirtyNow = () => Array.isArray(schema) && schema.some((sec) => sectionIsDirty(sec));
+    const isDirtyNow = () => (Array.isArray(schema) && schema.some((sec) => sectionIsDirty(sec))) || useNavGuard.getState().hasExternalDirty();
     setIntercept((proceed) => {
       if (isDirtyNow()) {
         openConfirm({
