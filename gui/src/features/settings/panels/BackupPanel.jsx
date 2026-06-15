@@ -2,12 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Database, ChevronDown, ChevronUp, Loader2, CheckCircle, XCircle, Download, RefreshCw, Trash2 } from 'lucide-react';
 import useSettingsStore from '../../../store/settingsStore';
+import useNavGuard from '../../../store/navGuardStore';
 import api from '../../../api';
 import SliderInput from '../../../components/SliderInput';
 import { formatBytes } from '../formUtils';
 
 export default function BackupPanel({ openConfirm, startRestartPoll }) {
   const { settings, saveSection, fetchSettings } = useSettingsStore();
+  const setDirty = useNavGuard((s) => s.setDirty);
   const [isExpanded, setIsExpanded] = useState(false);
   const [backups, setBackups] = useState([]);
   const [backupsLoading, setBackupsLoading] = useState(false);
@@ -18,6 +20,12 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
   useEffect(() => {
     if (settings?.backup) setBackupConfig(settings.backup);
   }, [settings]);
+  useEffect(() => {
+    const baseline = settings?.backup;
+    const dirty = !!baseline && JSON.stringify(backupConfig) !== JSON.stringify(baseline);
+    setDirty('backup', dirty);
+    return () => setDirty('backup', false);
+  }, [backupConfig, settings, setDirty]);
 
   const fetchBackupsList = useCallback(async () => {
     setBackupsLoading(true);
@@ -131,6 +139,7 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
       <button
         onClick={() => setIsExpanded((p) => !p)}
         aria-expanded={isExpanded}
+        aria-controls="backup-panel-body"
         className="focus-ring w-full flex items-center justify-between p-4"
       >
         <div className="flex items-center gap-3">
@@ -142,7 +151,7 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
         {isExpanded ? <ChevronUp className="w-4 h-4 text-telgrarr-muted" /> : <ChevronDown className="w-4 h-4 text-telgrarr-muted" />}
       </button>
       {isExpanded && (
-        <div className="px-4 pb-5 space-y-4 border-t border-telgrarr-border/50 pt-4">
+        <div id="backup-panel-body" className="px-4 pb-5 space-y-4 border-t border-telgrarr-border/50 pt-4">
           <div className="p-4 bg-telgrarr-elevated rounded-xl border border-telgrarr-border space-y-4">
             <div className="flex items-center justify-between">
               <div>
