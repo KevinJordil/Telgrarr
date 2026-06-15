@@ -5,7 +5,7 @@ import useSSE from '../hooks/useSSE';
 import api from '../api';
 
 const LEVELS  = ['all', 'info', 'warn', 'error'];
-const MODULES = ['all', 'Listener', 'Sweeper', 'Config', 'Auth', 'Emby', 'History'];
+const MODULES = ['all', 'About', 'App', 'Auth', 'Backup', 'Blacklist', 'Config', 'Events', 'History', 'Listener', 'MediaCache', 'MediaEnricher', 'Metadata', 'OMDb', 'Queue', 'Radarr', 'Settings', 'Sonarr', 'Sweeper', 'System', 'Templates', 'TMDb', 'Translator', 'Webhook'];
 
 const LEVEL_STYLE = {
   info:  { badge: 'bg-telgrarr-purple/15 text-telgrarr-purple border border-telgrarr-purple/20',    dot: 'bg-telgrarr-purple'  },
