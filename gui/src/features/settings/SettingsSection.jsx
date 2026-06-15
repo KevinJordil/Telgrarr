@@ -42,6 +42,7 @@ export default function SettingsSection({
       <button
         onClick={() => setExpanded((p) => ({ ...p, [section.id]: !isExpanded }))}
         aria-expanded={isExpanded}
+        aria-controls={`settings-${section.id}-body`}
         className="focus-ring w-full flex items-center justify-between p-4"
       >
         <div className="flex items-center gap-3">
@@ -59,7 +60,7 @@ export default function SettingsSection({
       </button>
 
       {isExpanded && (
-        <div className="px-4 pb-5 space-y-1 border-t border-telgrarr-border/50">
+        <div id={`settings-${section.id}-body`} className="px-4 pb-5 space-y-1 border-t border-telgrarr-border/50">
           {section.fields.map((field) => (
             <FieldRenderer
               key={field.key}
