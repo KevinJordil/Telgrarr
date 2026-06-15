@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Ban, Search, Folder, Tv, Film, X, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
@@ -27,6 +27,15 @@ export default function Blacklist() {
   const [error,   setError]   = useState(null);
   const [confirm, setConfirm] = useState(null); // { item, action }
   const debounced = useDebounce(query, 450);
+  const tabRefs = useRef({});
+  const onTabKey = (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const i = TABS.indexOf(tab);
+    const next = e.key === 'ArrowRight' ? (i + 1) % TABS.length : (i - 1 + TABS.length) % TABS.length;
+    setTab(TABS[next]);
+    tabRefs.current[TABS[next]]?.focus();
+  };
 
   // ── Search titles ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -95,12 +104,16 @@ export default function Blacklist() {
           <h1 className="text-lg font-semibold tracking-tight">Blacklist</h1>
         </div>
         {/* Tab: Titles / Folders */}
-        <div className="flex gap-1 p-1 bg-telgrarr-elevated rounded-xl mb-3" role="tablist" aria-label="Blacklist mode">
+        <div className="flex gap-1 p-1 bg-telgrarr-elevated rounded-xl mb-3" role="tablist" aria-label="Blacklist mode" onKeyDown={onTabKey}>
           {TABS.map(t => (
             <button
               key={t}
               role="tab"
+              id={`bl-tab-${t}`}
               aria-selected={tab === t}
+              aria-controls="bl-panel"
+              tabIndex={tab === t ? 0 : -1}
+              ref={(el) => { tabRefs.current[t] = el; }}
               onClick={() => setTab(t)}
               className={`focus-ring flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
                 tab === t ? 'bg-telgrarr-purple text-telgrarr-on-accent' : 'text-telgrarr-muted hover:text-telgrarr-text'
@@ -131,7 +144,7 @@ export default function Blacklist() {
         </div>
       </div>
 
-      <div className="px-4 pt-4 max-w-lg mx-auto">
+      <div id="bl-panel" role="tabpanel" aria-labelledby={`bl-tab-${tab}`} className="px-4 pt-4 max-w-lg mx-auto">
         {/* Search bar — titles only */}
         {tab === 'titles' && (
           <div className="relative mb-4">
