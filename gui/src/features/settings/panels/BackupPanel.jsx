@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { Database, ChevronDown, ChevronUp, Loader2, CheckCircle, XCircle, Download, RefreshCw, Trash2 } from 'lucide-react';
+import { Database, ChevronDown, ChevronUp, Loader2, CheckCircle, XCircle, Download, Upload, Save, RefreshCw, Trash2 } from 'lucide-react';
 import useSettingsStore from '../../../store/settingsStore';
 import useNavGuard from '../../../store/navGuardStore';
 import api from '../../../api';
@@ -64,6 +64,45 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
         }
       }
     });
+  };
+
+  const fileInputRef = useRef(null);
+
+  const handleUploadClick = () => fileInputRef.current?.click();
+
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      setBackupStatus({ success: false, msg: 'Please choose a .zip backup file.' });
+      return;
+    }
+    setBackupStatus({ loading: true, msg: 'Uploading backup…' });
+    try {
+      const res = await api.post('/backups/upload', file, { headers: { 'Content-Type': 'application/zip' } });
+      if (res.data.success) {
+        setBackupStatus({ success: true, msg: `Imported ${res.data.filename}. Restore it below to apply.` });
+        fetchBackupsList();
+      } else {
+        setBackupStatus({ success: false, msg: res.data.error || 'Import failed' });
+      }
+    } catch (err) {
+      setBackupStatus({ success: false, msg: err.response?.data?.error || err.message });
+    }
+  };
+
+  const handleDownloadBackup = async (filename) => {
+    try {
+      const res = await api.get(`/backups/${filename}/download`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setBackupStatus({ success: false, msg: err.response?.data?.error || err.message });
+    }
   };
 
   const handleCreateBackup = async () => {
@@ -199,10 +238,17 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
                 onClick={handleCreateBackup}
                 className="focus-ring flex items-center gap-1.5 text-xs text-telgrarr-purple hover:text-telgrarr-purple-glow font-medium bg-telgrarr-purple/10 px-2 py-1 rounded-sm"
               >
-                <Download className="w-3.5 h-3.5" /> Create Now
+                <Save className="w-3.5 h-3.5" /> Create Now
               </button>
             </div>
-            {backupStatus && (
+                          <button
+                onClick={handleUploadClick}
+                className="focus-ring w-full flex items-center justify-center gap-1.5 py-2 bg-telgrarr-surface border border-telgrarr-border hover:bg-telgrarr-purple/10 text-xs font-semibold rounded-lg transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5" /> Import Backup File
+              </button>
+              <input ref={fileInputRef} type="file" accept=".zip" onChange={handleFileSelected} className="hidden" aria-hidden="true" />
+              {backupStatus && (
               <p className={`text-xs flex items-center gap-1.5 ${statusColor}`}>
                 {backupStatus.loading ? <Loader2 className="w-3 h-3 animate-spin" /> : backupStatus.success ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                 {backupStatus.msg}
@@ -227,6 +273,9 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 ml-3">
+                        <button onClick={() => handleDownloadBackup(b.filename)} aria-label={`Download ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-text hover:bg-telgrarr-purple/10 rounded-sm">
+                          <Download className="w-4 h-4" />
+                        </button>
                       <button onClick={() => handleRestoreBackup(b.filename)} aria-label={`Restore ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-purple hover:bg-telgrarr-purple/10 rounded-sm">
                         <RefreshCw className="w-4 h-4" />
                       </button>
