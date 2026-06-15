@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Info, Server, Clock, FolderOpen, Terminal, Copy, Check, RefreshCw } from 'lucide-react';
 import api from '../api';
+import { copyText } from '../features/settings/clipboard';
 
 const REPO_URL = 'https://github.com/Fahad-Beta/Telgrarr';
 function GithubIcon({ className }) {
@@ -47,12 +48,13 @@ function InfoRow({ icon: Icon, label, value, mono }) {
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
-  function handleCopy() {
-    navigator.clipboard.writeText(text).then(() => {
+  const handleCopy = async () => {
+    const ok = await copyText(text);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
-  }
+    }
+  };
   return (
     <button
       onClick={handleCopy}
