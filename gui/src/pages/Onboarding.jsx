@@ -29,6 +29,7 @@ export default function Onboarding() {
   const handleSetup = async (e) => {
     e.preventDefault();
     setError('');
+    if (!username.trim()) { setError('Please choose a username.'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     if (password !== confirm) { setError('Passwords do not match.'); return; }
     setLoading(true);
@@ -65,7 +66,7 @@ export default function Onboarding() {
           <div className="flex flex-col items-center mb-6">
             <motion.img
               initial={reduceMotion ? { scale: 1 } : { scale: 0.8 }} animate={{ scale: 1 }} transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 15 }}
-              src={logoUrl} alt="Telgrarr Logo" className="w-32 h-32 md:w-40 md:h-40 mb-0 object-contain relative z-10"
+              src={logoUrl} alt="Telgrarr Logo" className="w-36 h-36 md:w-44 md:h-44 mb-0 object-contain relative z-10"
             />
             <h1 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-telgrarr-text to-telgrarr-purple tracking-widest relative z-10">TELGRARR</h1>
             <p className="mt-2 text-xs md:text-sm text-telgrarr-muted text-center tracking-wide">Create your administrator account to get started.</p>
@@ -75,7 +76,7 @@ export default function Onboarding() {
               <label htmlFor="setup-username" className="text-xs md:text-sm text-telgrarr-muted font-medium pl-1">Username</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-telgrarr-muted" />
-                <input type="text" id="setup-username" value={username} onChange={(e) => setUsername(e.target.value)}
+                <input type="text" id="setup-username" autoFocus value={username} onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-telgrarr-elevated border border-telgrarr-border rounded-xl py-3 md:py-3.5 pl-10 md:pl-11 pr-4 text-sm md:text-base text-telgrarr-text placeholder-telgrarr-muted/60 focus:outline-hidden focus:border-telgrarr-purple transition-colors shadow-inner"
                   placeholder="Choose a username" autoComplete="username" required
                 />
@@ -102,14 +103,14 @@ export default function Onboarding() {
               </div>
             </div>
             {error && (
-              <motion.p initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              <motion.p role="alert" initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                 className="text-xs md:text-sm text-telgrarr-danger text-center bg-telgrarr-danger/10 border border-telgrarr-danger/20 rounded-lg px-3 py-2">
                 {error}
               </motion.p>
             )}
             <button type="submit" disabled={loading}
               className="focus-ring w-full bg-telgrarr-purple hover:bg-telgrarr-purple-dark disabled:opacity-60 text-telgrarr-on-accent font-bold tracking-wide rounded-xl py-3 md:py-3.5 mt-4 md:mt-6 transition-colors shadow-md flex justify-center items-center gap-2 text-sm md:text-base">
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating account...</> : <><UserPlus className="w-4 h-4" /> Create Admin Account</>}
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating account…</> : <><UserPlus className="w-4 h-4" /> Create Admin Account</>}
             </button>
           </form>
         </div>
