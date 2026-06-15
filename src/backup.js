@@ -4,6 +4,8 @@ const path   = require('path');
 const AdmZip = require('adm-zip');
 const log    = require('./logger');
 const config = require('./config');
+const pkg              = require('../package.json');
+const BACKUP_META_NAME = 'backup-meta.json';
 
 const ROOT_DIR   = path.join(__dirname, '..');
 const DATA_DIR   = config.DATA_DIR;
@@ -16,7 +18,6 @@ const BACKUP_MANIFEST = [
   { name: 'config.json',         dir: DATA_DIR },
   { name: 'events-ring.json',    dir: DATA_DIR }, // F.9 (O4): SSE ring buffer
   { name: 'history.json',        dir: DATA_DIR },
-  { name: 'recovery.json',       dir: DATA_DIR }, // F.9 (O4): system-state recovery marker
   { name: 'sessions.json',       dir: DATA_DIR },
   { name: 'system-release.json', dir: DATA_DIR }, // F.9 (O4): release/version ledger
   { name: 'templates.json',      dir: DATA_DIR },
@@ -29,7 +30,7 @@ function createBackup() {
       fs.mkdirSync(BACKUP_DIR, { recursive: true });
     }
     const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-    const backupName = `telgrarr-backup-${timestamp}.zip`;
+    const backupName = `telgrarr-backup-${pkg.version}-${timestamp}.zip`;
     const backupPath = path.join(BACKUP_DIR, backupName);
     
     const zip = new AdmZip();
@@ -47,6 +48,16 @@ function createBackup() {
       throw new Error('No data files found to backup.');
     }
     
+    const meta = {
+      app: 'telgrarr',
+      schema: 1,
+      version: pkg.version,
+      createdAt: new Date().toISOString(),
+      files: BACKUP_MANIFEST
+        .filter(i => fs.existsSync(path.join(i.dir, i.name)))
+        .map(i => i.name)
+    };
+    zip.addFile(BACKUP_META_NAME, Buffer.from(JSON.stringify(meta, null, 2)));
     zip.writeZip(backupPath);
     log.audit('Backup', `Backup Create → Success → Filename: [${backupName}] | Items: ${addedCount}`);
     pruneBackups();
@@ -73,8 +84,18 @@ function listBackups() {
   }
 }
 
+function safeBackupName(name) {
+  // Reject path-traversal / non-backup names: backups are bare ".zip" basenames.
+  return typeof name === 'string'
+    && /^[\w.\-]+\.zip$/.test(name)
+    && path.basename(name) === name;
+}
+
 function restoreBackup(filename) {
   try {
+    if (!safeBackupName(filename)) {
+      return { success: false, error: 'Invalid backup filename.' };
+    }
     const backupPath = path.join(BACKUP_DIR, filename);
     if (!fs.existsSync(backupPath)) {
       throw new Error('Backup file not found.');
@@ -89,6 +110,18 @@ function restoreBackup(filename) {
       // path, so a crafted backup cannot path-traverse) and validate each parses
       // as JSON BEFORE touching any live file (a corrupt/truncated backup must not
       // brick the app by half-overwriting config.json / auth.json).
+      const metaEntry = zip.getEntry(BACKUP_META_NAME);
+      if (metaEntry) {
+        try {
+          const meta = JSON.parse(metaEntry.getData().toString('utf8'));
+          log.info('Backup', `Backup Restore → Metadata → version: ${meta.version || '?'} | created: ${meta.createdAt || '?'}`);
+          if (meta.version && meta.version !== pkg.version) {
+            log.warn('Backup', `Backup Restore → Version Skew → backup ${meta.version} vs app ${pkg.version} (proceeding)`);
+          }
+        } catch (e) {
+          log.warn('Backup', 'Backup Restore → Metadata → unreadable (proceeding)');
+        }
+      }
       const staged = [];
       for (const item of BACKUP_MANIFEST) {
         const entry = zip.getEntry(item.name);
@@ -126,6 +159,9 @@ function restoreBackup(filename) {
 
 function deleteBackup(filename) {
   try {
+    if (!safeBackupName(filename)) {
+      return { success: false, error: 'Invalid backup filename.' };
+    }
     const backupPath = path.join(BACKUP_DIR, filename);
     if (fs.existsSync(backupPath)) {
       fs.unlinkSync(backupPath);
@@ -157,4 +193,34 @@ function pruneBackups() {
   }
 }
 
-module.exports = { createBackup, listBackups, restoreBackup, deleteBackup, pruneBackups };
+function importBackup(buffer) {
+  try {
+    if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+      return { success: false, error: 'Empty or invalid upload.' };
+    }
+    let zip;
+    try {
+      zip = new AdmZip(buffer);
+    } catch (e) {
+      return { success: false, error: 'Uploaded file is not a valid zip archive.' };
+    }
+    const recognized = BACKUP_MANIFEST.some(item => zip.getEntry(item.name));
+    if (!recognized) {
+      return { success: false, error: 'Not a recognized Telgrarr backup (no known data files inside).' };
+    }
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    }
+    const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+    const filename = `telgrarr-imported-${timestamp}.zip`;
+    fs.writeFileSync(path.join(BACKUP_DIR, filename), buffer);
+    log.audit('Backup', `Backup Import → Success → Filename: [${filename}] | Bytes: ${buffer.length}`);
+    pruneBackups();
+    return { success: true, filename };
+  } catch (error) {
+    log.error('Backup', `Backup Import → Error → ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
+module.exports = { createBackup, listBackups, restoreBackup, deleteBackup, pruneBackups, importBackup, safeBackupName };

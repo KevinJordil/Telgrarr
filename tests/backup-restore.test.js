@@ -58,3 +58,43 @@ describe('backup.restoreBackup — hardened', () => {
     expect(fs.existsSync(path.join(tmp, 'evil.json'))).toBe(false);
   });
 });
+
+describe('backup.safeBackupName + traversal guard (BK-1)', () => {
+  it('rejects path-traversal on restore/delete', () => {
+    expect(backup.restoreBackup('../data/config.json').success).toBe(false);
+    expect(backup.deleteBackup('..%2Fconfig.json').success).toBe(false);
+  });
+  it('accepts bare .zip basenames, rejects the rest', () => {
+    expect(backup.safeBackupName('telgrarr-backup-1.0.0-20260101.zip')).toBe(true);
+    expect(backup.safeBackupName('../x.zip')).toBe(false);
+    expect(backup.safeBackupName('x.json')).toBe(false);
+  });
+});
+
+describe('backup.importBackup (BK-1)', () => {
+  it('imports a valid backup buffer into BACKUP_DIR', () => {
+    const z = new AdmZip(); z.addFile('config.json', Buffer.from('{"ok":1}'));
+    const r = backup.importBackup(z.toBuffer());
+    expect(r.success).toBe(true);
+    expect(fs.existsSync(path.join(BK, r.filename))).toBe(true);
+  });
+  it('rejects a non-zip buffer', () => {
+    expect(backup.importBackup(Buffer.from('not a zip')).success).toBe(false);
+  });
+  it('rejects a zip with no recognized manifest entries', () => {
+    const z = new AdmZip(); z.addFile('random.txt', Buffer.from('x'));
+    expect(backup.importBackup(z.toBuffer()).success).toBe(false);
+  });
+});
+
+describe('backup metadata (BK-1)', () => {
+  it('createBackup embeds backup-meta.json stamped with the app version', () => {
+    fs.writeFileSync(path.join(DATA, 'config.json'), '{"x":1}');
+    const r = backup.createBackup();
+    expect(r.success).toBe(true);
+    const z = new AdmZip(path.join(BK, r.filename));
+    const meta = JSON.parse(z.getEntry('backup-meta.json').getData().toString('utf8'));
+    expect(meta.version).toBe(require('../package.json').version);
+    expect(Array.isArray(meta.files)).toBe(true);
+  });
+});
