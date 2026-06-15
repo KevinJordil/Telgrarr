@@ -63,7 +63,7 @@ export default function BottomNav() {
             transition={reduceMotion ? { duration: 0.15 } : { type: 'spring', stiffness: 380, damping: 36, mass: 0.8 }}
             className="fixed bottom-16 sm:bottom-28 left-0 right-0 z-50 mx-auto max-w-lg px-3 pb-2"
           >
-            <div className="glass-panel rounded-2xl overflow-hidden shadow-2xl">
+            <div id="bottomnav-more-menu" role="menu" aria-label="More navigation" className="glass-panel rounded-2xl overflow-hidden shadow-2xl">
               <div className="px-4 pt-4 pb-1">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-telgrarr-muted">More</p>
               </div>
@@ -73,6 +73,7 @@ export default function BottomNav() {
                   <button
                     key={id}
                     onClick={() => handleTab(path)}
+                    role="menuitem"
                     aria-label={label}
                     className={
                       'focus-ring w-full flex items-center gap-4 px-4 py-3.5 transition-all ' +
@@ -124,6 +125,7 @@ export default function BottomNav() {
             aria-label="More"
             aria-expanded={open}
             aria-haspopup="menu"
+            aria-controls="bottomnav-more-menu"
             className={
               'focus-ring relative flex-1 flex flex-col items-center justify-center gap-1 transition-all ' +
               (moreActive || open ? 'text-telgrarr-purple' : 'text-telgrarr-muted') +
