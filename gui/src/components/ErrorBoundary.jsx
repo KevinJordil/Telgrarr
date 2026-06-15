@@ -19,10 +19,10 @@ import React from 'react'
  * Reset is via a full page reload, which re-runs bootstrap (theme init,
  * auth check, SSE) and clears any in-memory state.
  *
- * Styling note: kept intentionally neutral (Tailwind utilities only — no
- * brand colors, no hardcoded px/hex per R15). The structural component
- * is the value-add; the Architect can theme it to match the rest of the
- * app's design language later without touching the boundary's logic.
+ * Styling note: themed with telgrarr-* design tokens (R15). Tokens resolve
+ * to the :root dark defaults even before theme init, and every utility class
+ * ships in the one compiled CSS bundle, so this fallback renders
+ * theme-consistent without depending on any runtime state.
  *
  * Fallback rendering is deliberately dependency-free (no hooks, no
  * contexts, no async) so it can render even when the rest of the app
@@ -55,23 +55,23 @@ export default class ErrorBoundary extends React.Component {
 
     const message = this.state.error && this.state.error.message
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-white dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center px-4 bg-telgrarr-black">
         <div className="max-w-md w-full text-center">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          <h1 className="text-2xl font-semibold text-telgrarr-text mb-2">
             Something went wrong
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-telgrarr-muted mb-6">
             The app hit an unexpected error and could not continue. Reloading usually fixes it.
           </p>
           <button
             type="button"
             onClick={this.handleReload}
-            className="inline-flex items-center px-4 py-2 rounded-md bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-gray-200 text-white dark:text-gray-900 text-sm font-medium transition-colors"
+            className="focus-ring inline-flex items-center px-4 py-2 rounded-md bg-telgrarr-purple hover:bg-telgrarr-purple-glow text-telgrarr-on-accent text-sm font-medium transition-colors"
           >
             Reload
           </button>
           {message && (
-            <details className="mt-6 text-left text-xs text-gray-500 dark:text-gray-500">
+            <details className="mt-6 text-left text-xs text-telgrarr-muted/70">
               <summary className="cursor-pointer">Error details</summary>
               <pre className="mt-2 whitespace-pre-wrap break-all">{String(message)}</pre>
             </details>
