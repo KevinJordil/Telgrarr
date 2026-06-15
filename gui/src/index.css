@@ -4,9 +4,9 @@
 @layer base {
   /* 🌙 DEFAULT DARK MODE */
   :root, [data-theme="dark"] {
-    --color-bg: 10 10 10;
+    --color-bg: 11 11 13;
     /* U1 design-language lock — theme-aware tokens */
-    --color-elevated: 28 28 31;
+    --color-elevated: 31 31 38;
     --color-on-accent: 255 255 255;
     --color-success: 34 197 94;
     --color-warning: 245 158 11;
@@ -18,8 +18,8 @@
     --motion-slow: 320ms;
     --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-    --color-surface: 23 23 23;
-    --color-border: 38 38 38;
+    --color-surface: 23 23 28;
+    --color-border: 45 45 55;
     --color-text: 248 250 252;
     --color-muted: 148 163 184;
     --color-accent: 139 92 246;
@@ -41,8 +41,8 @@
     --color-border: 226 232 240;
     --color-text: 15 23 42;
     --color-muted: 100 116 139;
-    --color-accent: 139 92 246;
-    --color-accent-glow: 167 139 250;
+    --color-accent: 124 58 237;
+    --color-accent-glow: 139 92 246;
     --color-accent-dark: 91 33 182;
   }
 
@@ -54,9 +54,9 @@
     --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.45);
     --shadow-glass: 0 8px 32px 0 rgba(0,0,0,0.45);
     --color-surface: 17 24 39;
-    --color-border: 30 58 138;
+    --color-border: 64 58 122;
     --color-text: 248 250 252;
-    --color-muted: 147 197 253;
+    --color-muted: 165 180 252;
     --color-accent: 168 85 247;
     --color-accent-glow: 192 132 252;
     --color-accent-dark: 126 34 206;
@@ -66,11 +66,11 @@
   [data-theme="telegram"] {
     --color-bg: 23 33 43;
     /* U1 — telegram overrides */
-    --color-elevated: 30 41 54;
+    --color-elevated: 45 58 74;
     --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.40);
     --shadow-glass: 0 8px 32px 0 rgba(0,0,0,0.40);
     --color-surface: 36 47 61;
-    --color-border: 14 22 33;
+    --color-border: 51 64 81;
     --color-text: 245 245 245;
     --color-muted: 127 145 164;
     --color-accent: 82 136 193;
