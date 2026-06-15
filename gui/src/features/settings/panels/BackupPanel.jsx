@@ -78,6 +78,10 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
       setBackupStatus({ success: false, msg: 'Please choose a .zip backup file.' });
       return;
     }
+    if (file.size > 25 * 1024 * 1024) {
+      setBackupStatus({ success: false, msg: 'Backup file is too large (max 25 MB).' });
+      return;
+    }
     setBackupStatus({ loading: true, msg: 'Uploading backup…' });
     try {
       const res = await api.post('/backups/upload', file, { headers: { 'Content-Type': 'application/zip' } });
@@ -165,6 +169,7 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
     });
   };
 
+  const busy = !!backupStatus?.loading;
   const statusColor = backupStatus
     ? (backupStatus.loading ? 'text-telgrarr-muted' : backupStatus.success ? 'text-telgrarr-success' : 'text-telgrarr-danger')
     : '';
@@ -235,21 +240,21 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-telgrarr-text">Manual Backup</h3>
               <button
-                onClick={handleCreateBackup}
-                className="focus-ring flex items-center gap-1.5 text-xs text-telgrarr-purple hover:text-telgrarr-purple-glow font-medium bg-telgrarr-purple/10 px-2 py-1 rounded-sm"
+                onClick={handleCreateBackup} disabled={busy}
+                className="focus-ring flex items-center gap-1.5 text-xs text-telgrarr-purple hover:text-telgrarr-purple-glow font-medium bg-telgrarr-purple/10 px-2 py-1 rounded-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="w-3.5 h-3.5" /> Create Now
               </button>
             </div>
                           <button
-                onClick={handleUploadClick}
-                className="focus-ring w-full flex items-center justify-center gap-1.5 py-2 bg-telgrarr-surface border border-telgrarr-border hover:bg-telgrarr-purple/10 text-xs font-semibold rounded-lg transition-colors"
+                onClick={handleUploadClick} disabled={busy}
+                className="focus-ring w-full flex items-center justify-center gap-1.5 py-2 bg-telgrarr-surface border border-telgrarr-border hover:bg-telgrarr-purple/10 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Upload className="w-3.5 h-3.5" /> Import Backup File
               </button>
               <input ref={fileInputRef} type="file" accept=".zip" onChange={handleFileSelected} className="hidden" aria-hidden="true" />
               {backupStatus && (
-              <p className={`text-xs flex items-center gap-1.5 ${statusColor}`}>
+              <p role="status" aria-live="polite" className={`text-xs flex items-center gap-1.5 ${statusColor}`}>
                 {backupStatus.loading ? <Loader2 className="w-3 h-3 animate-spin" /> : backupStatus.success ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                 {backupStatus.msg}
               </p>
