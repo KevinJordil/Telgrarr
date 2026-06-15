@@ -71,7 +71,7 @@ function getMaskedSettings() {
  * @returns {Object<string,{source:string,effective:*,editable:boolean}>}
  */
 function getFieldSources() {
-  const meta = {};
+  const meta = /** @type {Object<string,{source:string,effective:*,editable:boolean}>} */ ({});
   for (const section of SETTINGS_SCHEMA) {
     for (const field of section.fields) {
       if (!field.envVar) continue;
