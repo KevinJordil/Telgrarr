@@ -48,6 +48,7 @@ export default function SecurityPanel() {
       <button
         onClick={() => setIsExpanded((p) => !p)}
         aria-expanded={isExpanded}
+        aria-controls="security-panel-body"
         className="focus-ring w-full flex items-center justify-between p-4"
       >
         <div className="flex items-center gap-3">
@@ -59,7 +60,7 @@ export default function SecurityPanel() {
         {isExpanded ? <ChevronUp className="w-4 h-4 text-telgrarr-muted" /> : <ChevronDown className="w-4 h-4 text-telgrarr-muted" />}
       </button>
       {isExpanded && (
-        <div className="px-4 pb-5 space-y-1 border-t border-telgrarr-border/50">
+        <div id="security-panel-body" className="px-4 pb-5 space-y-1 border-t border-telgrarr-border/50">
           {[
             { key: 'current', label: 'Current Password', placeholder: '••••••••' },
             { key: 'newPass', label: 'New Password', placeholder: 'Min. 8 characters' },
