@@ -102,7 +102,7 @@ export default function FieldRenderer({ field, value, onChange }) {
   if (meta && meta.editable === false) {
     return (
       <div className="space-y-1.5 pt-3">
-        <label htmlFor={field.key} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</label>
+        <label htmlFor={field.key} id={`${field.key}-label`} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</label>
         <input
           type="text"
           id={field.key}
@@ -120,7 +120,7 @@ export default function FieldRenderer({ field, value, onChange }) {
 
   return (
     <div className="space-y-1.5 pt-3">
-      <label htmlFor={field.key} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</label>
+      <label htmlFor={field.key} id={`${field.key}-label`} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</label>
 
       {(field.type === 'text' || field.type === 'url') && (
         <input
@@ -150,7 +150,7 @@ export default function FieldRenderer({ field, value, onChange }) {
       )}
 
       {field.type === 'slider' && (
-        <SliderInput field={field} value={value} onChange={onChange} displayFn={displayFn} />
+        <SliderInput field={field} value={value} onChange={onChange} displayFn={displayFn} labelId={`${field.key}-label`} />
       )}
 
       {field.type === 'select' && (
