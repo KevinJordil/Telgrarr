@@ -214,8 +214,9 @@ HTTP with `X-Forwarded-Proto: https`.
   Backups land in `<project>/backups/` (or inside the container in a
   Docker deployment — mount that path explicitly if you need offsite
   copies). The manifest covers config, templates, auth, sessions,
-  blacklist, history, recovery, ledger, and the event ring buffer. The
-  regenerable media cache is excluded.
+  blacklist, history, ledger, the pending media queue, and the event ring buffer. The
+  regenerable media cache, the transient sweep-state marker, and the ephemeral password-reset token are excluded.
+- **Migrating to a new host**: on the old instance open **Settings → Backup & Restore**, click **Create Now**, then **Download** the archive from the list. On the new instance install Telgrarr and create the admin account, then under **Settings → Backup & Restore** use **Import Backup File** to upload that `.zip` and click **Restore** — the backend restarts and comes back up with the migrated configuration. `DATA_DIR` and any environment overrides (port, host, proxy) are deployment-specific and set fresh on the new host; they are not part of the backup.
 - **Logs** live in `<project>/logs/` (`app.log`, `error.log`, `audit.log`)
   with size-based rotation.
 - **Recovery**: `npm run recover` runs `scripts/gen-recovery.js`, which writes a single-use, 15-minute
