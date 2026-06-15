@@ -51,7 +51,7 @@ export default function LoginBackground() {
         />
       </svg>
       <div className="absolute inset-0 bg-linear-to-b from-telgrarr-surface/35 via-telgrarr-black/10 to-telgrarr-black/45" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-transparent via-telgrarr-black/20 to-telgrarr-black/35" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent,rgb(var(--color-bg)_/_0.20)_60%,rgb(var(--color-bg)_/_0.35))]" />
       <motion.div
         animate={reduceMotion ? undefined : {
           scale: [1, 1.12, 1],
