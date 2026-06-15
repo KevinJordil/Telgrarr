@@ -13,6 +13,15 @@ const useNavGuard = create((set, get) => ({
 
   setIntercept: (fn) => set({ intercept: typeof fn === 'function' ? fn : null }),
   clearIntercept: () => set({ intercept: null }),
+  dirtyFlags: {},
+  setDirty: (key, isDirty) =>
+    set((s) => {
+      if (!!s.dirtyFlags[key] === !!isDirty) return {};
+      const next = { ...s.dirtyFlags };
+      if (isDirty) next[key] = true; else delete next[key];
+      return { dirtyFlags: next };
+    }),
+  hasExternalDirty: () => Object.keys(get().dirtyFlags).length > 0,
 
   run: (proceed) => {
     if (typeof proceed !== 'function') return;
