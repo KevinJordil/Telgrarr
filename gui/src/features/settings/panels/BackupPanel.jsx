@@ -281,10 +281,10 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
                         <button onClick={() => handleDownloadBackup(b.filename)} aria-label={`Download ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-text hover:bg-telgrarr-purple/10 rounded-sm">
                           <Download className="w-4 h-4" />
                         </button>
-                      <button onClick={() => handleRestoreBackup(b.filename)} aria-label={`Restore ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-purple hover:bg-telgrarr-purple/10 rounded-sm">
+                      <button onClick={() => handleRestoreBackup(b.filename)} disabled={busy} aria-label={`Restore ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-purple hover:bg-telgrarr-purple/10 rounded-sm disabled:opacity-50 disabled:cursor-not-allowed">
                         <RefreshCw className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteBackup(b.filename)} aria-label={`Delete ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-danger hover:bg-telgrarr-danger/10 rounded-sm">
+                      <button onClick={() => handleDeleteBackup(b.filename)} disabled={busy} aria-label={`Delete ${b.filename}`} className="focus-ring p-1.5 text-telgrarr-danger hover:bg-telgrarr-danger/10 rounded-sm disabled:opacity-50 disabled:cursor-not-allowed">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
