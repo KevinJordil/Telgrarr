@@ -1,5 +1,5 @@
 import React, { useState, Suspense } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import useAuthStore  from '../store/authStore';
 import useThemeStore from '../store/themeStore';
@@ -10,7 +10,6 @@ import logoUrlDark  from '../assets/header-logo-dark.png?format=webp&w=128&quali
 import logoUrlLight from '../assets/header-logo-light.png?format=webp&w=128&quality=80';
 
 export default function AuthLayout() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
   const theme   = useThemeStore((s) => s.theme);
   const logoUrl = theme === 'light' ? logoUrlLight : logoUrlDark;
@@ -24,7 +23,6 @@ export default function AuthLayout() {
       setRefreshKey((k) => k + 1);
       setTimeout(resolve, 600);
     });
-  if (!isAuthenticated) return <Navigate to="/" replace />;
 
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-telgrarr-black text-telgrarr-text transition-colors duration-300">
