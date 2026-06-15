@@ -185,7 +185,7 @@ function RecoveryModal({ onClose }) {
                   </div>
                 </div>
                 {error && (
-                  <motion.p
+                  <motion.p role="alert"
                     initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                     className="text-xs text-telgrarr-danger text-center bg-telgrarr-danger/10 border border-telgrarr-danger/20 rounded-lg px-3 py-2"
                   >
@@ -285,7 +285,7 @@ export default function Login() {
               </div>
             </div>
             {error && (
-              <motion.p initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              <motion.p role="alert" initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                 className="text-xs md:text-sm text-telgrarr-danger text-center bg-telgrarr-danger/10 border border-telgrarr-danger/20 rounded-lg px-3 py-2">
                 {error}
               </motion.p>
