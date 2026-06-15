@@ -32,18 +32,6 @@ export default {
         'glass': 'var(--shadow-glass)',
         'card': 'var(--shadow-card)',
       },
-      animation: {
-        'spin-slow': 'spin 8s linear infinite',
-      },
-      transitionDuration: {
-        'fast': 'var(--motion-fast)',
-        'base': 'var(--motion-base)',
-        'slow': 'var(--motion-slow)',
-      },
-      transitionTimingFunction: {
-        'standard': 'var(--ease-standard)',
-        'emphasized': 'var(--ease-emphasized)',
-      }
     },
   },
   plugins: [],
