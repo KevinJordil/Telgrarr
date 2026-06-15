@@ -25,7 +25,7 @@ const TOKENS = {
 };
 
 export default function Preview() {
-  const { templates: config, loading, saving: storeSaving, fetchTemplates, setActiveMode, addSlot, updateSlot, deleteSlot } = useTemplatesStore();
+  const { templates: config, loading, error, saving: storeSaving, fetchTemplates, setActiveMode, addSlot, updateSlot, deleteSlot } = useTemplatesStore();
   const [type, setType]                     = useState('sonarr');
   const [scenario, setScenario]             = useState('single');
   const [currentView, setCurrentView]       = useState('default_ar');
@@ -129,6 +129,18 @@ export default function Preview() {
       setSendState('sent');
     } catch (error) { setSendState('error'); }
   };
+  if (!config && error) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <XCircle className="w-10 h-10 text-telgrarr-danger" />
+        <p className="text-telgrarr-text font-semibold">Failed to load templates</p>
+        <p className="text-telgrarr-muted text-sm">{error}</p>
+        <button onClick={fetchTemplates} className="focus-ring flex items-center gap-2 px-4 py-2.5 bg-telgrarr-purple hover:bg-telgrarr-purple-glow text-telgrarr-on-accent text-sm font-semibold rounded-xl transition-all">
+          <RefreshCw className="w-4 h-4" /> Retry
+        </button>
+      </div>
+    );
+  }
   if (loading || !config) return <div className="flex justify-center items-center py-32"><RefreshCw className="w-8 h-8 animate-spin text-telgrarr-purple" /></div>;
   const isCustom = currentView !== 'default_ar' && currentView !== 'default_en';
   const currentSlot = config.slots.find(s => s.id === currentView);
