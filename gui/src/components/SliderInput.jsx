@@ -3,7 +3,7 @@ import React from 'react';
 // Shared horizontal slider primitive (U3.1/U4.5).
 // touch-action pan-y: vertical drags scroll the page; only deliberate horizontal
 // drags (or taps) change the value. Keyboard + ARIA included.
-export default function SliderInput({ field, value, onChange, displayFn }) {
+export default function SliderInput({ field, value, onChange, displayFn, labelId }) {
   const trackRef = React.useRef(null);
   const dragging = React.useRef(false);
   const moved = React.useRef(false);
@@ -75,7 +75,8 @@ export default function SliderInput({ field, value, onChange, displayFn }) {
         aria-valuemax={max}
         aria-valuenow={clamped}
         aria-valuetext={String(fmt(clamped))}
-        aria-label={field.label}
+        aria-label={labelId ? undefined : field.label}
+        aria-labelledby={labelId}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
