@@ -28,6 +28,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   const rawOv = includePlot ? (tmdbMovie?.overview || omdbPlot || movie.overview || '').trim() : '';
   const MAX_PLOT = 800;
   if (rawOv && !tmdbMovie) tmdbMovie = {};
+  if (!includePlot && tmdbMovie) tmdbMovie.overview = '';  // plot OFF: clear raw overview so renderRadarr fallback cannot leak it
   if (tmdbMovie) {
     tmdbMovie._overviewEn = rawOv.length > MAX_PLOT ? rawOv.substring(0, MAX_PLOT) + '...' : rawOv || null;
   }

@@ -32,4 +32,12 @@ describe('Radarr plot toggle (P3.4)', () => {
     const { tmdbMovie } = await enrichRadarrMedia(movie(), null, null, 'default_ar');
     expect(tmdbMovie).toBeNull();
   });
+
+  it('includePlot OFF with TMDb present -> raw overview suppressed (no leak)', async () => {
+    config.radarr.includePlot = false;
+    const tmdb = { overview: 'Raw TMDb plot.', genres: [], vote_average: 7 };
+    const { tmdbMovie } = await enrichRadarrMedia(movie(), tmdb, null, 'default_ar');
+    expect(tmdbMovie.overview || '').toBe('');
+    expect(tmdbMovie._overviewAr ?? '').toBe('');
+  });
 });
