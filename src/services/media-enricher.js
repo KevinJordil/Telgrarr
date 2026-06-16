@@ -23,8 +23,9 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   let tmdbMovie = rawTmdbMovie ? { ...rawTmdbMovie } : null;
 
   // 1. Deterministic English Field Shaping
+  const includePlot = config.radarr?.includePlot !== false;
   const omdbPlot = (rawOmdbData?.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
-  const rawOv = (tmdbMovie?.overview || omdbPlot || movie.overview || '').trim();
+  const rawOv = includePlot ? (tmdbMovie?.overview || omdbPlot || movie.overview || '').trim() : '';
   const MAX_PLOT = 800;
   if (rawOv && !tmdbMovie) tmdbMovie = {};
   if (tmdbMovie) {

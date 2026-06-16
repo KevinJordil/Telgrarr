@@ -41,7 +41,7 @@ async function fetchRadarrMetadata(movieId, activeMode) {
                     (!(r.imdb?.value > 0) ||
                      !(r.rottenTomatoes?.value > 0) ||
                      !(r.metacritic?.value > 0) ||
-                     (!tmdbMovie?.overview && movie.imdbId));
+                     (config.radarr?.includePlot !== false && !tmdbMovie?.overview && movie.imdbId));
   let omdbData = null;
   if (needsOmdb) {
     const omdbKey = `omdb:${movie.imdbId}`;
