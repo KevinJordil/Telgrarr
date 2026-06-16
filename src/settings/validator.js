@@ -98,6 +98,13 @@ function validateSettings(body) {
          continue;
       }
 
+      if (field.type === 'toggle') {
+         if (typeof val !== 'boolean') {
+           errors.push({ field: field.key, message: 'Must be true or false' });
+         }
+         continue;
+      }
+
       const strVal = String(val);
       const isWhitespace = strVal.trim() === '';
 

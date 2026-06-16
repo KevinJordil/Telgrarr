@@ -221,4 +221,18 @@ describe('validator parity harness', () => {
     expect(errors).toEqual([]);
   });
 
+  // toggle (boolean) rule: a type 'toggle' field must be a real boolean
+  it('toggle field rejects a non-boolean', () => {
+    expectSingleError(
+      { radarr: { includePlot: 'yes' } },
+      'radarr.includePlot',
+      'Must be true or false'
+    );
+  });
+
+  it('toggle field accepts booleans - no error', () => {
+    const errors = validateSettings({ radarr: { includePlot: false }, sonarr: { includePlot: true } });
+    expect(errors.filter(e => e.field === 'radarr.includePlot' || e.field === 'sonarr.includePlot')).toEqual([]);
+  });
+
 });
