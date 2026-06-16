@@ -20,11 +20,13 @@ function enrichSonarrMedia(rawSeries) {
 
 async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode) {
   const movie = attachSeerr(rawMovie, 'movie');
-  const tmdbMovie = rawTmdbMovie ? { ...rawTmdbMovie } : null;
+  let tmdbMovie = rawTmdbMovie ? { ...rawTmdbMovie } : null;
 
   // 1. Deterministic English Field Shaping
-  const rawOv = (tmdbMovie?.overview || movie.overview || '').trim();
+  const omdbPlot = (rawOmdbData?.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
+  const rawOv = (tmdbMovie?.overview || omdbPlot || movie.overview || '').trim();
   const MAX_PLOT = 800;
+  if (rawOv && !tmdbMovie) tmdbMovie = {};
   if (tmdbMovie) {
     tmdbMovie._overviewEn = rawOv.length > MAX_PLOT ? rawOv.substring(0, MAX_PLOT) + '...' : rawOv || null;
   }
@@ -52,7 +54,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
 
   // 3. Arabic Mode Execution
   if (activeMode === 'default_ar') {
-    if (rawOv && tmdbMovie) {
+    if (rawOv) {
       const isAlreadyArabic = /[؀-ۿ]/.test(rawOv);
       const plotKey = (!isAlreadyArabic && movie.tmdbId)
         ? `plot:${movie.tmdbId}:${config.tmdb.language}`
