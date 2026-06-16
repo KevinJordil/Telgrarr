@@ -163,6 +163,22 @@ export default function FieldRenderer({ field, value, onChange }) {
         </select>
       )}
 
+      {field.type === 'toggle' && (
+        <button
+          type="button"
+          role="switch"
+          id={field.key}
+          aria-checked={!!value}
+          aria-labelledby={`${field.key}-label`}
+          onClick={() => onChange(!value)}
+          className="focus-ring inline-flex h-11 items-center rounded-md"
+        >
+          <span className={`relative inline-flex h-7 w-12 items-center rounded-full border transition-colors motion-reduce:transition-none ${value ? 'bg-telgrarr-purple border-telgrarr-purple' : 'bg-telgrarr-elevated border-telgrarr-border'}`}>
+            <span className={`inline-block h-5 w-5 rounded-full bg-telgrarr-text transition-transform motion-reduce:transition-none ${value ? 'translate-x-6' : 'translate-x-1'}`} />
+          </span>
+        </button>
+      )}
+
       {field.note && <p className="text-xs text-telgrarr-muted/70 leading-relaxed">{field.note}</p>}
     </div>
   );
