@@ -61,6 +61,7 @@ const SETTINGS_SCHEMA = [
   },
   {
     id: 'tmdb', title: 'TMDb', icon: 'Star',
+    testEndpoint: '/api/settings/test/tmdb', testLabel: 'Test API Key',
     fields: [
       { key: 'tmdb.apiKey', bootRequired: 'TMDB API key', label: 'API Key', type: 'secret', placeholder: 'Your TMDb v3 API key', required: true },
       { key: 'tmdb.language', label: 'Metadata Language', type: 'select', options: TMDB_LANGUAGES },
