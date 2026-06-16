@@ -16,8 +16,8 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
     vi.restoreAllMocks(); // restore real axios.get/post after every test
   });
 
-  it('exports exactly 7 pure probes', () => {
-    expect(probes.length, `Expected 8 probes, found ${probes.length}: ${probes.join(', ')}`).toBe(8);
+  it('exports exactly 9 pure probes', () => {
+    expect(probes.length, `Expected 9 probes, found ${probes.length}: ${probes.join(', ')}`).toBe(9);
   });
 
   const probeArgs = {
@@ -26,6 +26,7 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
     testRadarr: ['http://127.0.0.1:7878', 'radarrkey'],
     testEmby: ['http://127.0.0.1:8096/Library/Refresh', 'embykey'],
     testOmdb: ['omdbkey'],
+    testTmdb: ['tmdbkey'],
     testTranslatorAi: ['https://api.openai.com/v1/chat/completions', 'gpt-4o-mini', 'aikey'],
     testSeerr: ['https://seerr.example'],
       testTranslatorDeepl: ['deeplkey']
@@ -80,5 +81,14 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
         expect(typeof result.message).toBe('string');
       }
     });
+  });
+
+  it('testTmdb: 401 invalid-key body classifies as Invalid API key', async () => {
+    const err = new Error('Request failed with status code 401');
+    err.response = { status: 401, data: { status_code: 7, status_message: 'Invalid API key' } };
+    vi.spyOn(axios, 'get').mockRejectedValue(err);
+    const result = await tester.testTmdb('badkey');
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Invalid API key');
   });
 });

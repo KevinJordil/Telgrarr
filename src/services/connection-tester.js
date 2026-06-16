@@ -89,6 +89,25 @@ async function testOmdb(apiKey) {
   }
 }
 
+async function testTmdb(apiKey) {
+  if (!apiKey || apiKey.trim() === '') {
+    return { success: false, error: 'No TMDb API key configured' };
+  }
+  try {
+    await axios.get('https://api.themoviedb.org/3/movie/550', {
+      params: { api_key: apiKey },
+      timeout: 8000
+    });
+    return { success: true, message: 'TMDb API key is valid.' };
+  } catch (error) {
+    const code = error.response?.data?.status_code;
+    if (error.response?.status === 401 || code === 7 || code === 10 || code === 3) {
+      return { success: false, error: 'Invalid API key' };
+    }
+    return { success: false, error: error.response?.status ? `HTTP ${error.response.status}` : error.message };
+  }
+}
+
 async function testTranslatorAi(endpoint, model, apiKey) {
   if (!apiKey || apiKey.trim() === '') {
     return { success: false, error: 'No AI API key configured' };
@@ -153,6 +172,7 @@ module.exports = {
   testEmby,
   testSeerr,
   testOmdb,
+  testTmdb,
   testTranslatorAi,
   testTranslatorDeepl,
   AI_DEFAULT_ENDPOINT,
