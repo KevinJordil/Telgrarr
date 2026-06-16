@@ -13,7 +13,7 @@ const { validateSettings } = require('../settings/validator');
 const { needsRestart, portChangeRequiresPreflight } = require('../settings/policy');
 const { pickSecret, maskSecret } = require('../settings/secrets');
 const {
-  testTelegram, testSonarr, testRadarr, testEmby, testSeerr, testOmdb,
+  testTelegram, testSonarr, testRadarr, testEmby, testSeerr, testOmdb, testTmdb,
   testTranslatorAi, testTranslatorDeepl,
   AI_DEFAULT_ENDPOINT, AI_DEFAULT_MODEL
 } = require('../services/connection-tester');
@@ -195,6 +195,19 @@ router.post('/settings/test/omdb', requireAuth, async (req, res) => {
     return res.json({ success: true, message: result.message });
   } else {
     log.warn('Settings', `Integration Test (OMDb) → Failed → ${result.error}`);
+    return res.status(400).json({ success: false, error: result.error });
+  }
+});
+
+// ── POST /api/settings/test/tmdb ─────────────────────────────────────────────
+router.post('/settings/test/tmdb', requireAuth, async (req, res) => {
+  const apiKey = pickSecret(req.body && req.body.apiKey, config.tmdb.apiKey);
+  const result = await testTmdb(apiKey);
+  if (result.success) {
+    log.info('Settings', 'Integration Test (TMDb) → Success → Key accepted');
+    return res.json({ success: true, message: result.message });
+  } else {
+    log.warn('Settings', `Integration Test (TMDb) → Failed → ${result.error}`);
     return res.status(400).json({ success: false, error: result.error });
   }
 });
