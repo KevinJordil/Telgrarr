@@ -6,7 +6,7 @@ const { translateText } = require('../translator');
 const { translateGenres, translateStatus } = require('../genres');
 const { attachSeerr, resolveRating } = require('../utils/media-utils');
 
-function enrichSonarrMedia(rawSeries) {
+async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null) {
   const series = attachSeerr(rawSeries, 'tv');
   const rawGenres = (series.genres || []).slice(0, 2);
   series._genresAr = translateGenres(rawGenres).join(' • ') || null;
@@ -15,6 +15,36 @@ function enrichSonarrMedia(rawSeries) {
   series._statusEn = series.status
     ? series.status.charAt(0).toUpperCase() + series.status.slice(1).toLowerCase()
     : null;
+  // Sonarr plot cascade (TMDb-TV -> OMDb -> Sonarr own), gated on sonarr.includePlot.
+  const includePlot = config.sonarr?.includePlot !== false;
+  const tmdbSeries = rawTmdbSeries || null;
+  const omdbPlot = (rawOmdbData && rawOmdbData.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
+  const rawOv = includePlot ? (((tmdbSeries && tmdbSeries.overview) || omdbPlot || series.overview || '')).trim() : '';
+  const MAX_PLOT = 800;
+  series._overviewEn = rawOv ? (rawOv.length > MAX_PLOT ? rawOv.substring(0, MAX_PLOT) + '...' : rawOv) : null;
+  series._overviewAr = null;
+  if (activeMode === 'default_ar' && rawOv) {
+    const isAlreadyArabic = /[\u0600-\u06FF]/.test(rawOv);
+    const plotKey = (!isAlreadyArabic && series.tmdbId) ? `plot:tv:${series.tmdbId}:${config.tmdb.language}` : null;
+    let translatedOv = null;
+    let plotCacheHit = false;
+    if (isAlreadyArabic) {
+      translatedOv = rawOv;
+    } else if (plotKey) {
+      translatedOv = await getFromCache(plotKey);
+      if (translatedOv) plotCacheHit = true;
+      else {
+        translatedOv = await translateText(rawOv, { fallback: null });
+        if (translatedOv) await setToCache(plotKey, translatedOv);
+      }
+    }
+    const baseAr = translatedOv !== null ? translatedOv : rawOv;
+    series._overviewAr = baseAr.length > MAX_PLOT ? baseAr.substring(0, MAX_PLOT) + '...' : baseAr;
+    if (!isAlreadyArabic && translatedOv !== null) {
+      series._overviewAr += '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
+      if (!plotCacheHit) log.info('MediaEnricher', `AI Translation Pass \u2192 Plot \u2192 "${series.title}"`);
+    }
+  }
   return series;
 }
 

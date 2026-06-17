@@ -130,14 +130,15 @@ async function runSweep() {
     const historyItems = [];
     for (const seriesId of Object.keys(sonarrGroups)) {
       const episodes = sonarrGroups[seriesId];
-      let series;
+      const activeMode = templates.getActiveMode();
+      let series, tmdbSeries, omdbData;
       try {
-        series = await fetchSonarrMetadata(seriesId);
+        ({ series, tmdbSeries, omdbData } = await fetchSonarrMetadata(seriesId, activeMode));
       } catch (err) {
         log.error('Sweeper', `Metadata Fetch (Sonarr) → Error → ID: ${seriesId} | Traces: [${tracesOf(episodes)}] | ${err.message}`);
         continue;
       }
-      const caption  = buildCaption(series, episodes);
+      const caption  = await buildCaption(series, episodes, tmdbSeries, omdbData);
       const photoUrl = getShowPosterUrl(series);
       if (!photoUrl) {
         log.warn('Sweeper', `Message Prep (Sonarr) → Skipped → Missing poster for "${series.title}" | Traces: [${tracesOf(episodes)}]`);

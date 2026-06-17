@@ -3,7 +3,8 @@
 const MOCK_SONARR = {
   series: {
     title: 'Breaking Bad', genres: ['Drama', 'Crime'], year: 2008,
-    status: 'Ended', imdbId: 'tt0903747', runtime: 47, tmdbId: 1396
+    status: 'Ended', imdbId: 'tt0903747', runtime: 47, tmdbId: 1396,
+    overview: 'A high-school chemistry teacher diagnosed with terminal cancer starts producing and selling methamphetamine to secure his family future.'
   },
   single: [{ episodeNumber: 7, seasonNumber: 3, _runtimeMinutes: 47 }],
   multi: [

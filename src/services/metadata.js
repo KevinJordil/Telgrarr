@@ -3,13 +3,33 @@ const config = require('../config');
 const log    = require('../logger');
 const { getSeriesById } = require('../sonarr');
 const { getMovieById } = require('../radarr');
-const { getTmdbMovieById } = require('../tmdb');
+const { getTmdbMovieById, getTmdbSeriesById } = require('../tmdb');
 const { getOmdbById } = require('../omdb');
 const { get: getFromCache, set: setToCache } = require('../media-cache');
 
 // ── Sonarr (thin wrapper) ───────────────────────────────────────────────────
-async function fetchSonarrMetadata(seriesId) {
-  return await getSeriesById(seriesId);
+async function fetchSonarrMetadata(seriesId, activeMode) {
+  const series = await getSeriesById(seriesId);
+  const includePlot = config.sonarr?.includePlot !== false;
+  let tmdbSeries = null;
+  if (includePlot && series.tmdbId) {
+    const tmdbKey = `tmdb-tv:${series.tmdbId}`;
+    tmdbSeries = await getFromCache(tmdbKey);
+    if (!tmdbSeries) {
+      tmdbSeries = await getTmdbSeriesById(series.tmdbId, activeMode === 'default_en' ? 'en-US' : null);
+      if (tmdbSeries) await setToCache(tmdbKey, tmdbSeries);
+    }
+  }
+  let omdbData = null;
+  if (includePlot && config.omdb?.apiKey && series.imdbId && !(tmdbSeries && tmdbSeries.overview)) {
+    const omdbKey = `omdb:${series.imdbId}`;
+    omdbData = await getFromCache(omdbKey);
+    if (!omdbData) {
+      omdbData = await getOmdbById(series.imdbId);
+      if (omdbData) await setToCache(omdbKey, omdbData);
+    }
+  }
+  return { series, tmdbSeries, omdbData };
 }
 
 // ── Radarr metadata resolution ──────────────────────────────────────────────

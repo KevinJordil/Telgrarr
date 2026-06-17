@@ -33,7 +33,7 @@ router.post('/render', requireAuth, async (req, res) => {
     const activeMode = templates.getActiveMode();
 
     if (type === 'sonarr') {
-      const series = enrichSonarrMedia(MOCK_SONARR.series);
+      const series = await enrichSonarrMedia(MOCK_SONARR.series, null, null, activeMode);
       const eps = MOCK_SONARR[scenario] || MOCK_SONARR.single;
       html = renderSonarr(template || null, series, eps);
     } else {
@@ -65,7 +65,7 @@ router.post('/send', requireAuth, async (req, res) => {
     const activeMode = templates.getActiveMode();
 
     if (type === 'sonarr') {
-      const series = enrichSonarrMedia(MOCK_SONARR.series);
+      const series = await enrichSonarrMedia(MOCK_SONARR.series, null, null, activeMode);
       const eps = MOCK_SONARR[scenario] || MOCK_SONARR.single;
       html = renderSonarr(template || null, series, eps);
       photoUrl = 'https://artworks.thetvdb.com/banners/posters/81189-22.jpg';
