@@ -7,9 +7,12 @@ const EVENT_TYPES = require('../shared/events.json');
 
 const ARABIC_RE = /[؀-ۿ]/;
 
-async function translateText(text, { fallback = null } = {}) {
+const LANG = { ar: { name: 'Arabic', deepl: 'AR', google: 'ar' } };
+
+async function translateText(text, { targetLang = 'ar', fallback = null } = {}) {
+  const lang = LANG[targetLang] || LANG.ar;
   if (!text) return fallback;
-  if (ARABIC_RE.test(text)) return text;
+  if (targetLang === 'ar' && ARABIC_RE.test(text)) return text;
 
   // ── Tier 1: GitHub/Azure OpenAI-compatible LLM ──────────────────────────────
   const t1Key      = config.translator?.apiKey;
@@ -23,7 +26,7 @@ async function translateText(text, { fallback = null } = {}) {
         {
           model: t1Model,
           messages: [
-            { role: 'system', content: 'You are an elite cinematic translator. Translate the provided English text into professional Arabic. If the text is a plot overview, keep it concise, captivating, and STRICTLY spoiler-free — do not reveal plot twists or endings. Output ONLY the Arabic text. No quotes, no markdown, no explanations.' },
+            { role: 'system', content: `You are an elite cinematic translator. Translate the provided English text into professional ${lang.name}. If the text is a plot overview, keep it concise, captivating, and STRICTLY spoiler-free — do not reveal plot twists or endings. Output ONLY the ${lang.name} text. No quotes, no markdown, no explanations.` },
             { role: 'user',   content: text }
           ],
           temperature: 0.3
@@ -50,7 +53,7 @@ async function translateText(text, { fallback = null } = {}) {
     try {
       const res = await axios.post(
         'https://api-free.deepl.com/v2/translate',
-        new URLSearchParams({ auth_key: t2Key, text, source_lang: 'EN', target_lang: 'AR' }),
+        new URLSearchParams({ auth_key: t2Key, text, source_lang: 'EN', target_lang: lang.deepl }),
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 }
       );
       const translated = res.data?.translations?.[0]?.text;
@@ -72,7 +75,7 @@ async function translateText(text, { fallback = null } = {}) {
   // ── Tier 3: Google Translate (unofficial) ───────────────────────────────────
   try {
     const res = await axios.get(
-      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ar&dt=t&q=${encodeURIComponent(text)}`,
+      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${lang.google}&dt=t&q=${encodeURIComponent(text)}`,
       { timeout: 8000 }
     );
     const translated = res.data?.[0]?.[0]?.[0];
@@ -98,4 +101,4 @@ function aiWatermark(targetLang = 'ar') {
   return '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
 }
 
-module.exports = { translateText, aiWatermark };
+module.exports = { translateText, aiWatermark, LANG };
