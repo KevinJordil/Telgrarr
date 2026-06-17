@@ -138,7 +138,7 @@ async function runSweep() {
         log.error('Sweeper', `Metadata Fetch (Sonarr) → Error → ID: ${seriesId} | Traces: [${tracesOf(episodes)}] | ${err.message}`);
         continue;
       }
-      const caption  = await buildCaption(series, episodes, tmdbSeries, omdbData);
+      const caption  = await buildCaption(series, episodes, tmdbSeries, omdbData, activeMode);
       const photoUrl = getShowPosterUrl(series);
       if (!photoUrl) {
         log.warn('Sweeper', `Message Prep (Sonarr) → Skipped → Missing poster for "${series.title}" | Traces: [${tracesOf(episodes)}]`);

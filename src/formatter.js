@@ -10,10 +10,10 @@ function getPosterUrl(series) {
   return poster ? (poster.remoteUrl || config.sonarr.baseUrl + poster.url) : null;
 }
 
-async function buildCaption(series, episodes, tmdbSeries = null, omdbData = null) {
-  const activeMode = templates.getActiveMode();
-  const enrichedSeries = await enrichSonarrMedia(series, tmdbSeries, omdbData, activeMode);
-  const template = templates.resolveTemplate(activeMode, 'sonarr');
+async function buildCaption(series, episodes, tmdbSeries = null, omdbData = null, activeMode = null) {
+  const mode = activeMode || templates.getActiveMode();
+  const enrichedSeries = await enrichSonarrMedia(series, tmdbSeries, omdbData, mode);
+  const template = templates.resolveTemplate(mode, 'sonarr');
   return renderSonarr(template, enrichedSeries, episodes);
 }
 
