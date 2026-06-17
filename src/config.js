@@ -35,7 +35,8 @@ const DEFAULTS = {
     endpoint:    'https://models.inference.ai.azure.com/chat/completions',
     model:       'gpt-4o-mini',
     apiKey:      '',
-    deeplApiKey: ''
+    deeplApiKey: '',
+    targetLang:  'ar'
   },
   mediaCache: {
     ttlDays:    30,

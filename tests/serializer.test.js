@@ -30,7 +30,7 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       tmdb: { apiKey: 'short', language: 'en-US' },
       seerr: { baseUrl: '' },
       omdb: { apiKey: 'omdb_secret' },
-      translator: { endpoint: 'url', model: 'gpt', apiKey: 'ai_secret', deeplApiKey: 'deepl_secret' },
+      translator: { endpoint: 'url', model: 'gpt', apiKey: 'ai_secret', deeplApiKey: 'deepl_secret', targetLang: 'ar' },
       mediaCache: { ttlDays: 30, maxEntries: 500 },
       backup: { enabled: true, intervalDays: 7, retainCount: 5 },
       logging: {
@@ -108,7 +108,7 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       corsOrigin: '',
       trustProxy: '',
       cookieSecure: 'auto',
-      translator: { endpoint: 'url', model: 'gpt', apiKey: SECRET_MASK, deeplApiKey: SECRET_MASK },
+      translator: { endpoint: 'url', model: 'gpt', apiKey: SECRET_MASK, deeplApiKey: SECRET_MASK, targetLang: 'ar' },
       mediaCache: { ttlDays: 30, maxEntries: 500 },
       backup: { enabled: true, intervalDays: 7, retainCount: 5 },
       logging: {
