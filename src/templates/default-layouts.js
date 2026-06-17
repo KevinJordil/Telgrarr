@@ -9,7 +9,9 @@ const DEFAULT_SONARR_TEMPLATE = `<b>{{headerEmoji}} {{headerText}}</b>
 
 ‏📆 سنة البث: ⁦{{year}}⁩{{#if statusAr}} - ⁦{{statusAr}}⁩{{/if}}{{/if}}{{#if genres}}
 
-‏🎭 {{genres}}{{/if}}
+‏🎭 {{genres}}{{/if}}{{#if overview}}
+
+‏📝 {{{overview}}}{{/if}}
 
 ‏📺 <b>الموسم:</b> {{seasonRange}}
 
@@ -33,7 +35,9 @@ const DEFAULT_SONARR_EN = `<b>{{headerEmoji}} New Series Added</b>
 
 📆 <b>Year:</b> {{year}}{{#if status_en}} - {{status_en}}{{/if}}{{/if}}{{#if genresEn}}
 
-🎭 {{genresEn}}{{/if}}
+🎭 {{genresEn}}{{/if}}{{#if overview}}
+
+📝 {{{overview}}}{{/if}}
 
 📺 <b>Season:</b> {{seasonRange}}
 

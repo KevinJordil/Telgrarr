@@ -186,3 +186,28 @@ describe('renderRadarr', () => {
     expect(r.caption.endsWith('...')).toBe(true);
   });
 });
+
+describe('renderSonarr overview (P4.4)', () => {
+  it('renders _overviewEn on the EN layout', () => {
+    const out = renderSonarr('DEFAULT_EN', { ...SERIES, _overviewEn: 'A chemistry teacher turns to crime.' }, EPISODES);
+    expect(typeof out).toBe('string');
+    expect(out).toContain('A chemistry teacher turns to crime.');
+    expect(out.length).toBeLessThanOrEqual(1024);
+  });
+  it('renders _overviewAr on the AR layout', () => {
+    const out = renderSonarr('DEFAULT_AR', { ...SERIES, _overviewAr: 'AR_PLOT_MARKER' }, EPISODES);
+    expect(out).toContain('AR_PLOT_MARKER');
+  });
+  it('no _overview -> parity (no overview section, still a string <= 1024)', () => {
+    const out = renderSonarr('DEFAULT_AR', SERIES, EPISODES);
+    expect(typeof out).toBe('string');
+    expect(out.length).toBeLessThanOrEqual(1024);
+    expect(out).toContain(SERIES.title);
+  });
+  it('over-budget overview trimmed, string contract kept', () => {
+    const out = renderSonarr('DEFAULT_EN', { ...SERIES, _overviewEn: 'Y'.repeat(2000) }, EPISODES);
+    expect(typeof out).toBe('string');
+    expect(out.length).toBeLessThanOrEqual(1024);
+    expect(out).toContain('Y');
+  });
+});

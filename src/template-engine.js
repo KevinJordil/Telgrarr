@@ -88,6 +88,8 @@ function formatRuntimeDual(totalMinutes) {
 }
 
 function renderSonarr(templateString, series, episodes) {
+  const isEn = templateString === 'DEFAULT_EN';
+  const rawOv = ((isEn ? series._overviewEn : series._overviewAr) || '').trim();
   const epData = tripleSmartSwitchDual(episodes);
   const rtData = calcRuntimeDual(series, episodes);
   const data = {
@@ -114,7 +116,40 @@ function renderSonarr(templateString, series, episodes) {
   if (!compiledString || compiledString === 'DEFAULT_AR') compiledString = DEFAULT_SONARR_TEMPLATE;
   else if (compiledString === 'DEFAULT_EN') compiledString = DEFAULT_SONARR_EN;
   const compile = Handlebars.compile(compiledString);
-  return capToLimit(compile(data));
+  const buildData = (ov) => ({ ...data, overview: ov || null });
+  return renderWithBudget(compile, buildData, rawOv).caption;
+}
+
+function renderWithBudget(compile, buildData, rawOv) {
+  let caption = compile(buildData(rawOv));
+  if (caption.length <= TG_CAPTION_LIMIT) return { caption, pass: 1, length: caption.length };
+  // Pass 2 — calculate exact overview budget and re-render
+  const shellLength = compile(buildData('')).length;
+  // F.2d: measure the overview-section PREFIX overhead empirically. With a
+  // 1-char overview, the rendered template emits (shellLength + prefix + 1)
+  // chars; the prefix is the '\n\n<emoji> ' wrap around {{{overview}}} (~6
+  // code units for DEFAULT_AR, ~5 for DEFAULT_EN, variable for custom
+  // templates). Pre-F.2d this overhead was unmodeled, so the trimmed caption
+  // always ran to shellLength + overhead + budget + 3 ≈ 1030/1029 > 1024 and
+  // pass 2 was unreachable. Empirical probing handles custom templates too.
+  const probe = compile(buildData('X')).length;
+  const overhead = probe - shellLength - 1;
+  let budget = TG_CAPTION_LIMIT - shellLength - overhead - 3;
+  if (budget > 20 && rawOv.length > 0) {
+    const wmTag = '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
+    const hasWm = rawOv.includes(wmTag);
+    let cleanText = hasWm ? rawOv.replace(wmTag, '') : rawOv;
+    if (hasWm) budget -= wmTag.length;
+    if (budget > 0) {
+      let truncatedOv = cleanText.substring(0, budget) + '...';
+      if (hasWm) truncatedOv += wmTag;
+      caption = compile(buildData(truncatedOv));
+      if (caption.length <= TG_CAPTION_LIMIT) return { caption, pass: 2, length: caption.length };
+    }
+  }
+  // Pass 3 — drop overview entirely
+  caption = capToLimit(compile(buildData(null)));
+  return { caption, pass: 3, length: caption.length };
 }
 
 function renderRadarr(templateString, movie, tmdbMovie, ratings = {}) {
@@ -151,36 +186,7 @@ function renderRadarr(templateString, movie, tmdbMovie, ratings = {}) {
       seerrUrl: movie._seerrUrl || null,
     };
   }
-  // Pass 1 — render with full overview
-  let caption = compile(buildData(rawOv));
-  if (caption.length <= TG_CAPTION_LIMIT) return { caption, pass: 1, length: caption.length };
-  // Pass 2 — calculate exact overview budget and re-render
-  const shellLength = compile(buildData('')).length;
-  // F.2d: measure the overview-section PREFIX overhead empirically. With a
-  // 1-char overview, the rendered template emits (shellLength + prefix + 1)
-  // chars; the prefix is the '\n\n<emoji> ' wrap around {{{overview}}} (~6
-  // code units for DEFAULT_AR, ~5 for DEFAULT_EN, variable for custom
-  // templates). Pre-F.2d this overhead was unmodeled, so the trimmed caption
-  // always ran to shellLength + overhead + budget + 3 ≈ 1030/1029 > 1024 and
-  // pass 2 was unreachable. Empirical probing handles custom templates too.
-  const probe = compile(buildData('X')).length;
-  const overhead = probe - shellLength - 1;
-  let budget = TG_CAPTION_LIMIT - shellLength - overhead - 3;
-  if (budget > 20 && rawOv.length > 0) {
-    const wmTag = '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
-    const hasWm = rawOv.includes(wmTag);
-    let cleanText = hasWm ? rawOv.replace(wmTag, '') : rawOv;
-    if (hasWm) budget -= wmTag.length;
-    if (budget > 0) {
-      let truncatedOv = cleanText.substring(0, budget) + '...';
-      if (hasWm) truncatedOv += wmTag;
-      caption = compile(buildData(truncatedOv));
-      if (caption.length <= TG_CAPTION_LIMIT) return { caption, pass: 2, length: caption.length };
-    }
-  }
-  // Pass 3 — drop overview entirely
-  caption = capToLimit(compile(buildData(null)));
-  return { caption, pass: 3, length: caption.length };
+  return renderWithBudget(compile, buildData, rawOv);
 }
 
 module.exports = {
