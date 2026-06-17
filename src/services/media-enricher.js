@@ -6,6 +6,36 @@ const { translateText } = require('../translator');
 const { translateGenres, translateStatus } = require('../genres');
 const { attachSeerr, resolveRating } = require('../utils/media-utils');
 
+// DRY (R02/QB-4): the ONE genre resolver — static map -> per-genre cache -> AI
+// fallback. Used by BOTH enrichers so an unmapped genre never leaks English into
+// an Arabic caption (D1). Returns the ' \u2022 '-joined AR string, or null.
+async function resolveGenresAr(genres) {
+  const list = (genres || []).filter(Boolean);
+  if (list.length === 0) return null;
+  const AR = /[\u0600-\u06FF]/;
+  const needsTranslation = list.some(g => !AR.test(g));
+  if (!needsTranslation) return list.join(' \u2022 ');
+  const staticMapped = translateGenres(list);
+  const out = [];
+  for (let i = 0; i < list.length; i++) {
+    const g = list[i];
+    if (staticMapped[i] !== g || AR.test(g)) {
+      out.push(staticMapped[i]);
+    } else {
+      const genreKey = `genre:${g.toLowerCase().trim()}:${config.tmdb.language}`;
+      const cachedGenre = await getFromCache(genreKey);
+      if (cachedGenre) {
+        out.push(cachedGenre);
+      } else {
+        const result = await translateText(g, { fallback: g });
+        if (AR.test(result)) await setToCache(genreKey, result);
+        out.push(result);
+      }
+    }
+  }
+  return out.join(' \u2022 ');
+}
+
 async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null) {
   const series = attachSeerr(rawSeries, 'tv');
   const rawGenres = (series.genres || []).slice(0, 2);
@@ -44,6 +74,9 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
       series._overviewAr += '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
       if (!plotCacheHit) log.info('MediaEnricher', `AI Translation Pass \u2192 Plot \u2192 "${series.title}"`);
     }
+  }
+  if (activeMode === 'default_ar') {
+    series._genresAr = await resolveGenresAr(rawGenres);
   }
   return series;
 }
@@ -87,7 +120,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   // 3. Arabic Mode Execution
   if (activeMode === 'default_ar') {
     if (rawOv) {
-      const isAlreadyArabic = /[؀-ۿ]/.test(rawOv);
+      const isAlreadyArabic = /[\u0600-ۿ]/.test(rawOv);
       const plotKey = (!isAlreadyArabic && movie.tmdbId)
         ? `plot:${movie.tmdbId}:${config.tmdb.language}`
         : null;
@@ -116,32 +149,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
       }
     }
     if (targetGenres.length > 0) {
-      const needsTranslation = targetGenres.some(g => !/[؀-ۿ]/.test(g));
-      if (needsTranslation) {
-        const staticMapped = translateGenres(targetGenres);
-        const translated = [];
-        for (let i = 0; i < targetGenres.length; i++) {
-          const g = targetGenres[i];
-          if (staticMapped[i] !== g || /[؀-ۿ]/.test(g)) {
-            translated.push(staticMapped[i]);
-          } else {
-            const genreKey = `genre:${g.toLowerCase().trim()}:${config.tmdb.language}`;
-            const cachedGenre = await getFromCache(genreKey);
-            if (cachedGenre) {
-              translated.push(cachedGenre);
-            } else {
-              const result = await translateText(g, { fallback: g });
-              if (/[؀-ۿ]/.test(result)) {
-                await setToCache(genreKey, result);
-              }
-              translated.push(result);
-            }
-          }
-        }
-        movie._genresAr = translated.join(' • ');
-      } else {
-        movie._genresAr = movie._genresEn;
-      }
+      movie._genresAr = await resolveGenresAr(targetGenres);
     }
   }
 
