@@ -10,7 +10,7 @@ const MAX_PLOT = 800;
 // DRY (R02/QB-4): the ONE genre resolver — static map -> per-genre cache -> AI
 // fallback. Used by BOTH enrichers so an unmapped genre never leaks English into
 // an Arabic caption (D1). Returns the ' \u2022 '-joined AR string, or null.
-async function resolveGenresAr(genres) {
+async function resolveGenresAr(genres, targetLang = 'ar') {
   const list = (genres || []).filter(Boolean);
   if (list.length === 0) return null;
   const AR = /[\u0600-\u06FF]/;
@@ -23,7 +23,7 @@ async function resolveGenresAr(genres) {
     if (staticMapped[i] !== g || AR.test(g)) {
       out.push(staticMapped[i]);
     } else {
-      const genreKey = `genre:${g.toLowerCase().trim()}:${config.tmdb.language}`;
+      const genreKey = `genre:${g.toLowerCase().trim()}:${targetLang}`;
       const cachedGenre = await getFromCache(genreKey);
       if (cachedGenre) {
         out.push(cachedGenre);
@@ -39,6 +39,7 @@ async function resolveGenresAr(genres) {
 
 async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null) {
   const series = attachSeerr(rawSeries, 'tv');
+  const targetLang = config.translator?.targetLang || 'ar';
   const rawGenres = (series.genres || []).slice(0, 2);
   series._genresAr = translateGenres(rawGenres).join(' • ') || null;
   series._genresEn = rawGenres.length > 0 ? rawGenres.join(' • ') : null;
@@ -55,7 +56,7 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
   series._overviewAr = null;
   if (activeMode === 'default_ar' && rawOv) {
     const isAlreadyArabic = /[\u0600-\u06FF]/.test(rawOv);
-    const plotKey = (!isAlreadyArabic && series.tmdbId) ? `plot:tv:${series.tmdbId}:${config.tmdb.language}` : null;
+    const plotKey = (!isAlreadyArabic && series.tmdbId) ? `plot:tv:${series.tmdbId}:${targetLang}` : null;
     let translatedOv = null;
     let plotCacheHit = false;
     if (isAlreadyArabic) {
@@ -71,18 +72,19 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
     const baseAr = translatedOv !== null ? translatedOv : rawOv;
     series._overviewAr = baseAr.length > MAX_PLOT ? baseAr.substring(0, MAX_PLOT) + '...' : baseAr;
     if (!isAlreadyArabic && translatedOv !== null) {
-      series._overviewAr += aiWatermark();
+      series._overviewAr += aiWatermark(targetLang);
       if (!plotCacheHit) log.info('MediaEnricher', `AI Translation Pass \u2192 Plot \u2192 "${series.title}"`);
     }
   }
   if (activeMode === 'default_ar') {
-    series._genresAr = await resolveGenresAr(rawGenres);
+    series._genresAr = await resolveGenresAr(rawGenres, targetLang);
   }
   return series;
 }
 
 async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode) {
   const movie = attachSeerr(rawMovie, 'movie');
+  const targetLang = config.translator?.targetLang || 'ar';
   let tmdbMovie = rawTmdbMovie ? { ...rawTmdbMovie } : null;
 
   // 1. Deterministic English Field Shaping
@@ -121,7 +123,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
     if (rawOv) {
       const isAlreadyArabic = /[\u0600-ۿ]/.test(rawOv);
       const plotKey = (!isAlreadyArabic && movie.tmdbId)
-        ? `plot:${movie.tmdbId}:${config.tmdb.language}`
+        ? `plot:${movie.tmdbId}:${targetLang}`
         : null;
       let translatedOv = null;
       let plotCacheHit = false;
@@ -140,7 +142,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
         const baseAr = translatedOv !== null ? translatedOv : rawOv;
         tmdbMovie._overviewAr = baseAr.length > MAX_PLOT ? baseAr.substring(0, MAX_PLOT) + '...' : baseAr;
         if (!isAlreadyArabic && translatedOv !== null) {
-          tmdbMovie._overviewAr += aiWatermark();
+          tmdbMovie._overviewAr += aiWatermark(targetLang);
           if (!plotCacheHit) {
             log.info('MediaEnricher', `AI Translation Pass → Plot → "${movie.title}"`);
           }
@@ -148,7 +150,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
       }
     }
     if (targetGenres.length > 0) {
-      movie._genresAr = await resolveGenresAr(targetGenres);
+      movie._genresAr = await resolveGenresAr(targetGenres, targetLang);
     }
   }
 
