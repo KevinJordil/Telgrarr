@@ -6,6 +6,7 @@ const {
   DEFAULT_SONARR_EN,
   DEFAULT_RADARR_EN
 } = require('./templates/default-layouts');
+const { aiWatermark } = require('./translator');
 
 const TG_CAPTION_LIMIT = 1024;
 
@@ -136,7 +137,7 @@ function renderWithBudget(compile, buildData, rawOv) {
   const overhead = probe - shellLength - 1;
   let budget = TG_CAPTION_LIMIT - shellLength - overhead - 3;
   if (budget > 20 && rawOv.length > 0) {
-    const wmTag = '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
+    const wmTag = aiWatermark();
     const hasWm = rawOv.includes(wmTag);
     let cleanText = hasWm ? rawOv.replace(wmTag, '') : rawOv;
     if (hasWm) budget -= wmTag.length;

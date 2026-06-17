@@ -2,7 +2,7 @@
 const config = require('../config');
 const log    = require('../logger');
 const { get: getFromCache, set: setToCache } = require('../media-cache');
-const { translateText } = require('../translator');
+const { translateText, aiWatermark } = require('../translator');
 const { translateGenres, translateStatus } = require('../genres');
 const { attachSeerr, resolveRating } = require('../utils/media-utils');
 const MAX_PLOT = 800;
@@ -71,7 +71,7 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
     const baseAr = translatedOv !== null ? translatedOv : rawOv;
     series._overviewAr = baseAr.length > MAX_PLOT ? baseAr.substring(0, MAX_PLOT) + '...' : baseAr;
     if (!isAlreadyArabic && translatedOv !== null) {
-      series._overviewAr += '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
+      series._overviewAr += aiWatermark();
       if (!plotCacheHit) log.info('MediaEnricher', `AI Translation Pass \u2192 Plot \u2192 "${series.title}"`);
     }
   }
@@ -140,7 +140,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
         const baseAr = translatedOv !== null ? translatedOv : rawOv;
         tmdbMovie._overviewAr = baseAr.length > MAX_PLOT ? baseAr.substring(0, MAX_PLOT) + '...' : baseAr;
         if (!isAlreadyArabic && translatedOv !== null) {
-          tmdbMovie._overviewAr += '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
+          tmdbMovie._overviewAr += aiWatermark();
           if (!plotCacheHit) {
             log.info('MediaEnricher', `AI Translation Pass → Plot → "${movie.title}"`);
           }

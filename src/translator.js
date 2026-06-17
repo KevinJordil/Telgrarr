@@ -93,4 +93,9 @@ async function translateText(text, { fallback = null } = {}) {
   return fallback;
 }
 
-module.exports = { translateText };
+
+function aiWatermark(targetLang = 'ar') {
+  return '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
+}
+
+module.exports = { translateText, aiWatermark };
