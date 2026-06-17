@@ -5,6 +5,7 @@ const { get: getFromCache, set: setToCache } = require('../media-cache');
 const { translateText } = require('../translator');
 const { translateGenres, translateStatus } = require('../genres');
 const { attachSeerr, resolveRating } = require('../utils/media-utils');
+const MAX_PLOT = 800;
 
 // DRY (R02/QB-4): the ONE genre resolver — static map -> per-genre cache -> AI
 // fallback. Used by BOTH enrichers so an unmapped genre never leaks English into
@@ -50,7 +51,6 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
   const tmdbSeries = rawTmdbSeries || null;
   const omdbPlot = (rawOmdbData && rawOmdbData.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
   const rawOv = includePlot ? (((tmdbSeries && tmdbSeries.overview) || omdbPlot || series.overview || '')).trim() : '';
-  const MAX_PLOT = 800;
   series._overviewEn = rawOv ? (rawOv.length > MAX_PLOT ? rawOv.substring(0, MAX_PLOT) + '...' : rawOv) : null;
   series._overviewAr = null;
   if (activeMode === 'default_ar' && rawOv) {
@@ -89,7 +89,6 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   const includePlot = config.radarr?.includePlot !== false;
   const omdbPlot = (rawOmdbData?.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
   const rawOv = includePlot ? (tmdbMovie?.overview || omdbPlot || movie.overview || '').trim() : '';
-  const MAX_PLOT = 800;
   if (rawOv && !tmdbMovie) tmdbMovie = {};
   if (!includePlot && tmdbMovie) tmdbMovie.overview = '';  // plot OFF: clear raw overview so renderRadarr fallback cannot leak it
   if (tmdbMovie) {
