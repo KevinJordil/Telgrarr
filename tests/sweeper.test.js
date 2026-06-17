@@ -29,7 +29,7 @@ stub('../src/queue.js', {
   drainQueue: async () => [{ source: 'radarr', movieId: '123', traceId: 't1' }],
   enqueue: async () => {},
 });
-stub('../src/formatter.js', { buildCaption: () => 'caption', getPosterUrl: () => 'http://poster/show' });
+stub('../src/formatter.js', { buildCaption: async () => 'caption', getPosterUrl: () => 'http://poster/show' });
 stub('../src/radarr-formatter.js', {
   buildMovieCaption: () => ({ caption: 'caption', pass: 1, length: 42 }),
   getPosterUrl: () => 'http://poster/movie',
@@ -40,7 +40,7 @@ stub('../src/services/media-enricher.js', {
   enrichRadarrMedia: async (movie, tmdbMovie) => ({ movie, tmdbMovie, ratings: {} }),
 });
 stub('../src/services/metadata.js', {
-  fetchSonarrMetadata: async () => ({ title: 'Show', year: 2020 }),
+  fetchSonarrMetadata: async () => ({ series: { title: 'Show', year: 2020 }, tmdbSeries: null, omdbData: null }),
   fetchRadarrMetadata: async () => ({
     movie: { title: 'Movie', year: 2021, imdbId: 'tt1', tmdbId: 1 },
     tmdbMovie: { runtime: 100 },
