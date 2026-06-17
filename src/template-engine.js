@@ -89,7 +89,7 @@ function formatRuntimeDual(totalMinutes) {
 
 function renderSonarr(templateString, series, episodes) {
   const isEn = templateString === 'DEFAULT_EN';
-  const rawOv = ((isEn ? series._overviewEn : series._overviewAr) || '').trim();
+  const rawOv = ((isEn ? series._overviewEn : series._overviewAr) || series._overviewEn || '').trim();
   const epData = tripleSmartSwitchDual(episodes);
   const rtData = calcRuntimeDual(series, episodes);
   const data = {

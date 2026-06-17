@@ -211,3 +211,15 @@ describe('renderSonarr overview (P4.4)', () => {
     expect(out).toContain('Y');
   });
 });
+
+describe('renderSonarr overview fallback (P4.4-fix)', () => {
+  it('non-EN template with only _overviewEn falls back to it (custom-mode parity with Radarr)', () => {
+    const out = renderSonarr('DEFAULT_AR', { ...SERIES, _overviewEn: 'EN_FALLBACK_PLOT', _overviewAr: null }, EPISODES);
+    expect(out).toContain('EN_FALLBACK_PLOT');
+  });
+  it('plot-off parity: both _overviewX null -> no overview, still a string', () => {
+    const out = renderSonarr('DEFAULT_AR', { ...SERIES, _overviewEn: null, _overviewAr: null }, EPISODES);
+    expect(typeof out).toBe('string');
+    expect(out).not.toContain('EN_FALLBACK_PLOT');
+  });
+});
