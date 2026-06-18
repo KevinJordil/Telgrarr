@@ -102,6 +102,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   } else if (Array.isArray(movie.genres) && movie.genres.length > 0) {
     targetGenres = movie.genres.filter(Boolean);
   }
+  targetGenres = targetGenres.slice(0, 2);
   movie._genresEn = targetGenres.length > 0 ? targetGenres.join(' • ') : null;
 
   // 2. Ratings Resolution
