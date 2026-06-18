@@ -2,6 +2,7 @@
 
 const axios = require('axios');
 const config = require('../config');
+const { isTmdbAuthError, isOmdbAuthError } = require('./provider-breaker');
 
 // R02/R13: single source of truth for these defaults is DEFAULTS.translator (config),
 // not a second hardcoded copy.
@@ -80,7 +81,7 @@ async function testOmdb(apiKey) {
       timeout: 8000
     });
     // Legacy failure semantic: only explicitly flagged invalid API keys fail the connection test
-    if (response.data && response.data.Error && /invalid api key/i.test(response.data.Error)) {
+    if (isOmdbAuthError(response.data)) {
       return { success: false, error: 'Invalid API key' };
     }
     return { success: true, message: 'OMDb API key is valid.' };
@@ -100,8 +101,7 @@ async function testTmdb(apiKey) {
     });
     return { success: true, message: 'TMDb API key is valid.' };
   } catch (error) {
-    const code = error.response?.data?.status_code;
-    if (error.response?.status === 401 || code === 7 || code === 10 || code === 3) {
+    if (isTmdbAuthError(error)) {
       return { success: false, error: 'Invalid API key' };
     }
     return { success: false, error: error.response?.status ? `HTTP ${error.response.status}` : error.message };

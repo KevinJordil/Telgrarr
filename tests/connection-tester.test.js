@@ -91,4 +91,12 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe('Invalid API key');
   });
+
+  it('testOmdb: invalid-key body classifies as Invalid API key', async () => {
+    const payload = { data: { Response: 'False', Error: 'Invalid API key!' }, status: 200 };
+    vi.spyOn(axios, 'get').mockResolvedValue(payload);
+    const result = await tester.testOmdb('badkey');
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Invalid API key');
+  });
 });
