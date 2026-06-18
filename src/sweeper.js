@@ -15,6 +15,7 @@ const config    = require('./config');
 const log       = require('./logger');
 const events    = require('./events');
 const EVENT_TYPES = require('../shared/events.json');
+const providerBreaker = require('./services/provider-breaker');
 const SWEEP_STATE_FILE = path.join(config.DATA_DIR, 'sweep-state.json');
 
 function tracesOf(items) {
@@ -77,6 +78,7 @@ async function runSweep() {
     return;
   }
   isSweeping = true;
+  providerBreaker.reset();
   let sentCount = 0;
   try {
     log.info('Sweeper', 'Sweep Execution → Started → Draining queue');

@@ -2,9 +2,11 @@
 const axios  = require('axios');
 const config = require('./config');
 const log    = require('./logger');
+const { isTmdbAuthError, trip, isTripped } = require('./services/provider-breaker');
 
 async function getTmdbMovieById(tmdbId, langOverride = null) {
   if (!tmdbId) return null;
+  if (isTripped('tmdb')) return null;
   try {
     const res = await axios.get(`https://api.themoviedb.org/3/movie/${tmdbId}`, {
       params: {
@@ -14,6 +16,7 @@ async function getTmdbMovieById(tmdbId, langOverride = null) {
     });
     return res.data;
   } catch (error) {
+    if (isTmdbAuthError(error)) trip('tmdb');
     log.error('TMDb', `Metadata Fetch → Error → TMDb ID: [${tmdbId}] | ${error.message}`);
     return null;
   }
@@ -21,6 +24,7 @@ async function getTmdbMovieById(tmdbId, langOverride = null) {
 
 async function getTmdbSeriesById(tmdbId, langOverride = null) {
   if (!tmdbId) return null;
+  if (isTripped('tmdb')) return null;
   try {
     const res = await axios.get(`https://api.themoviedb.org/3/tv/${tmdbId}`, {
       params: {
@@ -30,6 +34,7 @@ async function getTmdbSeriesById(tmdbId, langOverride = null) {
     });
     return res.data;
   } catch (error) {
+    if (isTmdbAuthError(error)) trip('tmdb');
     log.error('TMDb', `Metadata Fetch → Error → TV ID: [${tmdbId}] | ${error.message}`);
     return null;
   }
