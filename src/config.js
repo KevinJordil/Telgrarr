@@ -28,7 +28,7 @@ const DEFAULTS = {
   telegram:   { botToken: '', chatId: '', delayMs: 3000 },
   emby:       { refreshUrl: '', apiKey: '' },
   radarr:     { baseUrl: '', apiKey: '', includePlot: true },
-  tmdb:       { apiKey: '', language: 'ar-SA' },
+  tmdb:       { apiKey: '' },
   seerr:      { baseUrl: '' },
   omdb:       { apiKey: '' },
   translator: {

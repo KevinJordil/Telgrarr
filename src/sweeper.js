@@ -205,7 +205,7 @@ async function runSweep() {
         },
         imdbId:   movie.imdbId  || null,
         tmdbId:   movie.tmdbId  || null,
-        language: config.tmdb.language,
+        language: config.translator?.targetLang || 'ar',
         traces:   tracesOf(radarrGroups[movieId]),
       });
       log.info('Sweeper', `Message Prep (Radarr) → Success → "${movie.title}" | Pass: ${pass} | Length: ${length} | Traces: [${tracesOf(radarrGroups[movieId])}]`);

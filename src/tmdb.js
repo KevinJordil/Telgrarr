@@ -9,7 +9,7 @@ async function getTmdbMovieById(tmdbId, langOverride = null) {
     const res = await axios.get(`https://api.themoviedb.org/3/movie/${tmdbId}`, {
       params: {
         api_key:  config.tmdb.apiKey,
-        language: langOverride || config.tmdb.language,
+        language: langOverride || 'en-US',
       },
     });
     return res.data;
@@ -25,7 +25,7 @@ async function getTmdbSeriesById(tmdbId, langOverride = null) {
     const res = await axios.get(`https://api.themoviedb.org/3/tv/${tmdbId}`, {
       params: {
         api_key:  config.tmdb.apiKey,
-        language: langOverride || config.tmdb.language,
+        language: langOverride || 'en-US',
       },
     });
     return res.data;

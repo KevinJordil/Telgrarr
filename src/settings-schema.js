@@ -1,17 +1,5 @@
 'use strict';
 
-const TMDB_LANGUAGES = [
-  { value: 'ar-SA', label: 'Arabic (Saudi Arabia)' },
-  { value: 'en-US', label: 'English (US)' },
-  { value: 'fr-FR', label: 'French (France)' },
-  { value: 'de-DE', label: 'German (Germany)' },
-  { value: 'es-ES', label: 'Spanish (Spain)' },
-  { value: 'ja-JP', label: 'Japanese' },
-  { value: 'ko-KR', label: 'Korean' },
-  { value: 'pt-BR', label: 'Portuguese (Brazil)' },
-  { value: 'tr-TR', label: 'Turkish' },
-  { value: 'zh-CN', label: 'Chinese (Simplified)' },
-];
 
 const SETTINGS_SCHEMA = [
   {
@@ -66,7 +54,6 @@ const SETTINGS_SCHEMA = [
     testEndpoint: '/api/settings/test/tmdb', testLabel: 'Test API Key',
     fields: [
       { key: 'tmdb.apiKey', bootRequired: 'TMDB API key', label: 'API Key', type: 'secret', placeholder: 'Your TMDb v3 API key', required: true },
-      { key: 'tmdb.language', label: 'Metadata Language', type: 'select', options: TMDB_LANGUAGES },
     ],
   },
   {
@@ -171,4 +158,4 @@ const SETTINGS_SCHEMA = [
   },
 ];
 
-module.exports = { SETTINGS_SCHEMA, TMDB_LANGUAGES };
+module.exports = { SETTINGS_SCHEMA };
