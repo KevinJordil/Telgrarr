@@ -11,12 +11,13 @@ const { get: getFromCache, set: setToCache } = require('../media-cache');
 async function fetchSonarrMetadata(seriesId, activeMode) {
   const series = await getSeriesById(seriesId);
   const includePlot = config.sonarr?.includePlot !== false;
+  const locale = activeMode === 'default_en' ? 'en-US' : (config.translator?.targetLang || 'ar');
   let tmdbSeries = null;
   if (includePlot && series.tmdbId) {
-    const tmdbKey = `tmdb-tv:${series.tmdbId}`;
+    const tmdbKey = `tmdb-tv:${series.tmdbId}:${locale}`;
     tmdbSeries = await getFromCache(tmdbKey);
     if (!tmdbSeries) {
-      tmdbSeries = await getTmdbSeriesById(series.tmdbId, activeMode === 'default_en' ? 'en-US' : null);
+      tmdbSeries = await getTmdbSeriesById(series.tmdbId, locale);
       if (tmdbSeries) await setToCache(tmdbKey, tmdbSeries);
     }
   }
@@ -41,12 +42,13 @@ async function fetchRadarrMetadata(movieId, activeMode) {
   }
 
   let tmdbMovie = null;
-  const tmdbKey = movie.tmdbId ? `radarr:${movie.tmdbId}` : null;
+  const locale = activeMode === 'default_en' ? 'en-US' : (config.translator?.targetLang || 'ar');
+  const tmdbKey = movie.tmdbId ? `radarr:${movie.tmdbId}:${locale}` : null;
   if (tmdbKey) {
     tmdbMovie = await getFromCache(tmdbKey);
     if (!tmdbMovie) {
       try {
-        tmdbMovie = await getTmdbMovieById(movie.tmdbId, activeMode === 'default_en' ? 'en-US' : null);
+        tmdbMovie = await getTmdbMovieById(movie.tmdbId, locale);
         if (tmdbMovie) await setToCache(tmdbKey, tmdbMovie);
       } catch (err) {
         log.warn('Metadata', `TMDb Fetch → Error → Radarr ID: ${movieId} | TMDb ID: ${movie.tmdbId} | ${err.message}`);
