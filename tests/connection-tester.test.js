@@ -16,8 +16,8 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
     vi.restoreAllMocks(); // restore real axios.get/post after every test
   });
 
-  it('exports exactly 9 pure probes', () => {
-    expect(probes.length, `Expected 9 probes, found ${probes.length}: ${probes.join(', ')}`).toBe(9);
+  it('exports exactly 10 pure probes', () => {
+    expect(probes.length, `Expected 10 probes, found ${probes.length}: ${probes.join(', ')}`).toBe(10);
   });
 
   const probeArgs = {
@@ -29,7 +29,8 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
     testTmdb: ['tmdbkey'],
     testTranslatorAi: ['https://api.openai.com/v1/chat/completions', 'gpt-4o-mini', 'aikey'],
     testSeerr: ['https://seerr.example'],
-      testTranslatorDeepl: ['deeplkey']
+      testTranslatorDeepl: ['deeplkey'],
+    testTranslatorGoogle: ['gkey', 'https://translation.googleapis.com/language/translate/v2']
   };
 
   describe.each(probes)('Probe Contract: %s', (probeName) => {
@@ -57,7 +58,8 @@ describe('Connection Tester Parity Harness (Phase A.5)', () => {
           result: { username: 'test_bot', first_name: 'bot' },
           choices: [{ message: { content: 'Success content from AI' } }],
           character_count: 150,
-          character_limit: 500000
+          character_limit: 500000,
+          data: { translations: [{ translatedText: 'ok' }] }
         },
         status: 200
       };

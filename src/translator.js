@@ -77,11 +77,23 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
   // ── Tier 3: Google Translate (unofficial) ───────────────────────────────────
   if (config.translator?.googleEnabled !== false) {
     try {
-      const res = await axios.get(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${lang.google}&dt=t&q=${encodeURIComponent(text)}`,
-        { timeout: 8000 }
-      );
-      const translated = res.data?.[0]?.[0]?.[0];
+      const gKey = config.translator?.googleApiKey;
+      let translated;
+      if (gKey) {
+        const gEndpoint = config.translator?.googleEndpoint || config.DEFAULTS.translator.googleEndpoint;
+        const gRes = await axios.post(
+          `${gEndpoint}?key=${encodeURIComponent(gKey)}`,
+          { q: text, source: 'en', target: lang.google, format: 'text' },
+          { timeout: 8000 }
+        );
+        translated = gRes.data?.data?.translations?.[0]?.translatedText;
+      } else {
+        const res = await axios.get(
+          `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${lang.google}&dt=t&q=${encodeURIComponent(text)}`,
+          { timeout: 8000 }
+        );
+        translated = res.data?.[0]?.[0]?.[0];
+      }
       if (translated) {
         log.info('Translator', `Translation → Complete → Tier: [3 (Google)] | Length: [${text.length}]`);
         events.emit(EVENT_TYPES.TRANSLATOR_TIER_SUCCESS, { tier: 3, length: text.length });

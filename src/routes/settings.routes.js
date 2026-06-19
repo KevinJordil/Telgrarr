@@ -14,8 +14,8 @@ const { needsRestart, portChangeRequiresPreflight } = require('../settings/polic
 const { pickSecret, maskSecret } = require('../settings/secrets');
 const {
   testTelegram, testSonarr, testRadarr, testEmby, testSeerr, testOmdb, testTmdb,
-  testTranslatorAi, testTranslatorDeepl,
-  AI_DEFAULT_ENDPOINT, AI_DEFAULT_MODEL
+  testTranslatorAi, testTranslatorDeepl, testTranslatorGoogle,
+  AI_DEFAULT_ENDPOINT, AI_DEFAULT_MODEL, GOOGLE_DEFAULT_ENDPOINT
 } = require('../services/connection-tester');
 const { SETTINGS_SCHEMA } = require('../settings-schema');
 const { requestRestart } = require('../services/restart');
@@ -244,6 +244,19 @@ router.post('/settings/test/translator-deepl', requireAuth, async (req, res) => 
   }
 });
 
+// POST /api/settings/test/translator-google
+router.post('/settings/test/translator-google', requireAuth, async (req, res) => {
+  const googleKey = pickSecret(req.body && req.body.googleApiKey, config.translator.googleApiKey);
+  const endpoint = (req.body && req.body.googleEndpoint) ? req.body.googleEndpoint : (config.translator.googleEndpoint || GOOGLE_DEFAULT_ENDPOINT);
+  const result = await testTranslatorGoogle(googleKey, endpoint);
+  if (result.success) {
+    log.info('Settings', 'Integration Test (Google) \u2192 Success \u2192 Key valid');
+    return res.json({ success: true, message: result.message });
+  } else {
+    log.warn('Settings', `Integration Test (Google) \u2192 Failed \u2192 ${result.error}`);
+    return res.status(400).json({ success: false, error: result.error });
+  }
+});
 // ── POST /api/settings/reveal ────────────────────
 // SD-9: return exactly ONE unmasked secret on explicit, auth-gated action.
 // Never a bulk dump; only schema-declared secret fields are revealable; the

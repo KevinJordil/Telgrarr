@@ -3,6 +3,7 @@
 
 const { SETTINGS_SCHEMA } = require('../settings-schema');
 const net = require('net');
+const { isMasked } = require('./secrets');
 
 // Non-schema operational-field bounds. backup.* is validated explicitly outside
 // the SETTINGS_SCHEMA-driven loop because it is admin/operational. listenerPort
@@ -42,6 +43,18 @@ const RULES = {
     if (/^\d+$/.test(s)) return Number(s) >= 0;
     const ip = s.split('/')[0];
     return net.isIP(ip) !== 0;
+  },
+  googleEndpoint: (val) => {
+    try {
+      const u = new URL(val);
+      return u.protocol === 'https:' && /(^|\.)googleapis\.com$/.test(u.hostname) && /translate/i.test(u.pathname);
+    } catch {
+      return false;
+    }
+  },
+  googleKey: (val) => {
+    if (isMasked(val)) return true;
+    return /^AIza[0-9A-Za-z_-]{35}$/.test(String(val));
   }
 };
 
@@ -132,7 +145,15 @@ function validateSettings(body) {
       }
 
       if (field.rule) {
-         if (field.rule === 'url') {
+         if (field.rule === 'googleEndpoint') {
+            if (!RULES.googleEndpoint(val)) {
+               errors.push({ field: field.key, message: 'Must be a valid Google Cloud Translation endpoint (https googleapis.com)' });
+            }
+         } else if (field.rule === 'googleKey') {
+            if (!RULES.googleKey(val)) {
+               errors.push({ field: field.key, message: 'Must be a valid Google API key (AIza...)' });
+            }
+         } else if (field.rule === 'url') {
             if (!RULES.url(val)) {
                errors.push({ field: field.key, message: 'Must be a valid URL' });
             }

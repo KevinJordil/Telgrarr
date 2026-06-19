@@ -36,6 +36,8 @@ const DEFAULTS = {
     model:       'gpt-4o-mini',
     apiKey:      '',
     deeplApiKey: '',
+    googleApiKey: '',
+    googleEndpoint: 'https://translation.googleapis.com/language/translate/v2',
     targetLang:  'ar',
     aiEnabled:    true,
     deeplEnabled: true,

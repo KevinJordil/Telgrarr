@@ -8,6 +8,7 @@ const { isTmdbAuthError, isOmdbAuthError } = require('./provider-breaker');
 // not a second hardcoded copy.
 const AI_DEFAULT_ENDPOINT = config.DEFAULTS.translator.endpoint;
 const AI_DEFAULT_MODEL = config.DEFAULTS.translator.model;
+const GOOGLE_DEFAULT_ENDPOINT = config.DEFAULTS.translator.googleEndpoint;
 
 async function testTelegram(botToken, chatId) {
   try {
@@ -151,6 +152,22 @@ async function testTranslatorDeepl(deeplApiKey) {
   }
 }
 
+async function testTranslatorGoogle(googleApiKey, googleEndpoint) {
+  if (!googleApiKey || googleApiKey.trim() === '') {
+    return { success: false, error: 'No Google API key configured' };
+  }
+  try {
+    const endpoint = googleEndpoint || GOOGLE_DEFAULT_ENDPOINT;
+    const res = await axios.post(`${endpoint}?key=${encodeURIComponent(googleApiKey)}`, {
+      q: 'test', source: 'en', target: 'ar', format: 'text'
+    }, { timeout: 8000 });
+    const ok = res.data?.data?.translations?.[0]?.translatedText;
+    if (!ok) throw new Error('Invalid Google response structure');
+    return { success: true, message: 'Google Translate key and endpoint are valid.' };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error?.message ?? (error.response?.status ? `HTTP ${error.response.status}` : error.message) };
+  }
+}
 async function testSeerr(baseUrl) {
   if (!baseUrl || baseUrl.trim() === '') {
     return { success: false, error: 'Seerr URL is empty' };
@@ -175,6 +192,8 @@ module.exports = {
   testTmdb,
   testTranslatorAi,
   testTranslatorDeepl,
+  testTranslatorGoogle,
   AI_DEFAULT_ENDPOINT,
-  AI_DEFAULT_MODEL
+  AI_DEFAULT_MODEL,
+  GOOGLE_DEFAULT_ENDPOINT
 };
