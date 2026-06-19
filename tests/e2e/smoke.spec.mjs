@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { createRequire } from 'module';
 
-const require = createRequire(import.meta.url);
-const { SETTINGS_SCHEMA } = require('../../src/settings-schema.js');
+const requireCjs = createRequire(import.meta.url);
+const { SETTINGS_SCHEMA } = requireCjs('../../src/settings-schema.js');
 
 const baselineSettings = {
   listenerPort: 3400,
