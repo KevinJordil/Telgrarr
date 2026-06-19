@@ -8,7 +8,14 @@ const { buildPrompt } = require('./translator-prompts');
 
 const ARABIC_RE = /[؀-ۿ]/;
 
-const LANG = { ar: { name: 'Arabic', deepl: 'AR', google: 'ar' } };
+const LANG = {
+  ar: { name: 'Arabic',     deepl: 'AR',    google: 'ar', dir: 'rtl', watermark: 'ترجمة ذكاء صناعي' },
+  en: { name: 'English',    deepl: 'EN-US', google: 'en', dir: 'ltr', watermark: 'AI Translation' },
+  es: { name: 'Spanish',    deepl: 'ES',    google: 'es', dir: 'ltr', watermark: 'Traducción IA' },
+  fr: { name: 'French',     deepl: 'FR',    google: 'fr', dir: 'ltr', watermark: 'Traduction IA' },
+  de: { name: 'German',     deepl: 'DE',    google: 'de', dir: 'ltr', watermark: 'KI-Übersetzung' },
+  pt: { name: 'Portuguese', deepl: 'PT-BR', google: 'pt', dir: 'ltr', watermark: 'Tradução IA' },
+};
 
 async function translateText(text, { targetLang = 'ar', fallback = null } = {}) {
   const lang = LANG[targetLang] || LANG.ar;
@@ -116,7 +123,8 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
 
 
 function aiWatermark(targetLang = 'ar') {
-  return '\n\n<blockquote>ترجمة ذكاء صناعي</blockquote>';
+  const lang = LANG[targetLang] || LANG.ar;
+  return '\n\n<blockquote>' + lang.watermark + '</blockquote>';
 }
 
 module.exports = { translateText, aiWatermark, LANG };
