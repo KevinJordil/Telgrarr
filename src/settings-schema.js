@@ -106,6 +106,8 @@ const SETTINGS_SCHEMA = [
         note: 'Use DeepL (Tier 2) as a fallback. Requires the DeepL Free API Key. Turn off to skip Tier 2.' },
       { key: 'translator.googleEnabled', label: 'Enable Google (Tier 3)', type: 'toggle',
         note: 'Use the keyless Google endpoint (Tier 3) as the final fallback. Turn off to skip Tier 3.' },
+      { key: 'translator.aiOnlyPlot', label: 'AI-only Plot (skip TMDb overview)', type: 'toggle',
+        note: 'When on, the plot is sourced from OMDb or the local library data (never the TMDb overview) and AI-translated. Forces AI rewriting for custom-prompt setups.' },
       { key: 'translator.shortPlot', label: 'Ultra-short / No-spoiler Plot', type: 'toggle',
         note: 'Use a concise, strictly spoiler-free prompt variant for plot translation: a short teaser instead of a full overview. Off = standard prompt.' },
       { key: 'translator.systemPrompt', label: 'AI System Prompt (read-only)', type: 'display', value: STANDARD_PLOT_PROMPT,

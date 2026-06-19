@@ -30,7 +30,7 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       tmdb: { apiKey: 'short' },
       seerr: { baseUrl: '' },
       omdb: { apiKey: 'omdb_secret' },
-      translator: { endpoint: 'url', model: 'gpt', apiKey: 'ai_secret', deeplApiKey: 'deepl_secret', googleApiKey: 'google_secret', googleEndpoint: 'https://translation.googleapis.com/language/translate/v2', targetLang: 'ar', aiEnabled: true, deeplEnabled: true, googleEnabled: true, shortPlot: false },
+      translator: { endpoint: 'url', model: 'gpt', apiKey: 'ai_secret', deeplApiKey: 'deepl_secret', googleApiKey: 'google_secret', googleEndpoint: 'https://translation.googleapis.com/language/translate/v2', targetLang: 'ar', aiEnabled: true, deeplEnabled: true, googleEnabled: true, shortPlot: false, aiOnlyPlot: false },
       mediaCache: { ttlDays: 30, maxEntries: 500 },
       backup: { enabled: true, intervalDays: 7, retainCount: 5 },
       logging: {
@@ -108,7 +108,7 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       corsOrigin: '',
       trustProxy: '',
       cookieSecure: 'auto',
-      translator: { endpoint: 'url', model: 'gpt', apiKey: SECRET_MASK, deeplApiKey: SECRET_MASK, googleApiKey: SECRET_MASK, googleEndpoint: 'https://translation.googleapis.com/language/translate/v2', targetLang: 'ar', aiEnabled: true, deeplEnabled: true, googleEnabled: true, shortPlot: false },
+      translator: { endpoint: 'url', model: 'gpt', apiKey: SECRET_MASK, deeplApiKey: SECRET_MASK, googleApiKey: SECRET_MASK, googleEndpoint: 'https://translation.googleapis.com/language/translate/v2', targetLang: 'ar', aiEnabled: true, deeplEnabled: true, googleEnabled: true, shortPlot: false, aiOnlyPlot: false },
       mediaCache: { ttlDays: 30, maxEntries: 500 },
       backup: { enabled: true, intervalDays: 7, retainCount: 5 },
       logging: {

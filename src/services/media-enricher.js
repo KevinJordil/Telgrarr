@@ -49,9 +49,10 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
     : null;
   // Sonarr plot cascade (TMDb-TV -> OMDb -> Sonarr own), gated on sonarr.includePlot.
   const includePlot = config.sonarr?.includePlot !== false;
+  const aiOnly = config.translator?.aiOnlyPlot === true;
   const tmdbSeries = rawTmdbSeries || null;
   const omdbPlot = (rawOmdbData && rawOmdbData.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
-  const rawOv = includePlot ? (((tmdbSeries && tmdbSeries.overview) || omdbPlot || series.overview || '')).trim() : '';
+  const rawOv = includePlot ? (((aiOnly ? '' : (tmdbSeries && tmdbSeries.overview)) || omdbPlot || series.overview || '')).trim() : '';
   series._overviewEn = rawOv ? (rawOv.length > MAX_PLOT ? rawOv.substring(0, MAX_PLOT) + '...' : rawOv) : null;
   series._overviewAr = null;
   if (activeMode === 'default_ar' && rawOv) {
@@ -89,10 +90,11 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
 
   // 1. Deterministic English Field Shaping
   const includePlot = config.radarr?.includePlot !== false;
+  const aiOnly = config.translator?.aiOnlyPlot === true;
   const omdbPlot = (rawOmdbData?.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
-  const rawOv = includePlot ? (tmdbMovie?.overview || omdbPlot || movie.overview || '').trim() : '';
+  const rawOv = includePlot ? ((aiOnly ? '' : tmdbMovie?.overview) || omdbPlot || movie.overview || '').trim() : '';
   if (rawOv && !tmdbMovie) tmdbMovie = {};
-  if (!includePlot && tmdbMovie) tmdbMovie.overview = '';  // plot OFF: clear raw overview so renderRadarr fallback cannot leak it
+  if ((!includePlot || aiOnly) && tmdbMovie) tmdbMovie.overview = '';  // plot OFF or AI-only: clear raw TMDb overview so renderRadarr fallback cannot leak it
   if (tmdbMovie) {
     tmdbMovie._overviewEn = rawOv.length > MAX_PLOT ? rawOv.substring(0, MAX_PLOT) + '...' : rawOv || null;
   }

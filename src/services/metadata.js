@@ -11,6 +11,7 @@ const { get: getFromCache, set: setToCache } = require('../media-cache');
 async function fetchSonarrMetadata(seriesId, activeMode) {
   const series = await getSeriesById(seriesId);
   const includePlot = config.sonarr?.includePlot !== false;
+  const aiOnly = config.translator?.aiOnlyPlot === true;
   const locale = activeMode === 'default_en' ? 'en-US' : (config.translator?.targetLang || 'ar');
   let tmdbSeries = null;
   if (includePlot && series.tmdbId) {
@@ -22,7 +23,7 @@ async function fetchSonarrMetadata(seriesId, activeMode) {
     }
   }
   let omdbData = null;
-  if (includePlot && config.omdb?.apiKey && series.imdbId && !(tmdbSeries && tmdbSeries.overview)) {
+  if (includePlot && config.omdb?.apiKey && series.imdbId && (aiOnly || !(tmdbSeries && tmdbSeries.overview))) {
     const omdbKey = `omdb:${series.imdbId}`;
     omdbData = await getFromCache(omdbKey);
     if (!omdbData) {
@@ -42,6 +43,7 @@ async function fetchRadarrMetadata(movieId, activeMode) {
   }
 
   let tmdbMovie = null;
+  const aiOnly = config.translator?.aiOnlyPlot === true;
   const locale = activeMode === 'default_en' ? 'en-US' : (config.translator?.targetLang || 'ar');
   const tmdbKey = movie.tmdbId ? `radarr:${movie.tmdbId}:${locale}` : null;
   if (tmdbKey) {
@@ -63,7 +65,7 @@ async function fetchRadarrMetadata(movieId, activeMode) {
                     (!(r.imdb?.value > 0) ||
                      !(r.rottenTomatoes?.value > 0) ||
                      !(r.metacritic?.value > 0) ||
-                     (config.radarr?.includePlot !== false && !tmdbMovie?.overview && movie.imdbId));
+                     (config.radarr?.includePlot !== false && (aiOnly || !tmdbMovie?.overview) && movie.imdbId));
   let omdbData = null;
   if (needsOmdb) {
     const omdbKey = `omdb:${movie.imdbId}`;

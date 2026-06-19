@@ -42,7 +42,8 @@ const DEFAULTS = {
     aiEnabled:    true,
     deeplEnabled: true,
     googleEnabled: true,
-    shortPlot: false
+    shortPlot: false,
+    aiOnlyPlot: false
   },
   mediaCache: {
     ttlDays:    30,
