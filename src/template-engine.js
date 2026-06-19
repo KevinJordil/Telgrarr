@@ -88,8 +88,8 @@ function formatRuntimeDual(totalMinutes) {
   return { ar: mins + ' دقيقة', en: mins + 'm' };
 }
 
-function renderSonarr(templateString, series, episodes) {
-  const isEn = templateString === 'DEFAULT_EN';
+function renderSonarr(templateString, series, episodes, opts) {
+  const isEn = (opts && opts.lang != null) ? (opts.lang === 'en') : (templateString === 'DEFAULT_EN');
   const rawOv = ((isEn ? series._overviewEn : series._overviewAr) || series._overviewEn || '').trim();
   const epData = tripleSmartSwitchDual(episodes);
   const rtData = calcRuntimeDual(series, episodes);
@@ -153,8 +153,8 @@ function renderWithBudget(compile, buildData, rawOv) {
   return { caption, pass: 3, length: caption.length };
 }
 
-function renderRadarr(templateString, movie, tmdbMovie, ratings = {}) {
-  const isEn = templateString === 'DEFAULT_EN';
+function renderRadarr(templateString, movie, tmdbMovie, ratings = {}, opts) {
+  const isEn = (opts && opts.lang != null) ? (opts.lang === 'en') : (templateString === 'DEFAULT_EN');
   const rawOv = ((tmdbMovie && (isEn ? (tmdbMovie._overviewEn || tmdbMovie.overview) : (tmdbMovie._overviewAr || tmdbMovie.overview))) || '').trim();
   const ir = (movie.ratings && movie.ratings.imdb && movie.ratings.imdb.value) || 0;
   const tr = (movie.ratings && movie.ratings.tmdb && movie.ratings.tmdb.value) || (tmdbMovie && tmdbMovie.vote_average) || 0;
