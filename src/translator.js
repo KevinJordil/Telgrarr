@@ -5,16 +5,17 @@ const log     = require('./logger');
 const events  = require('./events');
 const EVENT_TYPES = require('../shared/events.json');
 const { buildPrompt } = require('./translator-prompts');
+const { LANGUAGE_NAME } = require('./languages');
 
 const ARABIC_RE = /[؀-ۿ]/;
 
 const LANG = {
-  ar: { name: 'Arabic',     deepl: 'AR',    google: 'ar', dir: 'rtl', watermark: 'ترجمة ذكاء صناعي' },
-  en: { name: 'English',    deepl: 'EN-US', google: 'en', dir: 'ltr', watermark: 'AI Translation' },
-  es: { name: 'Spanish',    deepl: 'ES',    google: 'es', dir: 'ltr', watermark: 'Traducción IA' },
-  fr: { name: 'French',     deepl: 'FR',    google: 'fr', dir: 'ltr', watermark: 'Traduction IA' },
-  de: { name: 'German',     deepl: 'DE',    google: 'de', dir: 'ltr', watermark: 'KI-Übersetzung' },
-  pt: { name: 'Portuguese', deepl: 'PT-BR', google: 'pt', dir: 'ltr', watermark: 'Tradução IA' },
+  ar: { name: LANGUAGE_NAME.ar,     deepl: 'AR',    google: 'ar', dir: 'rtl', watermark: 'ترجمة ذكاء صناعي' },
+  en: { name: LANGUAGE_NAME.en,    deepl: 'EN-US', google: 'en', dir: 'ltr', watermark: 'AI Translation' },
+  es: { name: LANGUAGE_NAME.es,    deepl: 'ES',    google: 'es', dir: 'ltr', watermark: 'Traducción IA' },
+  fr: { name: LANGUAGE_NAME.fr,     deepl: 'FR',    google: 'fr', dir: 'ltr', watermark: 'Traduction IA' },
+  de: { name: LANGUAGE_NAME.de,     deepl: 'DE',    google: 'de', dir: 'ltr', watermark: 'KI-Übersetzung' },
+  pt: { name: LANGUAGE_NAME.pt, deepl: 'PT-BR', google: 'pt', dir: 'ltr', watermark: 'Tradução IA' },
 };
 
 async function translateText(text, { targetLang = 'ar', fallback = null } = {}) {

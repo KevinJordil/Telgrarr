@@ -2,6 +2,7 @@
 
 
 const { STANDARD_PLOT_PROMPT } = require('./translator-prompts');
+const { LANGUAGES } = require('./languages');
 const SETTINGS_SCHEMA = [
   {
     id: 'telegram', title: 'Telegram', icon: 'Send',
@@ -78,7 +79,7 @@ const SETTINGS_SCHEMA = [
     testEndpoint: '/api/settings/test/translator-ai', testLabel: 'Test AI Key',
     fields: [
       { key: 'translator.targetLang', label: 'Translation Language', type: 'select',
-        options: [ { value: 'ar', label: 'Arabic' } ],
+        options: LANGUAGES.map((l) => ({ value: l.code, label: l.name })),
         note: 'Target language for AI-translated plot and genres. Default: Arabic.' },
       { key: 'translator.aiEnabled', label: 'Enable AI Translation (Tier 1)', type: 'toggle',
         note: 'Use the AI/LLM translator (Tier 1). Requires an API Key. Turn off to skip Tier 1.' },
