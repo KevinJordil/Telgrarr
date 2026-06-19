@@ -4,6 +4,7 @@ const config  = require('./config');
 const log     = require('./logger');
 const events  = require('./events');
 const EVENT_TYPES = require('../shared/events.json');
+const { buildPrompt } = require('./translator-prompts');
 
 const ARABIC_RE = /[؀-ۿ]/;
 
@@ -26,7 +27,7 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
         {
           model: t1Model,
           messages: [
-            { role: 'system', content: `You are an elite cinematic translator. Translate the provided English text into professional ${lang.name}. If the text is a plot overview, keep it concise, captivating, and STRICTLY spoiler-free — do not reveal plot twists or endings. Output ONLY the ${lang.name} text. No quotes, no markdown, no explanations.` },
+            { role: 'system', content: buildPrompt(lang.name, config.translator?.shortPlot === true) },
             { role: 'user',   content: text }
           ],
           temperature: 0.3

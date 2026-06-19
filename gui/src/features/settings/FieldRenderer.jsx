@@ -179,6 +179,15 @@ export default function FieldRenderer({ field, value, onChange }) {
         </button>
       )}
 
+      {field.type === 'display' && (
+        <textarea
+          id={field.key}
+          value={field.value || ''}
+          readOnly
+          rows={6}
+          className={`${base} opacity-70 resize-none font-mono leading-relaxed`}
+        />
+      )}
       {field.note && <p className="text-xs text-telgrarr-muted/70 leading-relaxed">{field.note}</p>}
     </div>
   );

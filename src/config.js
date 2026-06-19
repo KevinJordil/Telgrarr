@@ -41,7 +41,8 @@ const DEFAULTS = {
     targetLang:  'ar',
     aiEnabled:    true,
     deeplEnabled: true,
-    googleEnabled: true
+    googleEnabled: true,
+    shortPlot: false
   },
   mediaCache: {
     ttlDays:    30,

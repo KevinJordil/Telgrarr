@@ -92,6 +92,7 @@ function validateSettings(body) {
     for (const field of /** @type {any[]} */ (section.fields)) {
       const val = getVal(body, field.key);
       if (val === undefined) continue;
+      if (field.type === 'display') continue; // read-only display field: never persisted/validated
 
       if (field.integer) {
          if (!Number.isInteger(val) || val < field.min || val > field.max) {
