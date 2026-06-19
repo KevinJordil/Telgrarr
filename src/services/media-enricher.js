@@ -113,10 +113,10 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   const omdbRt   = rtRaw ? parseInt(rtRaw.replace('%', '')) : 0;
   const omdbMc   = mcRaw ? parseInt(mcRaw.split('/')[0]) : 0;
   const ratings = {
-    imdb:           resolveRating(r.imdb?.value,           omdbImdb,                       v => `${v}/10`),
-    tmdb:           resolveRating(r.tmdb?.value,           tmdbMovie?.vote_average || 0,   v => `${v}/10`),
-    rottenTomatoes: resolveRating(r.rottenTomatoes?.value, omdbRt,                         v => `${v}%`),
-    metacritic:     resolveRating(r.metacritic?.value,     omdbMc,                         v => `${v}/100`),
+    imdb:           resolveRating(r.imdb?.value,           omdbImdb,                       v => `${v}`),
+    tmdb:           resolveRating(r.tmdb?.value,           tmdbMovie?.vote_average || 0,   v => `${v}`),
+    rottenTomatoes: resolveRating(r.rottenTomatoes?.value, omdbRt,                         v => `${v}`),
+    metacritic:     resolveRating(r.metacritic?.value,     omdbMc,                         v => `${v}`),
   };
 
   // 3. Arabic Mode Execution
