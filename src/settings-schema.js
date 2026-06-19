@@ -93,6 +93,12 @@ const SETTINGS_SCHEMA = [
       { key: 'translator.deeplApiKey', label: 'DeepL Free API Key', type: 'secret',
         placeholder: 'xxxxxxxxxxxxxxxx',
         note: 'Tier 2 fallback — get free key at deepl.com/pro#developer (500k chars/month).', required: false },
+      { key: 'translator.aiEnabled', label: 'Enable AI Translation (Tier 1)', type: 'toggle',
+        note: 'Use the AI/LLM translator (Tier 1). Requires an API Key. Turn off to skip Tier 1.' },
+      { key: 'translator.deeplEnabled', label: 'Enable DeepL (Tier 2)', type: 'toggle',
+        note: 'Use DeepL (Tier 2) as a fallback. Requires the DeepL Free API Key. Turn off to skip Tier 2.' },
+      { key: 'translator.googleEnabled', label: 'Enable Google (Tier 3)', type: 'toggle',
+        note: 'Use the keyless Google endpoint (Tier 3) as the final fallback. Turn off to skip Tier 3.' },
     ],
   },
   {

@@ -36,7 +36,10 @@ const DEFAULTS = {
     model:       'gpt-4o-mini',
     apiKey:      '',
     deeplApiKey: '',
-    targetLang:  'ar'
+    targetLang:  'ar',
+    aiEnabled:    true,
+    deeplEnabled: true,
+    googleEnabled: true
   },
   mediaCache: {
     ttlDays:    30,

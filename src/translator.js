@@ -19,7 +19,7 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
   const t1Endpoint = config.translator?.endpoint || 'https://models.inference.ai.azure.com/chat/completions';
   const t1Model    = config.translator?.model    || 'gpt-4o-mini';
 
-  if (t1Key) {
+  if (config.translator?.aiEnabled !== false && t1Key) {
     try {
       const res = await axios.post(
         t1Endpoint,
@@ -49,7 +49,7 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
 
   // ── Tier 2: DeepL Free API ───────────────────────────────────────────────────
   const t2Key = config.translator?.deeplApiKey;
-  if (t2Key) {
+  if (config.translator?.deeplEnabled !== false && t2Key) {
     try {
       const res = await axios.post(
         'https://api-free.deepl.com/v2/translate',
@@ -68,28 +68,33 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
       log.warn('Translator', `Tier 2 (DeepL) → Failed → Escalating | ${msg}`);
       events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, { tier: 2, error: msg });
     }
+  } else if (config.translator?.deeplEnabled === false) {
+    log.warn('Translator', 'Tier 2 (DeepL) \u2192 Skipped \u2192 disabled');
   } else {
     log.warn('Translator', 'Tier 2 (DeepL) → Skipped → deeplApiKey not configured');
   }
 
   // ── Tier 3: Google Translate (unofficial) ───────────────────────────────────
-  try {
-    const res = await axios.get(
-      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${lang.google}&dt=t&q=${encodeURIComponent(text)}`,
-      { timeout: 8000 }
-    );
-    const translated = res.data?.[0]?.[0]?.[0];
-    if (translated) {
-      log.info('Translator', `Translation → Complete → Tier: [3 (Google)] | Length: [${text.length}]`);
-      events.emit(EVENT_TYPES.TRANSLATOR_TIER_SUCCESS, { tier: 3, length: text.length });
-      return translated;
+  if (config.translator?.googleEnabled !== false) {
+    try {
+      const res = await axios.get(
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${lang.google}&dt=t&q=${encodeURIComponent(text)}`,
+        { timeout: 8000 }
+      );
+      const translated = res.data?.[0]?.[0]?.[0];
+      if (translated) {
+        log.info('Translator', `Translation → Complete → Tier: [3 (Google)] | Length: [${text.length}]`);
+        events.emit(EVENT_TYPES.TRANSLATOR_TIER_SUCCESS, { tier: 3, length: text.length });
+        return translated;
+      }
+      throw new Error('Invalid Google response structure');
+    } catch (err) {
+      log.warn('Translator', `Tier 3 (Google) → Failed → Escalating | ${err.message}`);
+      events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, { tier: 3, error: err.message });
     }
-    throw new Error('Invalid Google response structure');
-  } catch (err) {
-    log.warn('Translator', `Tier 3 (Google) → Failed → Escalating | ${err.message}`);
-    events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, { tier: 3, error: err.message });
+  } else {
+    log.warn('Translator', 'Tier 3 (Google) \u2192 Skipped \u2192 disabled');
   }
-
   // ── Tier 4: Graceful degradation ────────────────────────────────────────────
   log.warn('Translator', `Translation → Skipped → All tiers exhausted | Length: [${text.length}]`);
   events.emit(EVENT_TYPES.TRANSLATOR_SKIPPED, { length: text.length });
