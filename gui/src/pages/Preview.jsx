@@ -7,6 +7,9 @@ import TemplateEditor from '../components/preview/TemplateEditor';
 import SlotManager from '../components/preview/SlotManager';
 import ConfirmModal from '../components/ConfirmModal';
 import InputModal from '../components/InputModal';
+import LayoutComposer from '../components/preview/LayoutComposer';
+import LanguagePicker from '../components/preview/LanguagePicker';
+import useSettingsStore from '../store/settingsStore';
 
 const STARTER_AR = `<b>{{headerEmoji}} {{headerText}}</b>
 {{separator}}
@@ -25,10 +28,12 @@ const TOKENS = {
 };
 
 export default function Preview() {
-  const { templates: config, loading, error, saving: storeSaving, fetchTemplates, setActiveMode, addSlot, updateSlot, deleteSlot } = useTemplatesStore();
+  const { templates: config, loading, error, saving: storeSaving, fetchTemplates, setActiveMode, addSlot, updateSlot, deleteSlot, catalog } = useTemplatesStore();
+  const { settings } = useSettingsStore();
+  const targetLang = settings?.translator?.targetLang || 'ar';
   const [type, setType]                     = useState('sonarr');
   const [scenario, setScenario]             = useState('single');
-  const [currentView, setCurrentView]       = useState('default_ar');
+  const [currentView, setCurrentView]       = useState('default');
   const [draft, setDraft]                   = useState('');
   const [html, setHtml]                     = useState('');
   const [syntaxError, setSyntaxError]       = useState(null);
@@ -51,13 +56,14 @@ export default function Preview() {
   useEffect(() => {
     if (config && !initializedRef.current) {
       initializedRef.current = true;
-      setCurrentView(config.activeMode || 'default_ar');
+      const m = config.activeMode;
+      setCurrentView((!m || m === 'default' || m === 'default_ar' || m === 'default_en') ? 'default' : m);
     }
   }, [config]);
   useEffect(() => {
     if (!config) return;
     setSyntaxError(null);
-    if (currentView === 'default_ar' || currentView === 'default_en') {
+    if (currentView === 'default') {
       setDraft('');
     } else {
       const slot = config.slots.find(s => s.id === currentView);
@@ -67,7 +73,7 @@ export default function Preview() {
     }
   }, [currentView, type, config]);
   useEffect(() => {
-    if (currentView !== 'default_ar' && currentView !== 'default_en' && draft !== '') {
+    if (currentView !== 'default' && draft !== '') {
       localStorage.setItem(`telgrarr_draft_${currentView}_${type}`, draft);
     }
   }, [draft, currentView, type]);
@@ -76,17 +82,17 @@ export default function Preview() {
     const timer = setTimeout(async () => {
       setLoadingPreview(true);
       try {
-        let payloadTemplate = 'DEFAULT_AR';
-        if (currentView === 'default_en') payloadTemplate = 'DEFAULT_EN';
-        else if (currentView !== 'default_ar') payloadTemplate = draft === '' ? '&#8203;' : draft;
-        const res = await api.post('/preview/render', { type, scenario, template: payloadTemplate });
+        const body = currentView === 'default'
+          ? { type, scenario, lang: targetLang }
+          : { type, scenario, template: draft === '' ? '&#8203;' : draft };
+        const res = await api.post('/preview/render', body);
         if (res.data.success === false) setSyntaxError(res.data.error);
         else { setSyntaxError(null); setHtml(res.data.html); }
       } catch (err) { setSyntaxError('Network or server error. Check backend logs.'); }
       finally { setLoadingPreview(false); }
     }, 500);
     return () => clearTimeout(timer);
-  }, [type, scenario, currentView, draft, config]);
+  }, [type, scenario, currentView, draft, config, targetLang]);
   const confirmAddSlot = async (name) => {
     setModal(null);
     const newSlot = { id: `slot_${Date.now()}`, name, sonarr: STARTER_AR, radarr: STARTER_AR };
@@ -107,7 +113,7 @@ export default function Preview() {
     if (res.success) {
       localStorage.removeItem(`telgrarr_draft_${currentView}_sonarr`);
       localStorage.removeItem(`telgrarr_draft_${currentView}_radarr`);
-      setCurrentView('default_ar');
+      setCurrentView('default');
     }
     else setSlotError(res.error);
   };
@@ -122,10 +128,10 @@ export default function Preview() {
   const sendTest = async () => {
     setSendState('sending');
     try {
-      let payloadTemplate = 'DEFAULT_AR';
-      if (currentView === 'default_en') payloadTemplate = 'DEFAULT_EN';
-      else if (currentView !== 'default_ar') payloadTemplate = draft || null;
-      await api.post('/preview/send', { type, scenario, template: payloadTemplate });
+      const body = currentView === 'default'
+        ? { type, scenario, lang: targetLang }
+        : { type, scenario, template: draft || null };
+      await api.post('/preview/send', body);
       setSendState('sent');
     } catch (error) { setSendState('error'); }
   };
@@ -142,7 +148,7 @@ export default function Preview() {
     );
   }
   if (loading || !config) return <div className="flex justify-center items-center py-32"><RefreshCw className="w-8 h-8 animate-spin text-telgrarr-purple" /></div>;
-  const isCustom = currentView !== 'default_ar' && currentView !== 'default_en';
+  const isCustom = currentView !== 'default';
   const currentSlot = config.slots.find(s => s.id === currentView);
   return (
     <div className="text-telgrarr-text px-4 pt-6 overflow-x-hidden relative">
@@ -169,12 +175,19 @@ export default function Preview() {
               ))}
             </div>
           )}
-          <TemplateEditor value={isCustom ? draft : ''} onChange={setDraft} tokens={TOKENS[type]} readOnly={!isCustom} syntaxError={syntaxError} />
-          {isCustom && (
-            <button onClick={saveDraftToSlot} disabled={storeSaving} className="focus-ring w-full py-3 bg-telgrarr-success hover:bg-telgrarr-success/90 disabled:opacity-50 text-telgrarr-on-accent font-medium rounded-xl flex items-center justify-center space-x-2 shadow-card active:scale-[0.98] transition-all">
-              {storeSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span>Save Code to Slot</span>
-            </button>
+          {isCustom ? (
+            <>
+              <TemplateEditor value={draft} onChange={setDraft} tokens={TOKENS[type]} readOnly={false} syntaxError={syntaxError} />
+              <button onClick={saveDraftToSlot} disabled={storeSaving} className="focus-ring w-full py-3 bg-telgrarr-success hover:bg-telgrarr-success/90 disabled:opacity-50 text-telgrarr-on-accent font-medium rounded-xl flex items-center justify-center space-x-2 shadow-card active:scale-[0.98] transition-all">
+                {storeSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Save Code to Slot</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <LanguagePicker languages={catalog?.languages || []} />
+              <LayoutComposer kind={type} />
+            </>
           )}
         </div>
         <div className="md:col-span-5 mt-8 md:mt-0 relative">
@@ -192,7 +205,7 @@ export default function Preview() {
               }`}
             >
               {sendState === 'sending' ? (
-                <><RefreshCw className="w-5 h-5 animate-spin" /><span>Sending…</span></>
+                <><RefreshCw className="w-5 h-5 animate-spin" /><span>Sending&#8230;</span></>
               ) : sendState === 'sent' ? (
                 <><CheckCircle className="w-5 h-5" /><span>Sent</span></>
               ) : sendState === 'error' ? (
@@ -209,7 +222,7 @@ export default function Preview() {
         isOpen={modal?.kind === 'add'}
         title="New Preset Slot"
         label="Slot name"
-        placeholder="e.g. Compact, Detailed…"
+        placeholder={'e.g. Compact, Detailed\u2026'}
         confirmLabel="Create"
         maxLength={40}
         onConfirm={confirmAddSlot}

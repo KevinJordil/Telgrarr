@@ -3,8 +3,8 @@ import { Plus, Edit2, Trash2, CheckCircle } from 'lucide-react';
 
 export default function SlotManager({ templates, currentView, onSelectView, onAdd, onRename, onDelete, onMakeActive }) {
   const slots = templates?.slots || [];
-  const activeMode = templates?.activeMode || 'default_ar';
-  const isDefault = currentView === 'default_ar' || currentView === 'default_en';
+  const activeMode = templates?.activeMode || 'default';
+  const isDefault = currentView === 'default';
   const isActive = currentView === activeMode;
   return (
     <div className="bg-telgrarr-surface border border-telgrarr-border rounded-xl p-3 space-y-3">
@@ -17,9 +17,8 @@ export default function SlotManager({ templates, currentView, onSelectView, onAd
             onChange={(e) => onSelectView(e.target.value)}
             className="w-full bg-telgrarr-elevated border border-telgrarr-border text-telgrarr-text text-sm rounded-lg block p-2 focus:ring-telgrarr-purple focus:border-telgrarr-purple transition-colors"
           >
-            <optgroup label="Protected Defaults">
-              <option value="default_ar">🔒 Default (Arabic)</option>
-              <option value="default_en">🔒 Default (English)</option>
+            <optgroup label="Default">
+              <option value="default">Default styling</option>
             </optgroup>
             <optgroup label={`Custom Slots (${slots.length}/5)`}>
               {slots.map(s => (
