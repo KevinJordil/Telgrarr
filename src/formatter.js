@@ -15,7 +15,7 @@ async function buildCaption(series, episodes, tmdbSeries = null, omdbData = null
   const mode = activeMode || templates.getActiveMode();
   const enrichedSeries = await enrichSonarrMedia(series, tmdbSeries, omdbData, mode);
   const resolved = templates.resolveTemplate(mode, 'sonarr');
-  const { template, lang } = resolveComposed('sonarr', resolved, config.translator?.targetLang);
+  const { template, lang } = resolveComposed('sonarr', resolved, config.translator?.targetLang, templates.getLayout().sonarr);
   return renderSonarr(template, enrichedSeries, episodes, lang ? { lang } : undefined);
 }
 

@@ -11,7 +11,7 @@ function getPosterUrl(movie) {
 
 function buildMovieCaption(movie, tmdbMovie, ratings = {}) {
   const resolved = templates.resolveTemplate(templates.getActiveMode(), 'radarr');
-  const { template, lang } = resolveComposed('radarr', resolved, config.translator?.targetLang);
+  const { template, lang } = resolveComposed('radarr', resolved, config.translator?.targetLang, templates.getLayout().radarr);
   
   return renderRadarr(template, movie, tmdbMovie, ratings, lang ? { lang } : undefined);
 }

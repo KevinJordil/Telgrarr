@@ -226,13 +226,14 @@ function composeTemplate(kind, lang, order) {
 // composer default template + render language (DEC-11). DRY home (R02) so both
 // formatters share ONE source. Custom slot strings pass through unchanged; an
 // invalid targetLang fails fast inside composeTemplate (schema prevents it).
-function resolveComposed(kind, resolved, targetLang) {
+function resolveComposed(kind, resolved, targetLang, order) {
+  const ord = (order || DEFAULT_ORDER[kind]).filter((it) => !(it && typeof it === 'object' && it.enabled === false));
   if (resolved === 'DEFAULT_EN') {
-    return { template: composeTemplate(kind, 'en', DEFAULT_ORDER[kind]), lang: 'en' };
+    return { template: composeTemplate(kind, 'en', ord), lang: 'en' };
   }
   if (!resolved || resolved === 'DEFAULT_AR') {
     const lang = targetLang || 'ar';
-    return { template: composeTemplate(kind, lang, DEFAULT_ORDER[kind]), lang };
+    return { template: composeTemplate(kind, lang, ord), lang };
   }
   return { template: resolved, lang: null };
 }
