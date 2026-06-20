@@ -1,6 +1,7 @@
 'use strict';
 const L = require('./default-layouts');
 const S = require('./layout-schema');
+const CS = require('./caption-strings');
 
 /*
  * Splits each legacy default template into ordered per-element fragments + a fixed
@@ -157,10 +158,37 @@ function buildSonarr(str, lang) {
   return assemble(str, starts);
 }
 
+// buildLtrTemplate: derive an es/fr/de/pt template from the EN template (LTR
+// structure) — swap header + descriptive labels to the target (caption-strings
+// leaf, R02/QB-4) and swap the *_en value tokens to the BASE tokens so the
+// engine's render-lang base values feed in. Ratings labels (brand) + value
+// isolates are inherited from EN unchanged. en/ar registries are NOT touched.
+function buildLtrTemplate(enStr, kind, lang) {
+  const en = CS.captionStrings('en');
+  const cs = CS.captionStrings(lang);
+  let s = enStr;
+  s = s.replaceAll(en.header[kind], cs.header[kind]);
+  s = s.replaceAll('{{#if genresEn}}', '{{#if genres}}').replaceAll('{{genresEn}}', '{{genres}}');
+  s = s.replaceAll('{{#if runtime_en}}', '{{#if runtime}}').replaceAll('{{runtime_en}}', '{{runtime}}');
+  s = s.replaceAll('{{#if status_en}}', '{{#if statusAr}}').replaceAll('{{status_en}}', '{{statusAr}}');
+  s = s.replaceAll('{{epLabel_en}}', '{{epLabel}}').replaceAll('{{epValue_en}}', '{{epValue}}');
+  s = s.replaceAll('<b>' + en.labels.year + '</b>', '<b>' + cs.labels.year + '</b>');
+  s = s.replaceAll('<b>' + en.labels.season + '</b>', '<b>' + cs.labels.season + '</b>');
+  s = s.replaceAll('<b>' + en.labels.runtime + '</b>', '<b>' + cs.labels.runtime + '</b>');
+  s = s.replaceAll('>' + en.labels.imdbLink + '</a>', '>' + cs.labels.imdbLink + '</a>');
+  s = s.replaceAll('>' + en.labels.seerrLink + '</a>', '>' + cs.labels.seerrLink + '</a>');
+  return s;
+}
+
 const REGISTRY = {
   sonarr: { ar: buildSonarr(L.DEFAULT_SONARR_TEMPLATE, 'ar'), en: buildSonarr(L.DEFAULT_SONARR_EN, 'en') },
   radarr: { ar: buildRadarr(L.DEFAULT_RADARR_TEMPLATE, 'ar'), en: buildRadarr(L.DEFAULT_RADARR_EN, 'en') },
 };
+
+for (const _lang of ['es', 'fr', 'de', 'pt']) {
+  REGISTRY.sonarr[_lang] = buildSonarr(buildLtrTemplate(L.DEFAULT_SONARR_EN, 'sonarr', _lang), _lang);
+  REGISTRY.radarr[_lang] = buildRadarr(buildLtrTemplate(L.DEFAULT_RADARR_EN, 'radarr', _lang), _lang);
+}
 
 const DEFAULT_ORDER = {
   sonarr: REGISTRY.sonarr.ar.orderKeys.slice(),
