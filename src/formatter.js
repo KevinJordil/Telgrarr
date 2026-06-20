@@ -3,6 +3,7 @@ const config    = require('./config');
 const templates = require('./templates');
 const { renderSonarr } = require('./template-engine');
 const { enrichSonarrMedia } = require('./services/media-enricher');
+const { resolveComposed } = require('./templates/layout-fragments');
 
 function getPosterUrl(series) {
   if (!series.images || series.images.length === 0) return null;
@@ -13,8 +14,9 @@ function getPosterUrl(series) {
 async function buildCaption(series, episodes, tmdbSeries = null, omdbData = null, activeMode = null) {
   const mode = activeMode || templates.getActiveMode();
   const enrichedSeries = await enrichSonarrMedia(series, tmdbSeries, omdbData, mode);
-  const template = templates.resolveTemplate(mode, 'sonarr');
-  return renderSonarr(template, enrichedSeries, episodes);
+  const resolved = templates.resolveTemplate(mode, 'sonarr');
+  const { template, lang } = resolveComposed('sonarr', resolved, config.translator?.targetLang);
+  return renderSonarr(template, enrichedSeries, episodes, lang ? { lang } : undefined);
 }
 
 module.exports = { buildCaption, getPosterUrl };
