@@ -6,6 +6,9 @@ const useTemplatesStore = create((set, get) => ({
   loading:   false,
   error:     null,
   saving:    false,
+  layout:        null,
+  layoutLoading: false,
+  layoutError:   null,
 
   fetchTemplates: async () => {
     set({ loading: true, error: null });
@@ -58,6 +61,26 @@ const useTemplatesStore = create((set, get) => ({
     try {
       const res = await api.delete(`/templates/slots/${id}`);
       set({ templates: res.data.templates, saving: false });
+      return { success: true };
+    } catch (err) {
+      set({ saving: false });
+      return { success: false, error: err.response?.data?.error || err.message };
+    }
+  },
+  fetchLayout: async () => {
+    set({ layoutLoading: true, layoutError: null });
+    try {
+      const res = await api.get('/templates/layout');
+      set({ layout: res.data, layoutLoading: false });
+    } catch (err) {
+      set({ layoutLoading: false, layoutError: err.response?.data?.error || err.message });
+    }
+  },
+  saveLayout: async (layout) => {
+    set({ saving: true });
+    try {
+      const res = await api.put('/templates/layout', { layout });
+      set({ layout: res.data.layout, saving: false });
       return { success: true };
     } catch (err) {
       set({ saving: false });
