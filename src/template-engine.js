@@ -7,6 +7,7 @@ const {
   DEFAULT_RADARR_EN
 } = require('./templates/default-layouts');
 const { aiWatermark } = require('./translator');
+const CS = require('./templates/caption-strings');
 
 const TG_CAPTION_LIMIT = 1024;
 
@@ -44,6 +45,42 @@ function calcSeasonRange(episodes) {
   return buildRangeString(episodes.map(e => e.seasonNumber));
 }
 
+const LTR_TARGETS = ['es', 'fr', 'de', 'pt'];
+// pickLang: base-token value for the RENDER language. ar/en keep the legacy
+// 'ar' base value byte-for-byte (EN templates read the *_en tokens, so this is
+// unused for en); only the new LTR targets resolve their own value from the
+// caption-strings leaf (R02/QB-4). Additive: no existing ar/en output changes.
+function pickLang(map, lang) {
+  return (LTR_TARGETS.includes(lang) && map[lang] != null) ? map[lang] : map.ar;
+}
+function ltrEpRuntime(min, max, avg) {
+  const out = {};
+  for (const lang of LTR_TARGETS) {
+    const rt = CS.captionStrings(lang).runtime;
+    out[lang] = (min === max)
+      ? (min + ' ' + rt.episodeUnit)
+      : (min + '-' + max + ' ' + rt.episodeUnit + rt.episodeAvgOpen + avg + rt.episodeAvgUnit + rt.episodeAvgClose);
+  }
+  return out;
+}
+function ltrTotalRuntime(hours, mins) {
+  const out = {};
+  for (const lang of LTR_TARGETS) {
+    const rt = CS.captionStrings(lang).runtime;
+    out[lang] = (hours > 0 && mins > 0)
+      ? (hours + rt.totalHour + rt.totalJoin + mins + rt.totalMin)
+      : (hours > 0 ? (hours + rt.totalHour) : (mins + rt.totalMin));
+  }
+  return out;
+}
+function ltrEpisode(kind, value) {
+  const out = {};
+  for (const lang of LTR_TARGETS) {
+    out[lang] = { label: CS.captionStrings(lang).episode[kind], value: value };
+  }
+  return out;
+}
+
 function calcRuntimeDual(series, episodes) {
   const runtimes = episodes
     .map(e => e._runtimeMinutes || series.runtime)
@@ -51,11 +88,12 @@ function calcRuntimeDual(series, episodes) {
   if (runtimes.length === 0) return { ar: null, en: null };
   const min = Math.min(...runtimes);
   const max = Math.max(...runtimes);
-  if (min === max) return { ar: min + ' دقيقة', en: min + ' min' };
+  if (min === max) return { ar: min + ' دقيقة', en: min + ' min', ...ltrEpRuntime(min, max) };
   const avg = Math.round(runtimes.reduce((s, r) => s + r, 0) / runtimes.length);
   return {
     ar: min + '-' + max + ' دقيقة (متوسط ' + avg + ' د.)',
-    en: min + '-' + max + ' min (avg ' + avg + 'm)'
+    en: min + '-' + max + ' min (avg ' + avg + 'm)',
+    ...ltrEpRuntime(min, max, avg)
   };
 }
 
@@ -64,18 +102,21 @@ function tripleSmartSwitchDual(episodes) {
   if (distinctSeasons.length > 1) {
     return {
       ar: { label: 'إجمالي الحلقات:', value: String(episodes.length) },
-      en: { label: 'Total Episodes:', value: String(episodes.length) }
+      en: { label: 'Total Episodes:', value: String(episodes.length) },
+      ...ltrEpisode('multi', String(episodes.length))
     };
   }
   if (episodes.length === 1) {
     return {
       ar: { label: 'الحلقة:', value: String(episodes[0].episodeNumber) },
-      en: { label: 'Episode:', value: String(episodes[0].episodeNumber) }
+      en: { label: 'Episode:', value: String(episodes[0].episodeNumber) },
+      ...ltrEpisode('single', String(episodes[0].episodeNumber))
     };
   }
   return {
     ar: { label: 'الحلقات:', value: buildRangeString(episodes.map(e => e.episodeNumber)) },
-    en: { label: 'Episodes:', value: buildRangeStringEn(episodes.map(e => e.episodeNumber)) }
+    en: { label: 'Episodes:', value: buildRangeStringEn(episodes.map(e => e.episodeNumber)) },
+    ...ltrEpisode('range', buildRangeStringEn(episodes.map(e => e.episodeNumber)))
   };
 }
 
@@ -83,13 +124,14 @@ function formatRuntimeDual(totalMinutes) {
   if (!totalMinutes || totalMinutes <= 0) return { ar: null, en: null };
   const hours = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
-  if (hours > 0 && mins > 0) return { ar: hours + ' ساعة و ' + mins + ' دقيقة', en: hours + 'h ' + mins + 'm' };
-  if (hours > 0) return { ar: hours + ' ساعة', en: hours + 'h' };
-  return { ar: mins + ' دقيقة', en: mins + 'm' };
+  if (hours > 0 && mins > 0) return { ar: hours + ' ساعة و ' + mins + ' دقيقة', en: hours + 'h ' + mins + 'm', ...ltrTotalRuntime(hours, mins) };
+  if (hours > 0) return { ar: hours + ' ساعة', en: hours + 'h', ...ltrTotalRuntime(hours, mins) };
+  return { ar: mins + ' دقيقة', en: mins + 'm', ...ltrTotalRuntime(hours, mins) };
 }
 
 function renderSonarr(templateString, series, episodes, opts) {
   const isEn = (opts && opts.lang != null) ? (opts.lang === 'en') : (templateString === 'DEFAULT_EN');
+  const renderLang = (opts && opts.lang != null) ? opts.lang : (isEn ? 'en' : 'ar');
   const rawOv = ((isEn ? series._overviewEn : series._overviewAr) || series._overviewEn || '').trim();
   const epData = tripleSmartSwitchDual(episodes);
   const rtData = calcRuntimeDual(series, episodes);
@@ -104,11 +146,11 @@ function renderSonarr(templateString, series, episodes, opts) {
     statusAr: series._statusAr || null,
     status_en: series._statusEn || null,
     seasonRange: calcSeasonRange(episodes),
-    epLabel: epData.ar.label,
-    epValue: epData.ar.value,
+    epLabel: pickLang(epData, renderLang).label,
+    epValue: pickLang(epData, renderLang).value,
     epLabel_en: epData.en.label,
     epValue_en: epData.en.value,
-    runtime: rtData.ar,
+    runtime: pickLang(rtData, renderLang),
     runtime_en: rtData.en,
     imdbUrl: series.imdbId ? 'https://www.imdb.com/title/' + series.imdbId + '/' : null,
     seerrUrl: series._seerrUrl || null,
@@ -155,6 +197,7 @@ function renderWithBudget(compile, buildData, rawOv) {
 
 function renderRadarr(templateString, movie, tmdbMovie, ratings = {}, opts) {
   const isEn = (opts && opts.lang != null) ? (opts.lang === 'en') : (templateString === 'DEFAULT_EN');
+  const renderLang = (opts && opts.lang != null) ? opts.lang : (isEn ? 'en' : 'ar');
   const rawOv = ((tmdbMovie && (isEn ? (tmdbMovie._overviewEn || tmdbMovie.overview) : (tmdbMovie._overviewAr || tmdbMovie.overview))) || '').trim();
   const ir = (movie.ratings && movie.ratings.imdb && movie.ratings.imdb.value) || 0;
   const tr = (movie.ratings && movie.ratings.tmdb && movie.ratings.tmdb.value) || (tmdbMovie && tmdbMovie.vote_average) || 0;
@@ -174,7 +217,7 @@ function renderRadarr(templateString, movie, tmdbMovie, ratings = {}, opts) {
       genres: movie._genresAr || (movie.genres || []).filter(Boolean).join(' • '),
       genresEn: movie._genresEn || (movie.genres || []).filter(Boolean).join(' • '),
       overview: ov || null,
-      runtime: rtData.ar,
+      runtime: pickLang(rtData, renderLang),
       runtime_en: rtData.en,
       rating: ir ? { value: ir, label: 'IMDb' } : tr ? { value: tr, label: 'TMDb' } : null,
       ratings: {
