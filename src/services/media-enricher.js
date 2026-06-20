@@ -52,9 +52,9 @@ function localizeStatus(status, targetLang) {
   return cs.status[key] || (status.charAt(0).toUpperCase() + status.slice(1).toLowerCase());
 }
 
-async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null) {
+async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null, langOverride = null) {
   const series = attachSeerr(rawSeries, 'tv');
-  const targetLang = config.translator?.targetLang || 'ar';
+  const targetLang = langOverride || config.translator?.targetLang || 'ar';
   const rawGenres = (series.genres || []).slice(0, 2);
   series._genresAr = translateGenres(rawGenres).join(' • ') || null;
   series._genresEn = rawGenres.length > 0 ? rawGenres.join(' • ') : null;
@@ -98,9 +98,9 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
   return series;
 }
 
-async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode) {
+async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode, langOverride = null) {
   const movie = attachSeerr(rawMovie, 'movie');
-  const targetLang = config.translator?.targetLang || 'ar';
+  const targetLang = langOverride || config.translator?.targetLang || 'ar';
   let tmdbMovie = rawTmdbMovie ? { ...rawTmdbMovie } : null;
 
   // 1. Deterministic English Field Shaping
