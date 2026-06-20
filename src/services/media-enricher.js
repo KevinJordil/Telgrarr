@@ -4,6 +4,7 @@ const log    = require('../logger');
 const { get: getFromCache, set: setToCache } = require('../media-cache');
 const { translateText, aiWatermark } = require('../translator');
 const { translateGenres, translateStatus } = require('../genres');
+const CS = require('../templates/caption-strings');
 const { attachSeerr, resolveRating } = require('../utils/media-utils');
 const MAX_PLOT = 800;
 
@@ -37,13 +38,27 @@ async function resolveGenresAr(genres, targetLang = 'ar') {
   return out.join(' \u2022 ');
 }
 
+// localizeStatus: render-target status string for the {{statusAr}} base token.
+// ar/en delegate to translateStatus byte-for-byte (the EN template reads
+// {{status_en}}=_statusEn, so this is unused for en); the LTR targets map known
+// statuses via the caption-strings leaf, falling back to the title-cased raw
+// status (same passthrough spirit as translateStatus). Additive: ar/en unchanged.
+function localizeStatus(status, targetLang) {
+  if (!status) return null;
+  if (targetLang === 'ar' || targetLang === 'en') return translateStatus(status);
+  const cs = CS.captionStrings(targetLang);
+  if (!cs) return translateStatus(status);
+  const key = status.toLowerCase().trim();
+  return cs.status[key] || (status.charAt(0).toUpperCase() + status.slice(1).toLowerCase());
+}
+
 async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null) {
   const series = attachSeerr(rawSeries, 'tv');
   const targetLang = config.translator?.targetLang || 'ar';
   const rawGenres = (series.genres || []).slice(0, 2);
   series._genresAr = translateGenres(rawGenres).join(' • ') || null;
   series._genresEn = rawGenres.length > 0 ? rawGenres.join(' • ') : null;
-  series._statusAr = translateStatus(series.status);
+  series._statusAr = localizeStatus(series.status, targetLang);
   series._statusEn = series.status
     ? series.status.charAt(0).toUpperCase() + series.status.slice(1).toLowerCase()
     : null;
@@ -160,4 +175,4 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   return { movie, tmdbMovie, ratings };
 }
 
-module.exports = { enrichSonarrMedia, enrichRadarrMedia };
+module.exports = { enrichSonarrMedia, enrichRadarrMedia, localizeStatus };
