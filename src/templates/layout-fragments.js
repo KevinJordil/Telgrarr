@@ -222,4 +222,19 @@ function composeTemplate(kind, lang, order) {
   }
 })();
 
-module.exports = { REGISTRY, DEFAULT_ORDER, composeTemplate };
+// Bridge (interim, retires at P4.3): map a resolveTemplate() result to the
+// composer default template + render language (DEC-11). DRY home (R02) so both
+// formatters share ONE source. Custom slot strings pass through unchanged; an
+// invalid targetLang fails fast inside composeTemplate (schema prevents it).
+function resolveComposed(kind, resolved, targetLang) {
+  if (resolved === 'DEFAULT_EN') {
+    return { template: composeTemplate(kind, 'en', DEFAULT_ORDER[kind]), lang: 'en' };
+  }
+  if (!resolved || resolved === 'DEFAULT_AR') {
+    const lang = targetLang || 'ar';
+    return { template: composeTemplate(kind, lang, DEFAULT_ORDER[kind]), lang };
+  }
+  return { template: resolved, lang: null };
+}
+
+module.exports = { REGISTRY, DEFAULT_ORDER, composeTemplate, resolveComposed };
