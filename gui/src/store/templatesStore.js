@@ -9,6 +9,9 @@ const useTemplatesStore = create((set, get) => ({
   layout:        null,
   layoutLoading: false,
   layoutError:   null,
+  catalog:        null,
+  catalogLoading: false,
+  catalogError:   null,
 
   fetchTemplates: async () => {
     set({ loading: true, error: null });
@@ -85,6 +88,15 @@ const useTemplatesStore = create((set, get) => ({
     } catch (err) {
       set({ saving: false });
       return { success: false, error: err.response?.data?.error || err.message };
+    }
+  },
+  fetchCatalog: async () => {
+    set({ catalogLoading: true, catalogError: null });
+    try {
+      const res = await api.get('/templates/catalog');
+      set({ catalog: res.data, catalogLoading: false });
+    } catch (err) {
+      set({ catalogLoading: false, catalogError: err.response?.data?.error || err.message });
     }
   },
 }));
