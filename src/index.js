@@ -13,6 +13,7 @@ const { getQueue }                      = require('./queue');
 const { runSweep, recoverCrashedSweep } = require('./sweeper');
 const { flushSessions }                 = require('./middlewares/auth');
 const { loadEvents, flushEvents }       = require('./events');
+const templates = require('./templates');
 
 log.info('App', '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 log.info('App', 'System Startup → Success → telgrarr initialized');
@@ -38,6 +39,7 @@ let releaseLock = null;
 
   loadEvents();
   blacklist.load();
+  await templates.migrateLegacyPlot({ sonarr: config.sonarr && config.sonarr.includePlot, radarr: config.radarr && config.radarr.includePlot });
   startListener();
 })();
 

@@ -63,12 +63,13 @@ function loadFromDisk() {
         activeMode: typeof raw.activeMode === 'string' ? raw.activeMode : DEFAULTS.activeMode,
         slots:      Array.isArray(raw.slots) ? raw.slots : [],
         layout:     normalizeLayout(raw.layout),
+        migrations: (raw.migrations && typeof raw.migrations === 'object' && !Array.isArray(raw.migrations)) ? raw.migrations : {},
       };
     }
   } catch (err) {
     log.error('Templates', `Failed to read templates.json: ${err.message} — using defaults`);
   }
-  return { activeMode: DEFAULTS.activeMode, slots: [], layout: defaultLayout() };
+  return { activeMode: DEFAULTS.activeMode, slots: [], layout: defaultLayout(), migrations: {} };
 }
 
 // ── THE LIVE SINGLETON ────────────────────────────────────────────────────────
@@ -109,7 +110,7 @@ function isElementEnabled(kind, key) {
 
 // ── ATOMIC WRITE ──────────────────────────────────────────────────────────────
 async function persist() {
-  const payload = JSON.stringify({ activeMode: store.activeMode, slots: store.slots, layout: store.layout }, null, 2);
+  const payload = JSON.stringify({ activeMode: store.activeMode, slots: store.slots, layout: store.layout, migrations: store.migrations }, null, 2);
   await new Promise((resolve, reject) => {
     writeFileAtomic(TEMPLATES_FILE, payload, (err) => {
       if (err) reject(err); else resolve();
@@ -118,6 +119,41 @@ async function persist() {
 }
 
 // ── VALIDATE SLOT ─────────────────────────────────────────────────────────────
+// --- P4.5b LEGACY PLOT MIGRATION (one-shot) ---
+// Honors a pre-Composer operator choice: a retired config.<kind>.includePlot===false
+// becomes a disabled plot layout element, exactly ONCE. Guarded by
+// store.migrations.legacyPlot so it never re-derives -- a later P5 re-enable is never
+// overwritten. Booleans are INJECTED by the boot caller (SoC: templates stays
+// config-agnostic here; index.js sources config.<kind>.includePlot).
+async function migrateLegacyPlot(legacy) {
+  try {
+    if (store.migrations && store.migrations.legacyPlot) return false;
+    const want = (legacy && typeof legacy === 'object') ? legacy : {};
+    let changed = false;
+    for (const kind of ['sonarr', 'radarr']) {
+      if (want[kind] !== false) continue;
+      const arr = store.layout[kind];
+      for (let i = 0; i < arr.length; i++) {
+        const it = arr[i];
+        const key = typeof it === 'string' ? it : (it && it.key);
+        if (key !== 'plot') continue;
+        const enabled = typeof it === 'string' ? true : (it.enabled !== false);
+        if (enabled) {
+          arr[i] = (typeof it === 'string') ? { key: 'plot', enabled: false } : Object.assign({}, it, { enabled: false });
+          changed = true;
+        }
+      }
+    }
+    store.migrations = Object.assign({}, store.migrations, { legacyPlot: true });
+    await persist();
+    if (changed) log.audit('Templates', 'Legacy Plot Migration → Applied → disabled plot from retired includePlot=false');
+    return changed;
+  } catch (err) {
+    log.error('Templates', `Legacy Plot Migration → Failed → ${err.message}`);
+    return false;
+  }
+}
+
 function validateSlot(slot) {
   const errors = [];
   if (!slot || typeof slot !== 'object')          errors.push('Slot must be an object');
@@ -201,4 +237,4 @@ function resolveTemplate(activeMode, kind) {
   return 'DEFAULT_AR';
 }
 
-module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, getLayout, setActiveMode, addSlot, updateSlot, deleteSlot, resolveTemplate, normalizeLayout, defaultLayout, isElementEnabled };
+module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, getLayout, setActiveMode, addSlot, updateSlot, deleteSlot, resolveTemplate, normalizeLayout, defaultLayout, isElementEnabled, migrateLegacyPlot };
