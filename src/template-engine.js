@@ -160,10 +160,10 @@ function renderSonarr(templateString, series, episodes, opts) {
   else if (compiledString === 'DEFAULT_EN') compiledString = DEFAULT_SONARR_EN;
   const compile = Handlebars.compile(compiledString);
   const buildData = (ov) => ({ ...data, overview: ov || null });
-  return renderWithBudget(compile, buildData, rawOv).caption;
+  return renderWithBudget(compile, buildData, rawOv, renderLang).caption;
 }
 
-function renderWithBudget(compile, buildData, rawOv) {
+function renderWithBudget(compile, buildData, rawOv, renderLang = 'ar') {
   let caption = compile(buildData(rawOv));
   if (caption.length <= TG_CAPTION_LIMIT) return { caption, pass: 1, length: caption.length };
   // Pass 2 — calculate exact overview budget and re-render
@@ -179,7 +179,7 @@ function renderWithBudget(compile, buildData, rawOv) {
   const overhead = probe - shellLength - 1;
   let budget = TG_CAPTION_LIMIT - shellLength - overhead - 3;
   if (budget > 20 && rawOv.length > 0) {
-    const wmTag = aiWatermark();
+    const wmTag = aiWatermark(renderLang);
     const hasWm = rawOv.includes(wmTag);
     let cleanText = hasWm ? rawOv.replace(wmTag, '') : rawOv;
     if (hasWm) budget -= wmTag.length;
@@ -230,7 +230,7 @@ function renderRadarr(templateString, movie, tmdbMovie, ratings = {}, opts) {
       seerrUrl: movie._seerrUrl || null,
     };
   }
-  return renderWithBudget(compile, buildData, rawOv);
+  return renderWithBudget(compile, buildData, rawOv, renderLang);
 }
 
 module.exports = {
