@@ -135,7 +135,7 @@ async function runSweep() {
       const activeMode = templates.getActiveMode();
       let series, tmdbSeries, omdbData;
       try {
-        ({ series, tmdbSeries, omdbData } = await fetchSonarrMetadata(seriesId, activeMode));
+        ({ series, tmdbSeries, omdbData } = await fetchSonarrMetadata(seriesId, activeMode, templates.isElementEnabled('sonarr', 'plot')));
       } catch (err) {
         log.error('Sweeper', `Metadata Fetch (Sonarr) → Error → ID: ${seriesId} | Traces: [${tracesOf(episodes)}] | ${err.message}`);
         continue;
@@ -170,7 +170,7 @@ async function runSweep() {
       const activeMode = templates.getActiveMode();
       let movie, tmdbMovie, omdbData;
       try {
-        ({ movie, tmdbMovie, omdbData } = await fetchRadarrMetadata(movieId, activeMode));
+        ({ movie, tmdbMovie, omdbData } = await fetchRadarrMetadata(movieId, activeMode, templates.isElementEnabled('radarr', 'plot')));
       } catch (err) {
         log.error('Sweeper', `Metadata Fetch (Radarr) → Error → ID: ${movieId} | Traces: [${tracesOf(radarrGroups[movieId])}] | ${err.message}`);
         continue;
@@ -179,7 +179,7 @@ async function runSweep() {
         log.warn('Sweeper', `Message Prep (Radarr) → Skipped → Metadata unavailable for ID: ${movieId} | Traces: [${tracesOf(radarrGroups[movieId])}]`);
         continue;
       }
-      const enriched = await enrichRadarrMedia(movie, tmdbMovie, omdbData, activeMode);
+      const enriched = await enrichRadarrMedia(movie, tmdbMovie, omdbData, activeMode, undefined, templates.isElementEnabled('radarr', 'plot'));
       movie = enriched.movie;
       tmdbMovie = enriched.tmdbMovie;
       const ratings = enriched.ratings;

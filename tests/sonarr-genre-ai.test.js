@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url);
 function stub(p, exports) { const id = require.resolve(p); require.cache[id] = { id, filename: id, loaded: true, exports }; }
 
 let translateCalls = [];
-stub('../src/config.js', { tmdb: { language: 'ar-SA' }, sonarr: { includePlot: true }, radarr: { includePlot: true } });
+stub('../src/config.js', { tmdb: { language: 'ar-SA' }, sonarr: {}, radarr: {} });
 stub('../src/logger.js', { info() {}, warn() {}, error() {}, audit() {} });
 stub('../src/media-cache.js', { get: async () => null, set: async () => {} });
 stub('../src/translator.js', { translateText: async (t) => { translateCalls.push(t); return 'XLATED-' + t; } });

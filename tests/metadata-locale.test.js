@@ -3,7 +3,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 function stub(p, exports) { const id = require.resolve(p); require.cache[id] = { id, filename: id, loaded: true, exports }; }
 let keys = [], langs = [];
-stub('../src/config.js', { tmdb: { language: 'zz-ZZ' }, translator: { targetLang: 'ar' }, sonarr: { includePlot: true }, radarr: { includePlot: true }, omdb: { apiKey: '' } });
+stub('../src/config.js', { tmdb: { language: 'zz-ZZ' }, translator: { targetLang: 'ar' }, sonarr: {}, radarr: {}, omdb: { apiKey: '' } });
 stub('../src/logger.js', { info() {}, warn() {}, error() {}, audit() {} });
 stub('../src/sonarr.js', { getSeriesById: async () => ({ title: 'S', tmdbId: 99, imdbId: 'tt1' }) });
 stub('../src/radarr.js', { getMovieById: async () => ({ title: 'M', tmdbId: 42, imdbId: 'tt2', ratings: {} }) });

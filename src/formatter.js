@@ -13,7 +13,7 @@ function getPosterUrl(series) {
 
 async function buildCaption(series, episodes, tmdbSeries = null, omdbData = null, activeMode = null) {
   const mode = activeMode || templates.getActiveMode();
-  const enrichedSeries = await enrichSonarrMedia(series, tmdbSeries, omdbData, mode);
+  const enrichedSeries = await enrichSonarrMedia(series, tmdbSeries, omdbData, mode, undefined, templates.isElementEnabled('sonarr', 'plot'));
   const resolved = templates.resolveTemplate(mode, 'sonarr');
   const { template, lang } = resolveComposed('sonarr', resolved, config.translator?.targetLang, templates.getLayout().sonarr);
   return renderSonarr(template, enrichedSeries, episodes, lang ? { lang } : undefined);

@@ -94,6 +94,18 @@ function getSlotById(id) {
 function getLayout() {
   return { sonarr: store.layout.sonarr.slice(), radarr: store.layout.radarr.slice() };
 }
+// ── LAYOUT ELEMENT STATE ──────────────────────────────
+// "Is element <key> enabled in <kind>'s layout?" — the P4.5 plot gate reads THIS
+// (not the retired config.<kind>.includePlot). Routes through module.exports.getLayout()
+// so unit tests can stub the layout (same CJS-exports seam as resolveTemplate).
+function isElementEnabled(kind, key) {
+  const layout = module.exports.getLayout()[kind] || [];
+  for (const it of layout) {
+    if (typeof it === 'string') { if (it === key) return true; }
+    else if (it && it.key === key) return it.enabled !== false;
+  }
+  return false;
+}
 
 // ── ATOMIC WRITE ──────────────────────────────────────────────────────────────
 async function persist() {
@@ -189,4 +201,4 @@ function resolveTemplate(activeMode, kind) {
   return 'DEFAULT_AR';
 }
 
-module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, getLayout, setActiveMode, addSlot, updateSlot, deleteSlot, resolveTemplate, normalizeLayout, defaultLayout };
+module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, getLayout, setActiveMode, addSlot, updateSlot, deleteSlot, resolveTemplate, normalizeLayout, defaultLayout, isElementEnabled };

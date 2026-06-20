@@ -7,7 +7,6 @@ const config = require('../src/config.js');
 
 // default_en avoids the translator (no network); covers the cascade + the gate.
 describe('Sonarr enrichment overview cascade (P4.3)', () => {
-  afterEach(() => { if (config.sonarr) config.sonarr.includePlot = true; });
 
   it('TMDb-TV overview wins the cascade', async () => {
     const s = await enrichSonarrMedia(
@@ -45,12 +44,10 @@ describe('Sonarr enrichment overview cascade (P4.3)', () => {
     expect(s._statusEn).toBe('Ended');
   });
 
-  it('sonarr.includePlot=false suppresses the overview', async () => {
-    if (!config.sonarr) config.sonarr = {};
-    config.sonarr.includePlot = false;
+  it('plotEnabled=false suppresses the overview', async () => {
     const s = await enrichSonarrMedia(
       { title: 'S', tmdbId: 1, imdbId: 'tt1', overview: 'From Sonarr.' },
-      { overview: 'From TMDb.' }, null, 'default_en');
+      { overview: 'From TMDb.' }, null, 'default_en', undefined, false);
     expect(s._overviewEn).toBeNull();
   });
 });

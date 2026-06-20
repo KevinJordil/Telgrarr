@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 function stub(p, exports) { const id = require.resolve(p); require.cache[id] = { id, filename: id, loaded: true, exports }; }
-stub('../src/config.js', { tmdb: {}, translator: { targetLang: 'ar' }, sonarr: { includePlot: true }, radarr: { includePlot: true }, omdb: { apiKey: '' } });
+stub('../src/config.js', { tmdb: {}, translator: { targetLang: 'ar' }, sonarr: {}, radarr: {}, omdb: { apiKey: '' } });
 stub('../src/logger.js', { info() {}, warn() {}, error() {}, audit() {} });
 stub('../src/media-cache.js', { get: async () => null, set: async () => {} });
 stub('../src/translator.js', { translateText: async () => 'X', aiWatermark: () => '' });

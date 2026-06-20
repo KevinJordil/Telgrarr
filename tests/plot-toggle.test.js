@@ -1,42 +1,27 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createRequire } from 'module';
-
 const require = createRequire(import.meta.url);
-const config = require('../src/config.js');
 const { enrichRadarrMedia } = require('../src/services/media-enricher.js');
-
-// P3.4: config.radarr.includePlot gates the plot cascade + OMDb-for-plot +
-// translate. Default (undefined or true) = on, so existing behavior is parity.
-describe('Radarr plot toggle (P3.4)', () => {
-  let orig;
-  beforeEach(() => { orig = config.radarr ? config.radarr.includePlot : undefined; });
-  afterEach(() => { if (config.radarr) config.radarr.includePlot = orig; });
-
+// P4.5: plot gating is the `plotEnabled` arg (plot layout element), passed by
+// the caller — not config.radarr.includePlot. Default true preserves parity.
+describe('Radarr plot toggle (P4.5 — plotEnabled arg)', () => {
   const movie = () => ({ title: 'X', imdbId: 'tt1', tmdbId: 1, overview: 'A plot.', ratings: {} });
-
-  it('includePlot ON -> plot carried', async () => {
-    config.radarr.includePlot = true;
-    const { tmdbMovie } = await enrichRadarrMedia(movie(), null, null, 'default_en');
+  it('plotEnabled ON -> plot carried', async () => {
+    const { tmdbMovie } = await enrichRadarrMedia(movie(), null, null, 'default_en', undefined, true);
     expect(tmdbMovie).not.toBeNull();
     expect(tmdbMovie._overviewEn).toBe('A plot.');
   });
-
-  it('includePlot OFF -> no carrier, no plot', async () => {
-    config.radarr.includePlot = false;
-    const { tmdbMovie } = await enrichRadarrMedia(movie(), null, null, 'default_en');
+  it('plotEnabled OFF -> no carrier, no plot', async () => {
+    const { tmdbMovie } = await enrichRadarrMedia(movie(), null, null, 'default_en', undefined, false);
     expect(tmdbMovie).toBeNull();
   });
-
-  it('includePlot OFF in AR mode -> translate never reached (completes offline)', async () => {
-    config.radarr.includePlot = false;
-    const { tmdbMovie } = await enrichRadarrMedia(movie(), null, null, 'default_ar');
+  it('plotEnabled OFF in AR mode -> translate never reached (offline)', async () => {
+    const { tmdbMovie } = await enrichRadarrMedia(movie(), null, null, 'default_ar', undefined, false);
     expect(tmdbMovie).toBeNull();
   });
-
-  it('includePlot OFF with TMDb present -> raw overview suppressed (no leak)', async () => {
-    config.radarr.includePlot = false;
+  it('plotEnabled OFF with TMDb present -> raw overview suppressed (no leak)', async () => {
     const tmdb = { overview: 'Raw TMDb plot.', genres: [], vote_average: 7 };
-    const { tmdbMovie } = await enrichRadarrMedia(movie(), tmdb, null, 'default_ar');
+    const { tmdbMovie } = await enrichRadarrMedia(movie(), tmdb, null, 'default_ar', undefined, false);
     expect(tmdbMovie.overview || '').toBe('');
     expect(tmdbMovie._overviewAr ?? '').toBe('');
   });

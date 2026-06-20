@@ -50,7 +50,7 @@ stub('../src/services/metadata.js', {
 stub('../src/services/notifications.js', {
   dispatchBatch: async (messages, historyItems) => ({ successful: historyItems, failed: [] }),
 });
-stub('../src/templates.js', { getActiveMode: () => 'standard' });
+stub('../src/templates.js', { getActiveMode: () => 'standard', isElementEnabled: () => true });
 stub('write-file-atomic', (file, data, cb) => { if (cb) cb(null); });
 
 // Guard ANY sweep-state.json path (hardcoded or DATA_DIR-derived) so the test can

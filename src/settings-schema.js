@@ -31,7 +31,6 @@ const SETTINGS_SCHEMA = [
     fields: [
       { key: 'sonarr.baseUrl', bootRequired: 'Sonarr base URL', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:8989', required: true, rule: 'url' },
       { key: 'sonarr.apiKey', bootRequired: 'Sonarr API key', label: 'API Key', type: 'secret', placeholder: 'Your Sonarr API key', note: 'Found in Sonarr under Settings → General → API Key.', required: true },
-      { key: 'sonarr.includePlot', label: 'Include Plot', type: 'toggle', note: 'Add the series plot/overview to Sonarr notifications, translated to your metadata language. Turn off to skip the extra metadata lookup.' },
     ],
   },
   {
@@ -40,7 +39,6 @@ const SETTINGS_SCHEMA = [
     fields: [
       { key: 'radarr.baseUrl', bootRequired: 'Radarr base URL', label: 'Base URL', type: 'url', placeholder: 'http://127.0.0.1:7878', required: true, rule: 'url' },
       { key: 'radarr.apiKey', bootRequired: 'Radarr API key', label: 'API Key', type: 'secret', placeholder: 'Your Radarr API key', note: 'Found in Radarr under Settings → General → API Key.', required: true },
-      { key: 'radarr.includePlot', label: 'Include Plot', type: 'toggle', note: 'Add the movie plot/overview to Radarr notifications, translated to your metadata language. Turn off to skip the extra metadata lookup.' },
     ],
   },
   {

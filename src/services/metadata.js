@@ -8,9 +8,9 @@ const { getOmdbById } = require('../omdb');
 const { get: getFromCache, set: setToCache } = require('../media-cache');
 
 // ── Sonarr (thin wrapper) ───────────────────────────────────────────────────
-async function fetchSonarrMetadata(seriesId, activeMode) {
+async function fetchSonarrMetadata(seriesId, activeMode, plotEnabled = true) {
   const series = await getSeriesById(seriesId);
-  const includePlot = config.sonarr?.includePlot !== false;
+  const includePlot = plotEnabled;
   const aiOnly = config.translator?.aiOnlyPlot === true;
   const locale = activeMode === 'default_en' ? 'en-US' : (config.translator?.targetLang || 'ar');
   let tmdbSeries = null;
@@ -35,7 +35,7 @@ async function fetchSonarrMetadata(seriesId, activeMode) {
 }
 
 // ── Radarr metadata resolution ──────────────────────────────────────────────
-async function fetchRadarrMetadata(movieId, activeMode) {
+async function fetchRadarrMetadata(movieId, activeMode, plotEnabled = true) {
   // No try/catch here — caller owns logging; the await re-throws naturally.
   const movie = await getMovieById(movieId);
   if (!movie) {
@@ -65,7 +65,7 @@ async function fetchRadarrMetadata(movieId, activeMode) {
                     (!(r.imdb?.value > 0) ||
                      !(r.rottenTomatoes?.value > 0) ||
                      !(r.metacritic?.value > 0) ||
-                     (config.radarr?.includePlot !== false && (aiOnly || !tmdbMovie?.overview) && movie.imdbId));
+                     (plotEnabled && (aiOnly || !tmdbMovie?.overview) && movie.imdbId));
   let omdbData = null;
   if (needsOmdb) {
     const omdbKey = `omdb:${movie.imdbId}`;

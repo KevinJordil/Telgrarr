@@ -52,7 +52,7 @@ function localizeStatus(status, targetLang) {
   return cs.status[key] || (status.charAt(0).toUpperCase() + status.slice(1).toLowerCase());
 }
 
-async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null, langOverride = null) {
+async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null, langOverride = null, plotEnabled = true) {
   const series = attachSeerr(rawSeries, 'tv');
   const targetLang = langOverride || config.translator?.targetLang || 'ar';
   const rawGenres = (series.genres || []).slice(0, 2);
@@ -62,8 +62,8 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
   series._statusEn = series.status
     ? series.status.charAt(0).toUpperCase() + series.status.slice(1).toLowerCase()
     : null;
-  // Sonarr plot cascade (TMDb-TV -> OMDb -> Sonarr own), gated on sonarr.includePlot.
-  const includePlot = config.sonarr?.includePlot !== false;
+  // Sonarr plot cascade (TMDb-TV -> OMDb -> Sonarr own), gated on plotEnabled (plot layout element; P4.5).
+  const includePlot = plotEnabled;
   const aiOnly = config.translator?.aiOnlyPlot === true;
   const tmdbSeries = rawTmdbSeries || null;
   const omdbPlot = (rawOmdbData && rawOmdbData.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
@@ -98,13 +98,13 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
   return series;
 }
 
-async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode, langOverride = null) {
+async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode, langOverride = null, plotEnabled = true) {
   const movie = attachSeerr(rawMovie, 'movie');
   const targetLang = langOverride || config.translator?.targetLang || 'ar';
   let tmdbMovie = rawTmdbMovie ? { ...rawTmdbMovie } : null;
 
   // 1. Deterministic English Field Shaping
-  const includePlot = config.radarr?.includePlot !== false;
+  const includePlot = plotEnabled;
   const aiOnly = config.translator?.aiOnlyPlot === true;
   const omdbPlot = (rawOmdbData?.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
   const rawOv = includePlot ? ((aiOnly ? '' : tmdbMovie?.overview) || omdbPlot || movie.overview || '').trim() : '';

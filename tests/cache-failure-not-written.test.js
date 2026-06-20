@@ -6,7 +6,7 @@ function stub(p, exports) { const id = require.resolve(p); require.cache[id] = {
 let translateImpl = async () => null;
 const setCalls = [];
 
-stub('../src/config.js', { sonarr: { includePlot: true }, radarr: { includePlot: true }, translator: { targetLang: 'ar' }, tmdb: {}, omdb: { apiKey: '' } });
+stub('../src/config.js', { sonarr: {}, radarr: {}, translator: { targetLang: 'ar' }, tmdb: {}, omdb: { apiKey: '' } });
 stub('../src/logger.js', { info() {}, warn() {}, error() {}, audit() {} });
 stub('../src/media-cache.js', { get: async () => null, set: async (k, v) => { setCalls.push([k, v]); } });
 stub('../src/translator.js', { translateText: async (...a) => translateImpl(...a), aiWatermark: () => '' });
