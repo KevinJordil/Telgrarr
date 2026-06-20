@@ -6,6 +6,7 @@ const log        = require('../logger');
 const events     = require('../events');
 const EVENT_TYPES = require('../../shared/events.json');
 const { requireAuth } = require('../middlewares/auth');
+const { buildCatalog } = require('../templates/composer-catalog');
 
 // ── GET /api/templates ────────────────────────────────────────────────────────
 router.get('/templates', requireAuth, (req, res) => {
@@ -82,6 +83,12 @@ router.put('/templates/layout', requireAuth, async (req, res) => {
     log.error('Templates', `Set layout failed: ${err.message}`);
     res.status(400).json({ error: err.message });
   }
+});
+
+// --- GET /api/templates/catalog (P5c-1): composer view-model assembled DRY from
+// layout-schema + layout-fragments (orderable/prefix elements, icon choices, languages). ---
+router.get('/templates/catalog', requireAuth, (req, res) => {
+  res.json(buildCatalog());
 });
 
 module.exports = router;
