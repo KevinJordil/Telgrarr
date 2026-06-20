@@ -166,6 +166,26 @@ function validateSlot(slot) {
 
 // ── MUTATIONS ─────────────────────────────────────────────────────────────────
 
+// --- P5(a) LAYOUT WRITE PATH (DEC-1/10) ---
+// Persistence companion to getLayout() that P4.3a deferred. Fail-fast (R06) on a
+// malformed payload so a partial/garbage shape can never silently reset a kind to its
+// default; the contents are then routed through normalizeLayout (drops unknown keys,
+// dedups, sanitizes label/icon) so ONLY a sanitized descriptor is persisted. slots,
+// activeMode and the migrations ledger are read from store by persist(), so they are
+// preserved untouched across the write.
+async function setLayout(layout) {
+  if (!layout || typeof layout !== 'object' || Array.isArray(layout)) {
+    throw new Error('layout must be an object with sonarr and radarr arrays');
+  }
+  if (!Array.isArray(layout.sonarr) || !Array.isArray(layout.radarr)) {
+    throw new Error('layout.sonarr and layout.radarr must each be an array');
+  }
+  store.layout = normalizeLayout(layout);
+  await persist();
+  log.audit('Templates', 'Layout set \u2192 persisted \u2192 sonarr/radarr normalized (slots/activeMode/migrations preserved)');
+  return getLayout();
+}
+
 async function setActiveMode(mode) {
   if (typeof mode !== 'string') throw new Error('activeMode must be a string');
   store.activeMode = mode;
@@ -237,4 +257,4 @@ function resolveTemplate(activeMode, kind) {
   return 'DEFAULT_AR';
 }
 
-module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, getLayout, setActiveMode, addSlot, updateSlot, deleteSlot, resolveTemplate, normalizeLayout, defaultLayout, isElementEnabled, migrateLegacyPlot };
+module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, getLayout, setActiveMode, addSlot, updateSlot, deleteSlot, setLayout, resolveTemplate, normalizeLayout, defaultLayout, isElementEnabled, migrateLegacyPlot };
