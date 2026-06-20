@@ -11,11 +11,15 @@ const { isValidIcon, normalizeLabel } = require('./templates/layout-schema');
 const TEMPLATES_FILE = path.join(config.DATA_DIR, 'templates.json');
 
 const DEFAULTS = {
-  activeMode: 'default_ar',
+  activeMode: 'default',
   slots:      [],
 };
 
 const MAX_SLOTS = 5;
+
+// Reserved activeMode words (P5b): canonical 'default' + retained legacy aliases. A slot
+// id must not collide with these (it could shadow, or be shadowed by, a default mode).
+const RESERVED_MODES = new Set(['default', 'default_ar', 'default_en']);
 
 // --- DEC-1/10 STRUCTURED LAYOUT (Default styling) ---
 // Ordered set of ORDERABLE caption elements per kind. DRY (R02/DEC-10): the order
@@ -198,6 +202,7 @@ async function addSlot(slot) {
   if (store.slots.length >= MAX_SLOTS) throw new Error(`Maximum ${MAX_SLOTS} slots allowed`);
   const errors = validateSlot(slot);
   if (errors.length) throw new Error(errors.join('; '));
+  if (RESERVED_MODES.has(slot.id)) throw new Error(`Slot id is reserved: ${slot.id}`);
   if (store.slots.find(s => s.id === slot.id)) throw new Error(`Slot id already exists: ${slot.id}`);
   store.slots.push({ id: slot.id, name: slot.name, sonarr: slot.sonarr || '', radarr: slot.radarr || '' });
   await persist();
@@ -221,7 +226,7 @@ async function deleteSlot(id) {
   const idx = store.slots.findIndex(s => s.id === id);
   if (idx === -1) throw new Error(`Slot not found: ${id}`);
   store.slots.splice(idx, 1);
-  if (store.activeMode === id) store.activeMode = 'default_ar';
+  if (store.activeMode === id) store.activeMode = 'default';
   await persist();
   log.info('Templates', `Slot deleted: ${id}`);
   return getTemplates();
@@ -251,7 +256,9 @@ function resolveTemplate(activeMode, kind) {
     throw new Error(`resolveTemplate: kind must be 'sonarr' or 'radarr', got: ${JSON.stringify(kind)}`);
   }
   if (activeMode === 'default_en') return 'DEFAULT_EN';
-  if (activeMode === 'default_ar') return 'DEFAULT_AR';
+  // 'default' = canonical AR mode (P5b); 'default_ar' is the retained legacy alias. Both
+  // resolve here BEFORE the slot lookup, so a slot can never shadow the canonical mode.
+  if (activeMode === 'default_ar' || activeMode === 'default') return 'DEFAULT_AR';
   const slot = module.exports.getSlotById(activeMode);
   if (slot && slot[kind]) return slot[kind];
   return 'DEFAULT_AR';
