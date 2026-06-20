@@ -5,6 +5,8 @@ const path            = require('path');
 const writeFileAtomic = require('write-file-atomic');
 const log             = require('./logger');
 const config          = require('./config');
+const { DEFAULT_ORDER } = require('./templates/layout-fragments');
+const { isValidIcon, normalizeLabel } = require('./templates/layout-schema');
 
 const TEMPLATES_FILE = path.join(config.DATA_DIR, 'templates.json');
 
@@ -15,6 +17,43 @@ const DEFAULTS = {
 
 const MAX_SLOTS = 5;
 
+// --- DEC-1/10 STRUCTURED LAYOUT (Default styling) ---
+// Ordered set of ORDERABLE caption elements per kind. DRY (R02/DEC-10): the order
+// universe is DEFAULT_ORDER (the renderer single source). A plain string key renders
+// with the element default icon/label (byte-identical to legacy); an object item
+// {key,enabled?,label?,icon?} carries P5 overrides.
+function defaultLayout() {
+  return { sonarr: DEFAULT_ORDER.sonarr.slice(), radarr: DEFAULT_ORDER.radarr.slice() };
+}
+
+// Sanitize one kind (load-safe, never throws): keep known ORDERABLE keys in order, drop
+// duplicates, normalize labels (DEC-3; empty preserved = no-label intent), validate icons
+// (DEC-4); a bare {key} collapses to the plain string. Non-array, or empty-after-sanitize
+// (corrupt), falls back to the kind default (never a blank caption body).
+function normalizeLayoutKind(kind, arr) {
+  const allowed = DEFAULT_ORDER[kind];
+  if (!Array.isArray(arr)) return allowed.slice();
+  const seen = new Set();
+  const out = [];
+  for (const item of arr) {
+    const key = typeof item === 'string' ? item : (item && typeof item === 'object' ? item.key : null);
+    if (typeof key !== 'string' || !allowed.includes(key) || seen.has(key)) continue;
+    seen.add(key);
+    if (typeof item === 'string') { out.push(key); continue; }
+    const norm = { key };
+    if (item.enabled === false) norm.enabled = false;
+    if (typeof item.label === 'string') norm.label = normalizeLabel(item.label);
+    if (typeof item.icon === 'string' && isValidIcon(item.icon, key)) norm.icon = item.icon;
+    out.push(Object.keys(norm).length === 1 ? key : norm);
+  }
+  return out.length ? out : allowed.slice();
+}
+
+function normalizeLayout(raw) {
+  const src = (raw && typeof raw === 'object') ? raw : {};
+  return { sonarr: normalizeLayoutKind('sonarr', src.sonarr), radarr: normalizeLayoutKind('radarr', src.radarr) };
+}
+
 // ── LOAD FROM DISK ────────────────────────────────────────────────────────────
 function loadFromDisk() {
   try {
@@ -23,12 +62,13 @@ function loadFromDisk() {
       return {
         activeMode: typeof raw.activeMode === 'string' ? raw.activeMode : DEFAULTS.activeMode,
         slots:      Array.isArray(raw.slots) ? raw.slots : [],
+        layout:     normalizeLayout(raw.layout),
       };
     }
   } catch (err) {
     log.error('Templates', `Failed to read templates.json: ${err.message} — using defaults`);
   }
-  return { ...DEFAULTS };
+  return { activeMode: DEFAULTS.activeMode, slots: [], layout: defaultLayout() };
 }
 
 // ── THE LIVE SINGLETON ────────────────────────────────────────────────────────
@@ -51,9 +91,13 @@ function getSlotById(id) {
   return store.slots.find(s => s.id === id) || null;
 }
 
+function getLayout() {
+  return { sonarr: store.layout.sonarr.slice(), radarr: store.layout.radarr.slice() };
+}
+
 // ── ATOMIC WRITE ──────────────────────────────────────────────────────────────
 async function persist() {
-  const payload = JSON.stringify({ activeMode: store.activeMode, slots: store.slots }, null, 2);
+  const payload = JSON.stringify({ activeMode: store.activeMode, slots: store.slots, layout: store.layout }, null, 2);
   await new Promise((resolve, reject) => {
     writeFileAtomic(TEMPLATES_FILE, payload, (err) => {
       if (err) reject(err); else resolve();
@@ -145,4 +189,4 @@ function resolveTemplate(activeMode, kind) {
   return 'DEFAULT_AR';
 }
 
-module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, setActiveMode, addSlot, updateSlot, deleteSlot, resolveTemplate };
+module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, getLayout, setActiveMode, addSlot, updateSlot, deleteSlot, resolveTemplate, normalizeLayout, defaultLayout };
