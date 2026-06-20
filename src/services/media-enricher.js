@@ -8,6 +8,14 @@ const CS = require('../templates/caption-strings');
 const { attachSeerr, resolveRating } = require('../utils/media-utils');
 const MAX_PLOT = 800;
 
+// Canonical AR-default recognizer (P5b): the new canonical 'default' mode is the
+// byte-equivalent of the legacy 'default_ar' alias for the AR translate/genre cascade.
+// Kept LOCAL so the enricher stays templates-decoupled (no mode-vocabulary import; see
+// Architecture S6). 'default_en' and custom slot modes are unaffected.
+function isDefaultArMode(mode) {
+  return mode === 'default_ar' || mode === 'default';
+}
+
 // DRY (R02/QB-4): the ONE genre resolver — static map -> per-genre cache -> AI
 // fallback. Used by BOTH enrichers so an unmapped genre never leaks English into
 // an Arabic caption (D1). Returns the ' \u2022 '-joined AR string, or null.
@@ -70,7 +78,7 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
   const rawOv = includePlot ? (((aiOnly ? '' : (tmdbSeries && tmdbSeries.overview)) || omdbPlot || series.overview || '')).trim() : '';
   series._overviewEn = rawOv ? (rawOv.length > MAX_PLOT ? rawOv.substring(0, MAX_PLOT) + '...' : rawOv) : null;
   series._overviewAr = null;
-  if (activeMode === 'default_ar' && rawOv) {
+  if (isDefaultArMode(activeMode) && rawOv) {
     const isAlreadyArabic = /[\u0600-\u06FF]/.test(rawOv);
     const plotKey = (!isAlreadyArabic && series.tmdbId) ? `plot:tv:${series.tmdbId}:${targetLang}` : null;
     let translatedOv = null;
@@ -92,7 +100,7 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
       if (!plotCacheHit) log.info('MediaEnricher', `AI Translation Pass \u2192 Plot \u2192 "${series.title}"`);
     }
   }
-  if (activeMode === 'default_ar') {
+  if (isDefaultArMode(activeMode)) {
     series._genresAr = await resolveGenresAr(rawGenres, targetLang);
   }
   return series;
@@ -137,7 +145,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   };
 
   // 3. Arabic Mode Execution
-  if (activeMode === 'default_ar') {
+  if (isDefaultArMode(activeMode)) {
     if (rawOv) {
       const isAlreadyArabic = /[\u0600-ۿ]/.test(rawOv);
       const plotKey = (!isAlreadyArabic && movie.tmdbId)
