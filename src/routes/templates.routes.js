@@ -67,4 +67,21 @@ router.delete('/templates/slots/:id', requireAuth, async (req, res) => {
   }
 });
 
+// --- GET /api/templates/layout + PUT /api/templates/layout (P5a) ---
+router.get('/templates/layout', requireAuth, (req, res) => {
+  res.json(templates.getLayout());
+});
+
+router.put('/templates/layout', requireAuth, async (req, res) => {
+  try {
+    const { layout } = req.body;
+    const result = await templates.setLayout(layout);
+    events.emit(EVENT_TYPES.TEMPLATE_LAYOUT_CHANGED, 'info', 'Templates', 'Caption layout updated', { sonarr: result.sonarr.length, radarr: result.radarr.length });
+    res.json({ success: true, layout: result });
+  } catch (err) {
+    log.error('Templates', `Set layout failed: ${err.message}`);
+    res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;
