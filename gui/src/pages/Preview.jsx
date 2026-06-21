@@ -34,7 +34,7 @@ const TOKENS = {
 const isDefaultMode = (m) => !m || m === 'default' || m === 'default_ar' || m === 'default_en';
 
 export default function Preview() {
-  const { templates: config, loading, error, saving: storeSaving, fetchTemplates, setActiveMode, addSlot, updateSlot, deleteSlot, catalog } = useTemplatesStore();
+  const { templates: config, loading, error, saving: storeSaving, fetchTemplates, setActiveMode, addSlot, updateSlot, deleteSlot, catalog, layout } = useTemplatesStore();
   const { settings } = useSettingsStore();
   const targetLang = settings?.translator?.targetLang || 'ar';
   const [type, setType]                     = useState('sonarr');
@@ -98,7 +98,7 @@ export default function Preview() {
       finally { setLoadingPreview(false); }
     }, 500);
     return () => clearTimeout(timer);
-  }, [type, scenario, currentView, draft, config, targetLang]);
+  }, [type, scenario, currentView, draft, config, targetLang, layout]); // +layout: re-render on saved-layout change (B2)
   const confirmAddSlot = async (name) => {
     setModal(null);
     const newSlot = { id: `slot_${Date.now()}`, name, sonarr: STARTER_AR, radarr: STARTER_AR };
