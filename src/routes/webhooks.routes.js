@@ -56,7 +56,7 @@ router.post('/:token/sonarr', webhookAuth, async (req, res) => {
 
   for (const episode of episodes) {
     try {
-      await enqueue({
+      const added = await enqueue({
         source: 'sonarr',
         traceId,
         seriesId,
@@ -65,8 +65,10 @@ router.post('/:token/sonarr', webhookAuth, async (req, res) => {
         episodeNumber: episode.episodeNumber,
         _receivedAt: new Date().toISOString(),
       });
-      queuedCount++;
-      log.info('Webhook', `Webhook Event (Sonarr) → Queued → Title: [${title}] S${episode.seasonNumber}E${episode.episodeNumber} | trace=${traceId}`);
+      if (added) {
+        queuedCount++;
+        log.info('Webhook', `Webhook Event (Sonarr) → Queued → Title: [${title}] S${episode.seasonNumber}E${episode.episodeNumber} | trace=${traceId}`);
+      }
     } catch (err) {
       log.error('Webhook', `Webhook Event (Sonarr) → Error → Title: [${title}] S${episode.seasonNumber}E${episode.episodeNumber} | ${err.message} | trace=${traceId}`);
     }
@@ -112,15 +114,17 @@ router.post('/:token/radarr', webhookAuth, async (req, res) => {
   }
 
   try {
-    await enqueue({
+    const added = await enqueue({
       source: 'radarr',
       traceId,
       movieId,
       _receivedAt: new Date().toISOString(),
     });
-    events.emit(EVENT_TYPES.QUEUE_ITEM_ADDED, 'info', 'Listener', `"${title}" queued`, { title, type: 'radarr', count: 1 });
-    scheduleSweep();
-    log.info('Webhook', `Webhook Event (Radarr) → Queued → Title: [${title}] | trace=${traceId}`);
+    if (added) {
+      events.emit(EVENT_TYPES.QUEUE_ITEM_ADDED, 'info', 'Listener', `"${title}" queued`, { title, type: 'radarr', count: 1 });
+      scheduleSweep();
+      log.info('Webhook', `Webhook Event (Radarr) → Queued → Title: [${title}] | trace=${traceId}`);
+    }
   } catch (err) {
     log.error('Webhook', `Webhook Event (Radarr) → Error → Title: [${title}] | ${err.message} | trace=${traceId}`);
   }
