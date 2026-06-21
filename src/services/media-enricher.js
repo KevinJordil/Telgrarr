@@ -22,25 +22,45 @@ function isDefaultArMode(mode) {
 async function resolveGenresAr(genres, targetLang = 'ar') {
   const list = (genres || []).filter(Boolean);
   if (list.length === 0) return null;
-  const AR = /[\u0600-\u06FF]/;
-  const needsTranslation = list.some(g => !AR.test(g));
-  if (!needsTranslation) return list.join(' \u2022 ');
-  const staticMapped = translateGenres(list);
+  if (targetLang === 'ar') {
+    // ar: byte-frozen legacy path (static AR map -> per-genre cache -> AI). Parity oracle.
+    const AR = /[\u0600-\u06FF]/;
+    const needsTranslation = list.some(g => !AR.test(g));
+    if (!needsTranslation) return list.join(' \u2022 ');
+    const staticMapped = translateGenres(list);
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      const g = list[i];
+      if (staticMapped[i] !== g || AR.test(g)) {
+        out.push(staticMapped[i]);
+      } else {
+        const genreKey = `genre:${g.toLowerCase().trim()}:${targetLang}`;
+        const cachedGenre = await getFromCache(genreKey);
+        if (cachedGenre) {
+          out.push(cachedGenre);
+        } else {
+          const result = await translateText(g, { fallback: g });
+          if (AR.test(result)) await setToCache(genreKey, result);
+          out.push(result);
+        }
+      }
+    }
+    return out.join(' \u2022 ');
+  }
+  // non-ar target (es/fr/de/pt): no per-lang static genre map exists (GENRE_MAP is
+  // AR-only; caption-strings has no genres leaf), so translate each genre to targetLang
+  // via per-genre cache -> AI, then cache successful (non-source) results. (B1-GENRE)
   const out = [];
   for (let i = 0; i < list.length; i++) {
     const g = list[i];
-    if (staticMapped[i] !== g || AR.test(g)) {
-      out.push(staticMapped[i]);
+    const genreKey = `genre:${g.toLowerCase().trim()}:${targetLang}`;
+    const cachedGenre = await getFromCache(genreKey);
+    if (cachedGenre) {
+      out.push(cachedGenre);
     } else {
-      const genreKey = `genre:${g.toLowerCase().trim()}:${targetLang}`;
-      const cachedGenre = await getFromCache(genreKey);
-      if (cachedGenre) {
-        out.push(cachedGenre);
-      } else {
-        const result = await translateText(g, { fallback: g });
-        if (AR.test(result)) await setToCache(genreKey, result);
-        out.push(result);
-      }
+      const result = await translateText(g, { targetLang, fallback: g });
+      if (result && result !== g) await setToCache(genreKey, result);
+      out.push(result);
     }
   }
   return out.join(' \u2022 ');
