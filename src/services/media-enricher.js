@@ -89,7 +89,7 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
       translatedOv = await getFromCache(plotKey);
       if (translatedOv) plotCacheHit = true;
       else {
-        translatedOv = await translateText(rawOv, { fallback: null });
+        translatedOv = await translateText(rawOv, { targetLang, fallback: null });
         if (translatedOv) await setToCache(plotKey, translatedOv);
       }
     }
@@ -160,7 +160,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
         if (translatedOv) {
           plotCacheHit = true;
         } else {
-          translatedOv = await translateText(rawOv, { fallback: null });
+          translatedOv = await translateText(rawOv, { targetLang, fallback: null });
           if (translatedOv) await setToCache(plotKey, translatedOv);
         }
       }
