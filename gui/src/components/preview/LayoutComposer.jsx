@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Save, Lock, XCircle, CheckCircle } from 'lucide-react';
 import useTemplatesStore from '../../store/templatesStore';
+import useSettingsStore from '../../store/settingsStore';
 import ElementRow from './ElementRow';
 
-// Apply an ElementRow patch ({enabled?}/{icon?}) to a descriptor item, collapsing back to a
+// Apply an ElementRow patch ({enabled?}/{icon?}/{label?}) to a descriptor item, collapsing back to a
 // bare string key when no overrides remain (mirrors backend normalizeLayoutKind so the gui
 // sends the same canonical shape it receives).
 function applyPatch(item, patch) {
   const obj = typeof item === 'string' ? { key: item } : { ...item };
   if ('enabled' in patch) { if (patch.enabled === false) obj.enabled = false; else delete obj.enabled; }
   if ('icon' in patch) { if (patch.icon == null) delete obj.icon; else obj.icon = patch.icon; }
+  if ('label' in patch) { if (patch.label == null) delete obj.label; else obj.label = patch.label; }
   return Object.keys(obj).length === 1 ? obj.key : obj;
 }
 function swap(arr, i, j) { const next = arr.slice(); [next[i], next[j]] = [next[j], next[i]]; return next; }
@@ -19,6 +21,8 @@ export default function LayoutComposer({ kind }) {
   const { catalog, catalogLoading, catalogError, fetchCatalog,
           layout, layoutLoading, layoutError, fetchLayout,
           saveLayout, saving } = useTemplatesStore();
+  const { settings } = useSettingsStore();
+  const lang = settings?.translator?.targetLang || 'ar';
   const [draft, setDraft] = useState(null);
   const [saveState, setSaveState] = useState('idle'); // idle | saved | error
   const hydratedRef = useRef(false);
@@ -80,6 +84,7 @@ export default function LayoutComposer({ kind }) {
         {order.map((item, i) => {
           const el = elByKey[keyOf(item)];
           if (!el) return null;
+            const li = el.labels && el.labels[lang];
           return (
             <ElementRow
               key={keyOf(item)}
@@ -91,6 +96,9 @@ export default function LayoutComposer({ kind }) {
               onMoveDown={() => moveAt(i, 1)}
               canMoveUp={i > 0}
               canMoveDown={i < order.length - 1}
+                editable={!!(li && li.editable)}
+                defaultLabel={li ? li.default : ''}
+                labelMax={catalog.labelMax}
             />
           );
         })}
