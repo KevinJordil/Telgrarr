@@ -30,7 +30,9 @@ describe('P6.2 — translation failure must NOT be cached (the {fallback:null} g
   it('Sonarr: successful translation writes the plot cache', async () => {
     translateImpl = async () => '\u0646\u0635 \u0639\u0631\u0628\u064a';
     await enrichSonarrMedia(...sonarrIn());
-    expect(plotKeys()).toEqual(['plot:tv:555:ar']);
+    const sk = plotKeys();
+    expect(sk).toHaveLength(1);
+    expect(sk[0]).toMatch(/^plot:tv:[0-9a-f]+:ar$/);
   });
   it('Radarr: failed translation writes no plot cache', async () => {
     translateImpl = async () => null;
@@ -40,6 +42,8 @@ describe('P6.2 — translation failure must NOT be cached (the {fallback:null} g
   it('Radarr: successful translation writes the plot cache', async () => {
     translateImpl = async () => '\u0646\u0635 \u0639\u0631\u0628\u064a';
     await enrichRadarrMedia(...radarrIn());
-    expect(plotKeys()).toEqual(['plot:777:ar']);
+    const rk = plotKeys();
+    expect(rk).toHaveLength(1);
+    expect(rk[0]).toMatch(/^plot:[0-9a-f]+:ar$/);
   });
 });

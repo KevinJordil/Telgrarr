@@ -13,13 +13,13 @@ describe('P5.3 — enrichers key by translator.targetLang, not tmdb.language', (
   beforeEach(() => { keys = []; });
   it('Sonarr plot+genre keys carry targetLang (ar), not tmdb.language (en-US)', async () => {
     await enrichSonarrMedia({ title: 'S', tmdbId: 99, overview: 'A plot.', genres: ['Cyberpunk'] }, null, null, 'default_ar');
-    expect(keys).toContain('plot:tv:99:ar');
+    expect(keys.some((k) => k.startsWith('plot:tv:') && k.endsWith(':ar') && !k.includes(':99:'))).toBe(true);
     expect(keys.some((k) => k.startsWith('genre:') && k.endsWith(':ar'))).toBe(true);
     expect(keys.some((k) => k.includes('en-US'))).toBe(false);
   });
   it('Radarr plot key carries targetLang (ar)', async () => {
     await enrichRadarrMedia({ title: 'M', tmdbId: 42, overview: 'A plot.', genres: ['Cyberpunk'] }, null, null, 'default_ar');
-    expect(keys).toContain('plot:42:ar');
+    expect(keys.some((k) => k.startsWith('plot:') && !k.startsWith('plot:tv:') && k.endsWith(':ar') && !k.includes(':42:'))).toBe(true);
     expect(keys.some((k) => k.includes('en-US'))).toBe(false);
   });
   it('watermark is requested for the target language', async () => {

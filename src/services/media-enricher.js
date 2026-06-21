@@ -6,7 +6,17 @@ const { translateText, aiWatermark } = require('../translator');
 const { translateGenres, translateStatus } = require('../genres');
 const CS = require('../templates/caption-strings');
 const { attachSeerr, resolveRating } = require('../utils/media-utils');
+const crypto = require('crypto');
 const MAX_PLOT = 800;
+
+// B1-CACHE: plot translations key on a stable hash of the SOURCE text (+ lang), not
+// tmdbId -> the key exists even when tmdbId is absent (tmdbId-less items + preview become
+// cacheable instead of re-translating), a source change (e.g. an aiOnlyPlot flip selecting
+// a different overview) naturally invalidates, and a cosmetic layout change does not.
+// media-cache is regenerable (Master S4); old tmdbId-shaped keys orphan and age out by TTL.
+function plotSourceId(text) {
+  return crypto.createHash('sha1').update(text || '').digest('hex');
+}
 
 // Canonical AR-default recognizer (P5b): the new canonical 'default' mode is the
 // byte-equivalent of the legacy 'default_ar' alias for the AR translate/genre cascade.
@@ -100,7 +110,7 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
   series._overviewAr = null;
   if (isDefaultArMode(activeMode) && rawOv) {
     const isAlreadyArabic = /[\u0600-\u06FF]/.test(rawOv);
-    const plotKey = (!isAlreadyArabic && series.tmdbId) ? `plot:tv:${series.tmdbId}:${targetLang}` : null;
+    const plotKey = isAlreadyArabic ? null : `plot:tv:${plotSourceId(rawOv)}:${targetLang}`;
     let translatedOv = null;
     let plotCacheHit = false;
     if (isAlreadyArabic) {
@@ -168,9 +178,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   if (isDefaultArMode(activeMode)) {
     if (rawOv) {
       const isAlreadyArabic = /[\u0600-ۿ]/.test(rawOv);
-      const plotKey = (!isAlreadyArabic && movie.tmdbId)
-        ? `plot:${movie.tmdbId}:${targetLang}`
-        : null;
+      const plotKey = isAlreadyArabic ? null : `plot:${plotSourceId(rawOv)}:${targetLang}`;
       let translatedOv = null;
       let plotCacheHit = false;
       if (isAlreadyArabic) {
