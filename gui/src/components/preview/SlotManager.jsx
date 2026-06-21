@@ -1,11 +1,11 @@
 import React from 'react';
 import { Plus, Edit2, Trash2, CheckCircle } from 'lucide-react';
 
-export default function SlotManager({ templates, currentView, onSelectView, onAdd, onRename, onDelete, onMakeActive }) {
+export default function SlotManager({ templates, currentView, onSelectView, onAdd, onRename, onDelete, onMakeActive, defaultActive = false }) {
   const slots = templates?.slots || [];
   const activeMode = templates?.activeMode || 'default';
   const isDefault = currentView === 'default';
-  const isActive = currentView === activeMode;
+  const isActive = isDefault ? defaultActive : currentView === activeMode;
   return (
     <div className="bg-telgrarr-surface border border-telgrarr-border rounded-xl p-3 space-y-3">
       <div className="flex items-center space-x-3">

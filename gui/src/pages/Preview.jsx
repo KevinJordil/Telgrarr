@@ -27,6 +27,12 @@ const TOKENS = {
   radarr: ['{{title}}', '{{year}}', '{{genres}}', '{{overview}}', '{{runtime}}', '{{runtime_en}}', '{{rating.value}}', '{{rating.label}}', '{{ratings.imdb}}', '{{ratings.tmdb}}', '{{ratings.rottenTomatoes}}', '{{ratings.metacritic}}', '{{imdbUrl}}', '{{seerrUrl}}']
 };
 
+// c-7: default-family mode taxonomy. Canonical mode is 'default'; 'default_ar' and
+// 'default_en' are recognised LEGACY ALIASES (P5b-2), all shown as the one "Default
+// styling" view. Single source for the family check (de-duplicates the former inline
+// list in the init effect).
+const isDefaultMode = (m) => !m || m === 'default' || m === 'default_ar' || m === 'default_en';
+
 export default function Preview() {
   const { templates: config, loading, error, saving: storeSaving, fetchTemplates, setActiveMode, addSlot, updateSlot, deleteSlot, catalog } = useTemplatesStore();
   const { settings } = useSettingsStore();
@@ -57,7 +63,7 @@ export default function Preview() {
     if (config && !initializedRef.current) {
       initializedRef.current = true;
       const m = config.activeMode;
-      setCurrentView((!m || m === 'default' || m === 'default_ar' || m === 'default_en') ? 'default' : m);
+      setCurrentView(isDefaultMode(m) ? 'default' : m);
     }
   }, [config]);
   useEffect(() => {
@@ -155,7 +161,7 @@ export default function Preview() {
       <div className="max-w-5xl mx-auto md:grid md:grid-cols-12 md:gap-8 relative z-10">
         <div className="md:col-span-7 space-y-6">
           <h1 className="text-2xl font-bold text-telgrarr-text tracking-tight">Style Editor</h1>
-          <SlotManager templates={config} currentView={currentView} onSelectView={setCurrentView} onAdd={() => setModal({ kind: 'add' })} onRename={() => setModal({ kind: 'rename' })} onDelete={() => setModal({ kind: 'delete' })} onMakeActive={handleMakeActive} />
+          <SlotManager templates={config} currentView={currentView} onSelectView={setCurrentView} onAdd={() => setModal({ kind: 'add' })} onRename={() => setModal({ kind: 'rename' })} onDelete={() => setModal({ kind: 'delete' })} defaultActive={isDefaultMode(config.activeMode)} onMakeActive={handleMakeActive} />
           {slotError && (
             <p role="alert" className="text-xs text-telgrarr-danger px-1 flex items-center gap-1.5">
               <XCircle className="w-3.5 h-3.5 shrink-0" />

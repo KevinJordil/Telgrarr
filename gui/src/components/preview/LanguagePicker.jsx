@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, RefreshCw, XCircle } from 'lucide-react';
 import useSettingsStore from '../../store/settingsStore';
+import useTemplatesStore from '../../store/templatesStore';
 
 // 6-language picker for Default styling. Writes config.translator.targetLang through the
 // shared settings save path (R17): sends the FULL translator section with targetLang
@@ -8,14 +9,30 @@ import useSettingsStore from '../../store/settingsStore';
 // server-side per SD-6, so round-tripping them is safe).
 export default function LanguagePicker({ languages = [] }) {
   const { settings, fetchSettings, saveSection, saveStatus, saveErrors } = useSettingsStore();
+  const { templates, setActiveMode, saving: tplSaving } = useTemplatesStore();
+  const [relocError, setRelocError] = useState(null);
 
   useEffect(() => { if (!settings) fetchSettings(); }, [settings, fetchSettings]);
 
-  const current = (settings && settings.translator && settings.translator.targetLang) || 'ar';
+  const isLegacyEn = templates?.activeMode === 'default_en';
+  const storedLang = (settings && settings.translator && settings.translator.targetLang) || 'ar';
+  const current = isLegacyEn ? 'en' : storedLang;
   const status = saveStatus.translator;
+  const busy = status === 'saving' || tplSaving;
 
-  const choose = (code) => {
-    if (code === current || status === 'saving') return;
+  const choose = async (code) => {
+    if (busy) return;
+    if (isLegacyEn) {
+      // c-7 relocation, SAFETY ORDER: persist targetLang FIRST, then collapse the alias.
+      // A collapse failure leaves 'default_en' (English, safe); never the inverse flip.
+      setRelocError(null);
+      const r = await saveSection('translator', { translator: { ...((settings && settings.translator) || {}), targetLang: code } });
+      if (!r.success) return;
+      const c = await setActiveMode('default');
+      if (!c.success) setRelocError(c.error || 'Could not finalize the language change. Please retry.');
+      return;
+    }
+    if (code === current) return;
     saveSection('translator', { translator: { ...((settings && settings.translator) || {}), targetLang: code } });
   };
 
@@ -38,7 +55,7 @@ export default function LanguagePicker({ languages = [] }) {
               type="button"
               onClick={() => choose(l.code)}
               aria-pressed={active}
-              disabled={status === 'saving'}
+              disabled={busy}
               className={`focus-ring px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors disabled:opacity-60 ${
                 active
                   ? 'bg-telgrarr-purple/10 border-telgrarr-purple text-telgrarr-purple'
@@ -50,7 +67,10 @@ export default function LanguagePicker({ languages = [] }) {
           );
         })}
       </div>
-      {status === 'error' && saveErrors.translator && (
+      {relocError && (
+          <p role="alert" className="text-xs text-telgrarr-danger px-1">{relocError}</p>
+        )}
+        {status === 'error' && saveErrors.translator && (
         <p role="alert" className="text-xs text-telgrarr-danger px-1">{saveErrors.translator}</p>
       )}
     </div>
