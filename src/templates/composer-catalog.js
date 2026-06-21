@@ -6,7 +6,7 @@
 // catalog (R02). Authoritative validation stays server-side (templates.setLayout ->
 // normalizeLayout) — this is presentation data only.
 const S = require('./layout-schema');
-const { DEFAULT_ORDER } = require('./layout-fragments');
+const { DEFAULT_ORDER, REGISTRY } = require('./layout-fragments');
 const { LANGUAGES } = require('../languages');
 
 // Friendly row-heading names (presentation only; keys originate from the catalog/
@@ -32,6 +32,17 @@ const NAMES = {
 
 function nameOf(key) { return NAMES[key] || key; }
 
+function labelInfo(kind, key) {
+  const out = {};
+  for (const l of LANGUAGES) {
+    const reg = REGISTRY[kind] && REGISTRY[kind][l.code];
+    const p = reg && reg.paramsByKey[key];
+    const editable = !!(p && p.hasLabel);
+    out[l.code] = { editable, default: editable ? p.defaultLabel : '' };
+  }
+  return out;
+}
+
 function forKind(kind) {
   const orderKeys = DEFAULT_ORDER[kind] || [];
   const inKind = S.ELEMENT_CATALOG.filter((e) => e.kinds.includes(kind));
@@ -39,6 +50,7 @@ function forKind(kind) {
     key,
     name: nameOf(key),
     iconChoices: (S.ICON_CHOICES[key] || []).slice(),
+    labels: labelInfo(kind, key),
   }));
   const prefix = inKind
     .filter((e) => !orderKeys.includes(e.key))

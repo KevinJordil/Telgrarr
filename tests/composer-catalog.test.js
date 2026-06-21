@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 const { buildCatalog } = require('../src/templates/composer-catalog.js');
 const S = require('../src/templates/layout-schema.js');
-const { DEFAULT_ORDER } = require('../src/templates/layout-fragments.js');
+const { DEFAULT_ORDER, REGISTRY } = require('../src/templates/layout-fragments.js');
 const { LANGUAGES } = require('../src/languages.js');
 
 describe('P5c-1: composer catalog view-model', () => {
@@ -35,6 +35,17 @@ describe('P5c-1: composer catalog view-model', () => {
         expect(typeof e.name).toBe('string');
         expect(e.name.length).toBeGreaterThan(0);
         expect(e.name).not.toBe(e.key);
+      }
+    });
+    it(`${kind}: orderable labels mirror REGISTRY hasLabel/defaultLabel per language`, () => {
+      for (const o of cat[kind].orderable) {
+        expect(Object.keys(o.labels)).toEqual(LANGUAGES.map((l) => l.code));
+        for (const l of LANGUAGES) {
+          const p = REGISTRY[kind][l.code].paramsByKey[o.key];
+          const editable = !!(p && p.hasLabel);
+          expect(o.labels[l.code].editable).toBe(editable);
+          expect(o.labels[l.code].default).toBe(editable ? p.defaultLabel : '');
+        }
       }
     });
   }
