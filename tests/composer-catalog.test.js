@@ -18,9 +18,14 @@ describe('P5c-1: composer catalog view-model', () => {
     it(`${kind}: orderable keys == layout-fragments DEFAULT_ORDER (single source)`, () => {
       expect(cat[kind].orderable.map((o) => o.key)).toEqual(DEFAULT_ORDER[kind]);
     });
-    it(`${kind}: iconChoices mirror layout-schema ICON_CHOICES`, () => {
+    it(`${kind}: iconChoices mirror layout-schema ICON_CHOICES (empty for toggle-only)`, () => {
       for (const o of cat[kind].orderable) {
-        expect(o.iconChoices).toEqual(S.ICON_CHOICES[o.key] || []);
+        expect(o.iconChoices).toEqual(o.toggleOnly ? [] : (S.ICON_CHOICES[o.key] || []));
+      }
+    });
+    it(`${kind}: toggleOnly is true exactly for param-less (non-fragment) elements`, () => {
+      for (const o of cat[kind].orderable) {
+        expect(o.toggleOnly).toBe(!REGISTRY[kind].ar.paramsByKey[o.key]);
       }
     });
     it(`${kind}: prefix == in-kind catalog elements not in the orderable set`, () => {

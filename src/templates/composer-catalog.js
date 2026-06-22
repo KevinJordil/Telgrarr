@@ -46,12 +46,21 @@ function labelInfo(kind, key) {
 function forKind(kind) {
   const orderKeys = DEFAULT_ORDER[kind] || [];
   const inKind = S.ELEMENT_CATALOG.filter((e) => e.kinds.includes(kind));
-  const orderable = orderKeys.map((key) => ({
-    key,
-    name: nameOf(key),
-    iconChoices: (S.ICON_CHOICES[key] || []).slice(),
-    labels: labelInfo(kind, key),
-  }));
+  const reg = REGISTRY[kind] && REGISTRY[kind].ar;
+  const orderable = orderKeys.map((key) => {
+    // An orderable key with no fragment param (status) is non-emitting: no icon/label in the
+    // rendered caption, and its position is slaved to its host (year). It is therefore a pure
+    // enable/disable TOGGLE — no icon palette, no reorder. Derived from the render model so any
+    // future param-less element auto-inherits (no hardcoded key list).
+    const hasFragment = !!(reg && reg.paramsByKey[key]);
+    return {
+      key,
+      name: nameOf(key),
+      toggleOnly: !hasFragment,
+      iconChoices: hasFragment ? (S.ICON_CHOICES[key] || []).slice() : [],
+      labels: labelInfo(kind, key),
+    };
+  });
   const prefix = inKind
     .filter((e) => !orderKeys.includes(e.key))
     .map((e) => ({ key: e.key, name: nameOf(e.key) }));

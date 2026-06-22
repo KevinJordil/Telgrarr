@@ -5,7 +5,7 @@ import IconPicker from './IconPicker';
 // One ORDERABLE caption element (DEC-1/10): reorder + enable toggle + icon override.
 // Label editing (DEC-3): inline input shown only when editable in the active language. The row only
 // signals changes; the composer panel owns the order array and descriptor merge (SRP).
-export default function ElementRow({ element, descriptor, iconNone = 'none', onChange, onMoveUp, onMoveDown, canMoveUp, canMoveDown, editable = false, defaultLabel = '', labelMax = 40 }) {
+export default function ElementRow({ element, descriptor, iconNone = 'none', onChange, onMoveUp, onMoveDown, canMoveUp, canMoveDown, editable = false, defaultLabel = '', labelMax = 40, toggleOnly = false }) {
   const [iconOpen, setIconOpen] = useState(false);
   const isObj = descriptor && typeof descriptor === 'object';
   const enabled = isObj ? descriptor.enabled !== false : true;
@@ -23,6 +23,7 @@ export default function ElementRow({ element, descriptor, iconNone = 'none', onC
   return (
     <div className="space-y-1.5">
     <div className={`flex items-center gap-2 px-2.5 py-2 rounded-xl bg-telgrarr-surface border border-telgrarr-border ${enabled ? '' : 'opacity-60'}`}>
+      {!toggleOnly && (
       <div className="flex flex-col -my-1">
         <button type="button" onClick={onMoveUp} disabled={!canMoveUp} aria-label={`Move ${element.name} up`} className={stepBtn}>
           <ChevronUp className="w-4 h-4" />
@@ -31,9 +32,11 @@ export default function ElementRow({ element, descriptor, iconNone = 'none', onC
           <ChevronDown className="w-4 h-4" />
         </button>
       </div>
+      )}
 
       <span className="flex-1 text-sm font-medium text-telgrarr-text truncate">{element.name}</span>
 
+      {!toggleOnly && (
       <button
         type="button"
         onClick={() => setIconOpen(true)}
@@ -43,6 +46,7 @@ export default function ElementRow({ element, descriptor, iconNone = 'none', onC
       >
         {iconNode}
       </button>
+      )}
 
       <button
         type="button"

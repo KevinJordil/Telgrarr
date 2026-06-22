@@ -91,6 +91,7 @@ export default function LayoutComposer({ kind }) {
               element={el}
               descriptor={item}
               iconNone={catalog.iconNone}
+              toggleOnly={el.toggleOnly}
               onChange={(patch) => patchAt(i, patch)}
               onMoveUp={() => moveAt(i, -1)}
               onMoveDown={() => moveAt(i, 1)}
