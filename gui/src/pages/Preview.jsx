@@ -41,6 +41,7 @@ export default function Preview() {
   const [scenario, setScenario]             = useState('single');
   const [currentView, setCurrentView]       = useState('default');
   const [draft, setDraft]                   = useState('');
+  const [draftLayout, setDraftLayout]       = useState(null); // B4: live layout draft lifted from LayoutComposer
   const [html, setHtml]                     = useState('');
   const [syntaxError, setSyntaxError]       = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -89,7 +90,7 @@ export default function Preview() {
       setLoadingPreview(true);
       try {
         const body = currentView === 'default'
-          ? { type, scenario, lang: targetLang }
+          ? { type, scenario, lang: targetLang, ...(draftLayout ? { layout: draftLayout } : {}) }
           : { type, scenario, template: draft === '' ? '&#8203;' : draft };
         const res = await api.post('/preview/render', body);
         if (res.data.success === false) setSyntaxError(res.data.error);
@@ -98,7 +99,7 @@ export default function Preview() {
       finally { setLoadingPreview(false); }
     }, 500);
     return () => clearTimeout(timer);
-  }, [type, scenario, currentView, draft, config, targetLang, layout]); // +layout: re-render on saved-layout change (B2)
+  }, [type, scenario, currentView, draft, config, targetLang, layout, draftLayout]); // +layout: re-render on saved-layout change (B2)
   const confirmAddSlot = async (name) => {
     setModal(null);
     const newSlot = { id: `slot_${Date.now()}`, name, sonarr: STARTER_AR, radarr: STARTER_AR };
@@ -192,7 +193,7 @@ export default function Preview() {
           ) : (
             <>
               <LanguagePicker languages={catalog?.languages || []} />
-              <LayoutComposer kind={type} />
+              <LayoutComposer kind={type} onDraftChange={setDraftLayout} />
             </>
           )}
         </div>

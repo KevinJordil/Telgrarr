@@ -52,18 +52,28 @@ async function renderPreview(body = {}) {
   const enrichMode = advanced ? templates.getActiveMode() : (lang === 'en' ? 'default_en' : 'default_ar');
   const langOverride = advanced ? undefined : lang;
   const opts = advanced ? undefined : { lang };
+  // B4: live-as-you-edit — a GUI draft layout (default styling only) is composed via the
+  // load-safe normalizeLayout (same path a saved layout takes: status pin, dedup, sanitize,
+  // corrupt => defaults), so preview reflects each unsaved edit. Absent/non-object layout =>
+  // the persisted getLayout() (byte-identical to pre-B4). Preview never persists, so the
+  // load-safe normalize (not setLayout fail-fast) is the correct, non-destructive guard.
+  const layoutSrc = advanced
+    ? null
+    : ((body.layout && typeof body.layout === 'object' && !Array.isArray(body.layout))
+        ? templates.normalizeLayout(body.layout)
+        : templates.getLayout());
 
   if (type === 'sonarr') {
     const series = await enrichSonarrMedia(MOCK_SONARR.series, null, null, enrichMode, langOverride, templates.isElementEnabled('sonarr', 'plot'));
     const eps = MOCK_SONARR[scenario] || MOCK_SONARR.single;
-    const tpl = advanced ? template : resolveComposed('sonarr', 'DEFAULT_AR', lang, templates.getLayout().sonarr).template;
+    const tpl = advanced ? template : resolveComposed('sonarr', 'DEFAULT_AR', lang, layoutSrc.sonarr).template;
     return { caption: renderSonarr(tpl, series, eps, opts), photoUrl: SONARR_POSTER };
   }
 
   const previewMovie = buildPreviewRadarrMovie();
   const { movie, tmdbMovie, ratings } = await enrichRadarrMedia(previewMovie, MOCK_RADARR.tmdb, null, enrichMode, langOverride, templates.isElementEnabled('radarr', 'plot'));
   if (tmdbMovie && tmdbMovie._overviewAr) tmdbMovie.overview = tmdbMovie._overviewAr;
-  const tpl = advanced ? template : resolveComposed('radarr', 'DEFAULT_AR', lang, templates.getLayout().radarr).template;
+  const tpl = advanced ? template : resolveComposed('radarr', 'DEFAULT_AR', lang, layoutSrc.radarr).template;
   return { caption: renderRadarr(tpl, movie, tmdbMovie, ratings, opts).caption, photoUrl: RADARR_POSTER };
 }
 

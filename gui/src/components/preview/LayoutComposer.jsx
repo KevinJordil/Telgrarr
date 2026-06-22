@@ -17,7 +17,7 @@ function applyPatch(item, patch) {
 function swap(arr, i, j) { const next = arr.slice(); [next[i], next[j]] = [next[j], next[i]]; return next; }
 const keyOf = (item) => (typeof item === 'string' ? item : item.key);
 
-export default function LayoutComposer({ kind }) {
+export default function LayoutComposer({ kind, onDraftChange }) {
   const { catalog, catalogLoading, catalogError, fetchCatalog,
           layout, layoutLoading, layoutError, fetchLayout,
           saveLayout, saving } = useTemplatesStore();
@@ -29,6 +29,9 @@ export default function LayoutComposer({ kind }) {
 
   useEffect(() => { fetchCatalog(); fetchLayout(); }, [fetchCatalog, fetchLayout]);
   useEffect(() => { if (layout && !hydratedRef.current) { hydratedRef.current = true; setDraft(layout); } }, [layout]);
+  // B4: surface the live draft to the parent (Preview) so the preview pane reflects each
+  // edit before Save. Optional — absent onDraftChange leaves behaviour byte-identical.
+  useEffect(() => { if (draft && onDraftChange) onDraftChange(draft); }, [draft, onDraftChange]);
   useEffect(() => {
     if (saveState !== 'saved' && saveState !== 'error') return;
     const t = setTimeout(() => setSaveState('idle'), 2500);
