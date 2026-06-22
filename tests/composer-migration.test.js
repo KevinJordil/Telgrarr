@@ -21,14 +21,12 @@ describe('P4.3a: backward-compat load + normalization (no data loss)', () => {
     expect(T.normalizeLayout('garbage')).toEqual(T.defaultLayout());
   });
   it('valid custom subset preserved in order', () => {
-    const a = DEFAULT_ORDER.sonarr[0], b = DEFAULT_ORDER.sonarr[1];
-    const custom = { sonarr: [b, a], radarr: [DEFAULT_ORDER.radarr[0]] };
+    const custom = { sonarr: ['plot', 'genres'], radarr: [DEFAULT_ORDER.radarr[0]] };
     expect(T.normalizeLayout(custom)).toEqual(custom);
   });
   it('object items keep enabled:false/label/valid icon; bare {key} collapses', () => {
-    const [a, b, c] = DEFAULT_ORDER.sonarr;
-    const r = T.normalizeLayout({ sonarr: [{ key:a, enabled:false }, { key:b, label:'My Plot' }, { key:c, enabled:true }], radarr: [] });
-    expect(r.sonarr).toEqual([{ key:a, enabled:false }, { key:b, label:'My Plot' }, c]);
+    const r = T.normalizeLayout({ sonarr: [{ key:'season', label:'My Season' }, { key:'runtime', enabled:false }, { key:'genres', enabled:true }], radarr: [] });
+    expect(r.sonarr).toEqual([{ key:'season', label:'My Season' }, { key:'runtime', enabled:false }, 'genres']);
   });
   it('drops unknown keys, duplicates, invalid icons', () => {
     const a = DEFAULT_ORDER.sonarr[0], b = DEFAULT_ORDER.sonarr[1];

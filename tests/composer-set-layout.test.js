@@ -30,13 +30,13 @@ beforeEach(() => {
 });
 
 describe('P5(a): setLayout write path', () => {
-  it('persists a valid reordered/toggled layout and returns it', async () => {
-    const [a, b, c] = DEFAULT_ORDER.sonarr;
-    const next = { sonarr: [b, { key: a, enabled: false }, c], radarr: DEFAULT_ORDER.radarr.slice() };
+  it('persists a reordered/toggled layout, auto-pinning status after year', async () => {
+    const next = { sonarr: ['genres', { key: 'year', enabled: false }, 'plot'], radarr: DEFAULT_ORDER.radarr.slice() };
+    const expected = ['genres', { key: 'year', enabled: false }, 'status', 'plot'];
     const ret = await T.setLayout(next);
     expect(ret).toEqual(T.getLayout());
-    expect(T.getLayout().sonarr).toEqual([b, { key: a, enabled: false }, c]);
-    expect(JSON.parse(captured).layout.sonarr).toEqual([b, { key: a, enabled: false }, c]);
+    expect(T.getLayout().sonarr).toEqual(expected);
+    expect(JSON.parse(captured).layout.sonarr).toEqual(expected);
   });
 
   it('routes contents through normalizeLayout (drops unknown/dupe keys)', async () => {

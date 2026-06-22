@@ -26,6 +26,13 @@ const RESERVED_MODES = new Set(['default', 'default_ar', 'default_en']);
 // universe is DEFAULT_ORDER (the renderer single source). A plain string key renders
 // with the element default icon/label (byte-identical to legacy); an object item
 // {key,enabled?,label?,icon?} carries P5 overrides.
+// B3b: status renders INLINE in the year fragment (B3a), so its array position is slaved to
+// year. PINNED_AFTER re-pins status immediately after `year` on normalize (array order ==
+// GUI order == notification order); a legacy sonarr layout lacking status has it inserted
+// enabled (carried preference — status was always-on pre-B3; R06). radarr has no pins.
+const PINNED_AFTER = { sonarr: { status: 'year' } };
+const layoutKeyOf = (item) => (typeof item === 'string' ? item : (item && item.key));
+
 function defaultLayout() {
   return { sonarr: DEFAULT_ORDER.sonarr.slice(), radarr: DEFAULT_ORDER.radarr.slice() };
 }
@@ -37,12 +44,18 @@ function defaultLayout() {
 function normalizeLayoutKind(kind, arr) {
   const allowed = DEFAULT_ORDER[kind];
   if (!Array.isArray(arr)) return allowed.slice();
+  const pins = PINNED_AFTER[kind] || null;
+  const pinState = {};
   const seen = new Set();
   const out = [];
   for (const item of arr) {
     const key = typeof item === 'string' ? item : (item && typeof item === 'object' ? item.key : null);
     if (typeof key !== 'string' || !allowed.includes(key) || seen.has(key)) continue;
     seen.add(key);
+    if (pins && pins[key]) {
+      pinState[key] = (item && typeof item === 'object' && item.enabled === false) ? { enabled: false } : {};
+      continue;
+    }
     if (typeof item === 'string') { out.push(key); continue; }
     const norm = { key };
     if (item.enabled === false) norm.enabled = false;
@@ -50,7 +63,16 @@ function normalizeLayoutKind(kind, arr) {
     if (typeof item.icon === 'string' && isValidIcon(item.icon, key)) norm.icon = item.icon;
     out.push(Object.keys(norm).length === 1 ? key : norm);
   }
-  return out.length ? out : allowed.slice();
+  if (!out.length) return allowed.slice();
+  if (pins) {
+    for (const pk of Object.keys(pins)) {
+      const ai = out.findIndex((it) => layoutKeyOf(it) === pins[pk]);
+      if (ai < 0) continue;
+      const st = pinState[pk];
+      out.splice(ai + 1, 0, (st && st.enabled === false) ? { key: pk, enabled: false } : pk);
+    }
+  }
+  return out;
 }
 
 function normalizeLayout(raw) {

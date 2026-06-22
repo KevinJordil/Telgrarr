@@ -44,14 +44,14 @@ describe('P5(a): /api/templates/layout', () => {
   });
 
   it('PUT persists a valid reorder and GET reflects it', async () => {
-    const [a, b, c] = DEFAULT_ORDER.sonarr;
-    const next = { sonarr: [b, { key: a, enabled: false }, c], radarr: DEFAULT_ORDER.radarr.slice() };
+    const next = { sonarr: ['genres', { key: 'year', enabled: false }, 'plot'], radarr: DEFAULT_ORDER.radarr.slice() };
+    const expected = ['genres', { key: 'year', enabled: false }, 'status', 'plot'];
     const r = await putLayout(next);
     expect(r.status).toBe(200);
     const body = await r.json();
     expect(body.success).toBe(true);
-    expect(body.layout.sonarr).toEqual([b, { key: a, enabled: false }, c]);
-    expect((await getLayout()).sonarr).toEqual([b, { key: a, enabled: false }, c]);
+    expect(body.layout.sonarr).toEqual(expected);
+    expect((await getLayout()).sonarr).toEqual(expected);
   });
 
   it('PUT rejects a malformed layout with 400', async () => {
