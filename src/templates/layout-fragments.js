@@ -190,21 +190,61 @@ for (const _lang of ['es', 'fr', 'de', 'pt']) {
   REGISTRY.radarr[_lang] = buildRadarr(buildLtrTemplate(L.DEFAULT_RADARR_EN, 'radarr', _lang), _lang);
 }
 
+// B3a: `status` renders INLINE in the year fragment (oracle: year value then ' - status',
+// with the status {{/if}} nested immediately before the year {{/if}}). It cannot be a
+// standalone emitted fragment without changing the byte-oracle, so it is a NON-EMITTING
+// toggle pinned after `year`: when disabled, composeTemplate emits the year param's derived
+// `statusOffVariant` (status sub-block sliced out) instead of the default body. The variant
+// is DERIVED from the year param bodies (QB-5/6: never retyped), so the default path stays
+// byte-identical to the frozen oracle.
+function stripStatusBody(body) {
+  const i = body.indexOf('{{#if status');
+  if (i < 0) return null;
+  const j = body.indexOf('{{/if}}', i);
+  if (j < 0) throw new Error('layout-fragments: year status sub-block unterminated');
+  return body.slice(0, i) + body.slice(j + '{{/if}}'.length);
+}
+function attachStatusToggle(reg) {
+  const p = reg.paramsByKey.year;
+  if (!p || !p.hasLabel) return;
+  const offAfter = stripStatusBody(p.afterLabel);
+  if (offAfter == null) return;
+  const offEmpty = stripStatusBody(p.emptyBody);
+  const twin = Object.assign({}, p, { afterLabel: offAfter, emptyBody: offEmpty });
+  delete twin.statusOffVariant;
+  p.statusOffVariant = twin;
+}
+for (const _l of Object.keys(REGISTRY.sonarr)) attachStatusToggle(REGISTRY.sonarr[_l]);
+
+function insertAfter(arr, anchor, key) {
+  const i = arr.indexOf(anchor);
+  if (i < 0) throw new Error('layout-fragments: order anchor missing: ' + anchor);
+  if (arr.includes(key)) return arr.slice();
+  const next = arr.slice();
+  next.splice(i + 1, 0, key);
+  return next;
+}
+
 const DEFAULT_ORDER = {
-  sonarr: REGISTRY.sonarr.ar.orderKeys.slice(),
+  sonarr: insertAfter(REGISTRY.sonarr.ar.orderKeys.slice(), 'year', 'status'),
   radarr: REGISTRY.radarr.ar.orderKeys.slice(),
 };
 
 function composeTemplate(kind, lang, order) {
   const reg = REGISTRY[kind] && REGISTRY[kind][lang];
   if (!reg) throw new Error('layout-fragments: no registry for ' + kind + '/' + lang);
+  // status is a non-emitting toggle nested in the year fragment (B3a): detect its disabled
+  // state up front so the year fragment can swap to its statusOffVariant.
+  const statusOff = order.some((it) => it && typeof it === 'object' && it.key === 'status' && it.enabled === false);
   let out = reg.prefix;
   for (const item of order) {
     const d = typeof item === 'string' ? { key: item } : (item || {});
     if (d.enabled === false) continue;
     const key = d.key;
     if (reg.fragsByKey[key] == null) continue;
-    out += renderFragment(reg.paramsByKey[key], key, d.icon, d.label);
+    let param = reg.paramsByKey[key];
+    if (param.statusOffVariant && statusOff) param = param.statusOffVariant;
+    out += renderFragment(param, key, d.icon, d.label);
   }
   return out + reg.suffix;
 }
@@ -227,7 +267,11 @@ function composeTemplate(kind, lang, order) {
 // formatters share ONE source. Custom slot strings pass through unchanged; an
 // invalid targetLang fails fast inside composeTemplate (schema prevents it).
 function resolveComposed(kind, resolved, targetLang, order) {
-  const ord = (order || DEFAULT_ORDER[kind]).filter((it) => !(it && typeof it === 'object' && it.enabled === false));
+  // composeTemplate owns enable-handling (skips enabled:false AND consults the status
+  // toggle). The former pre-filter stripped the disabled `status` marker before
+  // composeTemplate could see it; passing the order through unfiltered is behaviour-
+  // identical for every normal element (composeTemplate already skips them).
+  const ord = order || DEFAULT_ORDER[kind];
   if (resolved === 'DEFAULT_EN') {
     return { template: composeTemplate(kind, 'en', ord), lang: 'en' };
   }
