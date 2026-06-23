@@ -90,6 +90,15 @@ function localizeStatus(status, targetLang) {
   return cs.status[key] || (status.charAt(0).toUpperCase() + status.slice(1).toLowerCase());
 }
 
+// OPEN-1: native-first plot language. ar keeps its byte-identical script test;
+// non-ar (es/fr/de/pt) treats a plot sourced from the TMDb language=<target>
+// fetch as already-native (TMDb returns native-or-empty, never an English
+// back-fill) -> not re-translated, not watermarked. English sources still translate.
+function isPlotAlreadyInTarget(rawOv, targetLang, fromTmdb) {
+  if (targetLang === 'ar') return /[\u0600-\u06FF]/.test(rawOv);
+  return fromTmdb === true;
+}
+
 async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null, langOverride = null, plotEnabled = true) {
   const series = attachSeerr(rawSeries, 'tv');
   const targetLang = langOverride || config.translator?.targetLang || 'ar';
@@ -106,10 +115,12 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
   const tmdbSeries = rawTmdbSeries || null;
   const omdbPlot = (rawOmdbData && rawOmdbData.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
   const rawOv = includePlot ? (((aiOnly ? '' : (tmdbSeries && tmdbSeries.overview)) || omdbPlot || series.overview || '')).trim() : '';
+  const _tmdbOvTv = (aiOnly ? '' : ((tmdbSeries && tmdbSeries.overview) || '')).trim();
+  const fromTmdb = rawOv !== '' && rawOv === _tmdbOvTv;
   series._overviewEn = rawOv ? (rawOv.length > MAX_PLOT ? rawOv.substring(0, MAX_PLOT) + '...' : rawOv) : null;
   series._overviewAr = null;
   if (isDefaultArMode(activeMode) && rawOv) {
-    const isAlreadyArabic = /[\u0600-\u06FF]/.test(rawOv);
+    const isAlreadyArabic = isPlotAlreadyInTarget(rawOv, targetLang, fromTmdb);
     const plotKey = isAlreadyArabic ? null : `plot:tv:${plotSourceId(rawOv)}:${targetLang}`;
     let translatedOv = null;
     let plotCacheHit = false;
@@ -146,6 +157,8 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   const aiOnly = config.translator?.aiOnlyPlot === true;
   const omdbPlot = (rawOmdbData?.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
   const rawOv = includePlot ? ((aiOnly ? '' : tmdbMovie?.overview) || omdbPlot || movie.overview || '').trim() : '';
+  const _tmdbOvMovie = (aiOnly ? '' : (tmdbMovie?.overview || '')).trim();
+  const fromTmdb = rawOv !== '' && rawOv === _tmdbOvMovie;
   if (rawOv && !tmdbMovie) tmdbMovie = {};
   if ((!includePlot || aiOnly) && tmdbMovie) tmdbMovie.overview = '';  // plot OFF or AI-only: clear raw TMDb overview so renderRadarr fallback cannot leak it
   if (tmdbMovie) {
@@ -177,7 +190,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   // 3. Arabic Mode Execution
   if (isDefaultArMode(activeMode)) {
     if (rawOv) {
-      const isAlreadyArabic = /[\u0600-ۿ]/.test(rawOv);
+      const isAlreadyArabic = isPlotAlreadyInTarget(rawOv, targetLang, fromTmdb);
       const plotKey = isAlreadyArabic ? null : `plot:${plotSourceId(rawOv)}:${targetLang}`;
       let translatedOv = null;
       let plotCacheHit = false;
