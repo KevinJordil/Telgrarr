@@ -118,6 +118,28 @@ export default function FieldRenderer({ field, value, onChange }) {
     );
   }
 
+  if (field.type === 'toggle') {
+    return (
+      <div className="pt-3">
+        <button
+          type="button"
+          role="switch"
+          id={field.key}
+          aria-checked={!!value}
+          aria-labelledby={`${field.key}-label`}
+          onClick={() => onChange(!value)}
+          className="focus-ring w-full flex items-center justify-between gap-4 rounded-xl py-3 px-4 bg-telgrarr-elevated border border-telgrarr-border hover:border-telgrarr-purple/60 transition-colors motion-reduce:transition-none"
+        >
+          <span id={`${field.key}-label`} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</span>
+          <span aria-hidden="true" className={`shrink-0 relative inline-flex h-7 w-12 items-center rounded-full border transition-colors motion-reduce:transition-none ${value ? 'bg-telgrarr-purple border-telgrarr-purple' : 'bg-telgrarr-black border-telgrarr-border'}`}>
+            <span className={`inline-block h-5 w-5 rounded-full bg-telgrarr-text shadow-xs transition-transform motion-reduce:transition-none ${value ? 'translate-x-6' : 'translate-x-1'}`} />
+          </span>
+        </button>
+        {field.note && <p className="mt-1.5 text-xs text-telgrarr-muted/70 leading-relaxed">{field.note}</p>}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1.5 pt-3">
       <label htmlFor={field.key} id={`${field.key}-label`} className="text-xs text-telgrarr-muted font-medium uppercase tracking-wider">{field.label}</label>
@@ -161,22 +183,6 @@ export default function FieldRenderer({ field, value, onChange }) {
             </option>
           ))}
         </select>
-      )}
-
-      {field.type === 'toggle' && (
-        <button
-          type="button"
-          role="switch"
-          id={field.key}
-          aria-checked={!!value}
-          aria-labelledby={`${field.key}-label`}
-          onClick={() => onChange(!value)}
-          className="focus-ring inline-flex h-11 items-center rounded-md"
-        >
-          <span className={`relative inline-flex h-7 w-12 items-center rounded-full border transition-colors motion-reduce:transition-none ${value ? 'bg-telgrarr-purple border-telgrarr-purple' : 'bg-telgrarr-elevated border-telgrarr-border'}`}>
-            <span className={`inline-block h-5 w-5 rounded-full bg-telgrarr-text transition-transform motion-reduce:transition-none ${value ? 'translate-x-6' : 'translate-x-1'}`} />
-          </span>
-        </button>
       )}
 
       {field.type === 'display' && (
