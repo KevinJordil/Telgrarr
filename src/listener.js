@@ -5,6 +5,7 @@ const path          = require('path');
 const config        = require('./config');
 const log           = require('./logger');
 const requestLogger = require('./middlewares/request-logger');
+const { shouldServeAppShell } = require('./utils/spa-fallback');
 
 const app = express();
 
@@ -115,8 +116,13 @@ app.use(express.static(distPath, {
 }));
 
 // -- SPA Fallback (must be last) ----------------------------------------------
+// Serve the app shell ONLY for real navigations; a stale lazy-chunk / missing
+// static file gets a clean 404, never HTML (decision: utils/spa-fallback.js).
 app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
+  if (shouldServeAppShell(req)) {
+    return res.sendFile(path.join(distPath, 'index.html'));
+  }
+  res.status(404).set('Cache-Control', 'no-store').type('txt').send('Not found');
 });
 
 // -- Start --------------------------------------------------------------------
