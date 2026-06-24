@@ -116,7 +116,7 @@ async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = 
   const omdbPlot = (rawOmdbData && rawOmdbData.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
   const rawOv = includePlot ? (((aiOnly ? '' : (tmdbSeries && tmdbSeries.overview)) || omdbPlot || series.overview || '')).trim() : '';
   const _tmdbOvTv = (aiOnly ? '' : ((tmdbSeries && tmdbSeries.overview) || '')).trim();
-  const fromTmdb = rawOv !== '' && rawOv === _tmdbOvTv;
+  const fromTmdb = rawOv !== '' && rawOv === _tmdbOvTv && tmdbSeries?._overviewNative !== false;
   series._overviewEn = rawOv ? (rawOv.length > MAX_PLOT ? rawOv.substring(0, MAX_PLOT) + '...' : rawOv) : null;
   series._overviewAr = null;
   if (isDefaultArMode(activeMode) && rawOv) {
@@ -158,7 +158,7 @@ async function enrichRadarrMedia(rawMovie, rawTmdbMovie, rawOmdbData, activeMode
   const omdbPlot = (rawOmdbData?.Plot && rawOmdbData.Plot !== 'N/A') ? rawOmdbData.Plot : '';
   const rawOv = includePlot ? ((aiOnly ? '' : tmdbMovie?.overview) || omdbPlot || movie.overview || '').trim() : '';
   const _tmdbOvMovie = (aiOnly ? '' : (tmdbMovie?.overview || '')).trim();
-  const fromTmdb = rawOv !== '' && rawOv === _tmdbOvMovie;
+  const fromTmdb = rawOv !== '' && rawOv === _tmdbOvMovie && tmdbMovie?._overviewNative !== false;
   if (rawOv && !tmdbMovie) tmdbMovie = {};
   if ((!includePlot || aiOnly) && tmdbMovie) tmdbMovie.overview = '';  // plot OFF or AI-only: clear raw TMDb overview so renderRadarr fallback cannot leak it
   if (tmdbMovie) {

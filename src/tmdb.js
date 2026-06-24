@@ -40,4 +40,19 @@ async function getTmdbSeriesById(tmdbId, langOverride = null) {
   }
 }
 
-module.exports = { getTmdbMovieById, getTmdbSeriesById };
+async function getTmdbTranslations(tmdbId, type) {
+  if (!tmdbId) return null;
+  if (isTripped('tmdb')) return null;
+  try {
+    const res = await axios.get(`https://api.themoviedb.org/3/${type}/${tmdbId}/translations`, {
+      params: { api_key: config.tmdb.apiKey },
+    });
+    return (res.data && Array.isArray(res.data.translations)) ? res.data.translations : null;
+  } catch (error) {
+    if (isTmdbAuthError(error)) trip('tmdb');
+    log.error('TMDb', `Translations Fetch \u2192 Error \u2192 ${type} ID: [${tmdbId}] | ${error.message}`);
+    return null;
+  }
+}
+
+module.exports = { getTmdbMovieById, getTmdbSeriesById, getTmdbTranslations };

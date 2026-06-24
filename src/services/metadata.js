@@ -3,11 +3,29 @@ const config = require('../config');
 const log    = require('../logger');
 const { getSeriesById } = require('../sonarr');
 const { getMovieById } = require('../radarr');
-const { getTmdbMovieById, getTmdbSeriesById } = require('../tmdb');
+const { getTmdbMovieById, getTmdbSeriesById, getTmdbTranslations } = require('../tmdb');
 const { getOmdbById } = require('../omdb');
 const { get: getFromCache, set: setToCache } = require('../media-cache');
 
 // ── Sonarr (thin wrapper) ───────────────────────────────────────────────────
+// OPEN-1 fallback guard: by contract TMDb returns the native overview or an empty string
+// at language=<target>; during rare server-side regressions the language param is ignored
+// and an English overview is returned instead. Verify against /translations so such a
+// fallback is treated as English (translated + watermarked downstream) rather than mislabeled
+// native. true=native, false=fallback(translate), null=unknown(unavailable -> trust, fail-safe).
+async function isTmdbOverviewNative(tmdbId, type, lang, detailOverview) {
+  try {
+    const translations = await getTmdbTranslations(tmdbId, type);
+    if (!translations) return null;
+    const entry = translations.find(t => t && t.iso_639_1 === lang);
+    const nativeOv = (entry && entry.data && entry.data.overview) ? entry.data.overview.trim() : '';
+    if (!nativeOv) return false;
+    return nativeOv === detailOverview.trim();
+  } catch (e) {
+    return null;
+  }
+}
+
 async function fetchSonarrMetadata(seriesId, activeMode, plotEnabled = true) {
   const series = await getSeriesById(seriesId);
   const includePlot = plotEnabled;
@@ -19,7 +37,13 @@ async function fetchSonarrMetadata(seriesId, activeMode, plotEnabled = true) {
     tmdbSeries = await getFromCache(tmdbKey);
     if (!tmdbSeries) {
       tmdbSeries = await getTmdbSeriesById(series.tmdbId, locale);
-      if (tmdbSeries) await setToCache(tmdbKey, tmdbSeries);
+      if (tmdbSeries) {
+        if (tmdbSeries.overview && locale !== 'en-US' && locale !== 'ar') {
+          const native = await isTmdbOverviewNative(series.tmdbId, 'tv', locale, tmdbSeries.overview);
+          if (native === false) { tmdbSeries._overviewNative = false; log.warn('Metadata', `TMDb language fallback \u2192 translating plot \u2192 "${series.title}" (${locale})`); }
+        }
+        await setToCache(tmdbKey, tmdbSeries);
+      }
     }
   }
   let omdbData = null;
@@ -51,7 +75,13 @@ async function fetchRadarrMetadata(movieId, activeMode, plotEnabled = true) {
     if (!tmdbMovie) {
       try {
         tmdbMovie = await getTmdbMovieById(movie.tmdbId, locale);
-        if (tmdbMovie) await setToCache(tmdbKey, tmdbMovie);
+        if (tmdbMovie) {
+          if (tmdbMovie.overview && locale !== 'en-US' && locale !== 'ar') {
+            const native = await isTmdbOverviewNative(movie.tmdbId, 'movie', locale, tmdbMovie.overview);
+            if (native === false) { tmdbMovie._overviewNative = false; log.warn('Metadata', `TMDb language fallback \u2192 translating plot \u2192 "${movie.title}" (${locale})`); }
+          }
+          await setToCache(tmdbKey, tmdbMovie);
+        }
       } catch (err) {
         log.warn('Metadata', `TMDb Fetch → Error → Radarr ID: ${movieId} | TMDb ID: ${movie.tmdbId} | ${err.message}`);
         tmdbMovie = null;
