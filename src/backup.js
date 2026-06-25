@@ -6,6 +6,13 @@ const log    = require('./logger');
 const config = require('./config');
 const pkg              = require('../package.json');
 const BACKUP_META_NAME = 'backup-meta.json';
+// BK-FIX-1: crypto for unique restore-temp tokens; restore staging/rollback temp prefixes
+// (temp files live in each DESTINATION dir so the final swap is always a same-directory atomic
+// rename — never a cross-device EXDEV between BACKUP_DIR and DATA_DIR / PROJECT ROOT).
+const crypto = require('crypto');
+const RESTORE_STAGE_PREFIX = '.telgrarr-restore-';
+const RESTORE_BAK_PREFIX   = '.telgrarr-restorebak-';
+
 
 const ROOT_DIR   = path.join(__dirname, '..');
 const DATA_DIR   = config.DATA_DIR;
@@ -32,40 +39,72 @@ function createBackup() {
     const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
     const backupName = `telgrarr-backup-${pkg.version}-${timestamp}.zip`;
     const backupPath = path.join(BACKUP_DIR, backupName);
-    
+
     const zip = new AdmZip();
-    let addedCount = 0;
-    
+    const addedFiles = []; // BK-FIX-1 (F4 DRY): single source of "what landed in the archive".
+
     for (const item of BACKUP_MANIFEST) {
       const filePath = path.join(item.dir, item.name);
       if (fs.existsSync(filePath)) {
         zip.addLocalFile(filePath);
-        addedCount++;
+        addedFiles.push(item.name);
       }
     }
-    
-    if (addedCount === 0) {
+
+    if (addedFiles.length === 0) {
       throw new Error('No data files found to backup.');
     }
-    
+
     const meta = {
       app: 'telgrarr',
       schema: 1,
       version: pkg.version,
       createdAt: new Date().toISOString(),
-      files: BACKUP_MANIFEST
-        .filter(i => fs.existsSync(path.join(i.dir, i.name)))
-        .map(i => i.name)
+      files: addedFiles.slice() // F4: identical to what was added — cannot drift from the zip.
     };
     zip.addFile(BACKUP_META_NAME, Buffer.from(JSON.stringify(meta, null, 2)));
     zip.writeZip(backupPath);
-    log.audit('Backup', `Backup Create → Success → Filename: [${backupName}] | Items: ${addedCount}`);
+
+    // BK-FIX-1 (F8): integrity verify — re-open the written archive and confirm it is a
+    // complete, readable zip carrying the meta + at least one data entry. Catches a truncated
+    // write (ENOSPC / interrupted fs) that would otherwise be reported as a successful backup.
+    try {
+      const names = new AdmZip(backupPath).getEntries().map(e => e.entryName);
+      const ok = names.includes(BACKUP_META_NAME) && addedFiles.some(n => names.includes(n));
+      if (!ok) throw new Error('incomplete archive (entries missing on re-read)');
+    } catch (vErr) {
+      try { fs.unlinkSync(backupPath); } catch (_) {}
+      throw new Error(`verification failed: ${vErr.message}`);
+    }
+
+    log.audit('Backup', `Backup Create → Success → Filename: [${backupName}] | Items: ${addedFiles.length}`);
     pruneBackups();
     return { success: true, filename: backupName };
   } catch (error) {
     log.error('Backup', `Backup Create → Error → ${error.message}`);
     return { success: false, error: error.message };
   }
+}
+
+// BK-FIX-1 (F6): filename-first timestamp. Produced/imported names embed a 14-digit UTC stamp
+// (telgrarr-backup-<ver>-YYYYMMDDHHMMSS.zip, legacy telgrarr-backup-YYYYMMDDHHMMSS.zip, and
+// telgrarr-imported-YYYYMMDDHHMMSS.zip). stat.birthtime is unreliable on several Linux FS/kernel
+// combos (Telgrarr ships to unknown infra) and BOTH the background scheduler and the GUI sort key
+// off this value — so derive it from the authoritative filename, falling back to mtime then
+// birthtime only for non-conforming names.
+function backupTimestamp(filename, stats) {
+  const m = /(\d{14})\.zip$/.exec(filename);
+  if (m) {
+    const s = m[1];
+    const t = Date.UTC(
+      +s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8),
+      +s.slice(8, 10), +s.slice(10, 12), +s.slice(12, 14)
+    );
+    if (Number.isFinite(t)) return t;
+  }
+  if (stats && Number.isFinite(stats.mtimeMs)) return stats.mtimeMs;
+  if (stats && stats.birthtime) return new Date(stats.birthtime).getTime();
+  return 0;
 }
 
 function listBackups() {
@@ -75,7 +114,8 @@ function listBackups() {
       .filter(f => f.endsWith('.zip'))
       .map(f => {
         const stats = fs.statSync(path.join(BACKUP_DIR, f));
-        return { filename: f, size: stats.size, createdAt: stats.birthtime.toISOString() };
+        const ts = backupTimestamp(f, stats);
+        return { filename: f, size: stats.size, createdAt: new Date(ts).toISOString() };
       })
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   } catch (error) {
@@ -91,6 +131,23 @@ function safeBackupName(name) {
     && path.basename(name) === name;
 }
 
+// BK-FIX-1 (F5): sweep orphaned restore temp files (stage + bak) from every destination dir.
+// Scoped strictly to our own prefixes; idempotent; safe because restore is fully synchronous
+// and single-instance (RD-8), so no concurrent restore's temps can be in flight.
+function cleanupRestoreTemps() {
+  const dirs = [...new Set(BACKUP_MANIFEST.map(i => i.dir))];
+  for (const dir of dirs) {
+    try {
+      if (!fs.existsSync(dir)) continue;
+      for (const f of fs.readdirSync(dir)) {
+        if (f.startsWith(RESTORE_STAGE_PREFIX) || f.startsWith(RESTORE_BAK_PREFIX)) {
+          try { fs.rmSync(path.join(dir, f), { force: true }); } catch (_) {}
+        }
+      }
+    } catch (_) { /* dir unreadable — skip */ }
+  }
+}
+
 function restoreBackup(filename) {
   try {
     if (!safeBackupName(filename)) {
@@ -102,51 +159,84 @@ function restoreBackup(filename) {
     }
 
     const zip = new AdmZip(backupPath);
-    const tempDir = path.join(BACKUP_DIR, '.restore_tmp_' + Date.now());
-    fs.mkdirSync(tempDir, { recursive: true });
 
-    try {
-      // Phase 1 — extract ONLY manifest-named entries (never trusts a zip entry's
-      // path, so a crafted backup cannot path-traverse) and validate each parses
-      // as JSON BEFORE touching any live file (a corrupt/truncated backup must not
-      // brick the app by half-overwriting config.json / auth.json).
-      const metaEntry = zip.getEntry(BACKUP_META_NAME);
-      if (metaEntry) {
+    // Clear any orphaned temp files from a prior hard-killed restore before we begin.
+    cleanupRestoreTemps();
+
+    // Metadata: log + one-time version-skew warn; restores are backward-compatible (proceed).
+    const metaEntry = zip.getEntry(BACKUP_META_NAME);
+    if (metaEntry) {
+      try {
+        const meta = JSON.parse(metaEntry.getData().toString('utf8'));
+        log.info('Backup', `Backup Restore → Metadata → version: ${meta.version || '?'} | created: ${meta.createdAt || '?'}`);
+        if (meta.version && meta.version !== pkg.version) {
+          log.warn('Backup', `Backup Restore → Version Skew → backup ${meta.version} vs app ${pkg.version} (proceeding)`);
+        }
+      } catch (e) {
+        log.warn('Backup', 'Backup Restore → Metadata → unreadable (proceeding)');
+      }
+    }
+
+    // Phase 1 — read ONLY manifest-named entries (never trusts a zip entry's stored path, so a
+    // crafted backup cannot path-traverse), validate each JSON parses, and stage it as a temp
+    // file IN ITS OWN DESTINATION DIRECTORY. Per-destination staging keeps the Phase-2 swap a
+    // same-dir atomic rename — never a cross-device EXDEV between BACKUP_DIR and DATA_DIR / ROOT.
+    const token = `${process.pid}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    const staged = []; // { dir, name, stagePath }
+    for (const item of BACKUP_MANIFEST) {
+      const entry = zip.getEntry(item.name);
+      if (!entry) continue;
+      const data = entry.getData();
+      if (item.name.endsWith('.json')) {
         try {
-          const meta = JSON.parse(metaEntry.getData().toString('utf8'));
-          log.info('Backup', `Backup Restore → Metadata → version: ${meta.version || '?'} | created: ${meta.createdAt || '?'}`);
-          if (meta.version && meta.version !== pkg.version) {
-            log.warn('Backup', `Backup Restore → Version Skew → backup ${meta.version} vs app ${pkg.version} (proceeding)`);
-          }
+          JSON.parse(data.toString('utf8'));
         } catch (e) {
-          log.warn('Backup', 'Backup Restore → Metadata → unreadable (proceeding)');
+          throw new Error(`Corrupt entry in backup: ${item.name}`);
         }
       }
-      const staged = [];
-      for (const item of BACKUP_MANIFEST) {
-        const entry = zip.getEntry(item.name);
-        if (!entry) continue;
-        const data = entry.getData();
-        if (item.name.endsWith('.json')) {
-          try {
-            JSON.parse(data.toString('utf8'));
-          } catch (e) {
-            throw new Error(`Corrupt entry in backup: ${item.name}`);
-          }
-        }
-        fs.writeFileSync(path.join(tempDir, item.name), data);
-        staged.push(item);
-      }
-      if (staged.length === 0) {
-        throw new Error('Backup contains no recognized data files.');
-      }
+      const stagePath = path.join(item.dir, `${RESTORE_STAGE_PREFIX}${token}-${item.name}`);
+      fs.writeFileSync(stagePath, data);
+      staged.push({ dir: item.dir, name: item.name, stagePath });
+    }
+    if (staged.length === 0) {
+      throw new Error('Backup contains no recognized data files.');
+    }
 
-      // Phase 2 — swap staged files into place, only after ALL validated.
-      for (const item of staged) {
-        fs.renameSync(path.join(tempDir, item.name), path.join(item.dir, item.name));
+    // Phase 2 — transactional, all-or-nothing swap. For each staged file: move the current live
+    // file aside (.bak, same dir), then atomically rename the staged file into place. On ANY
+    // mid-swap failure, roll EVERY touched file back to its pre-restore state — a failed restore
+    // can never leave a half-overwritten data set (FU-9, enforced across DATA_DIR + PROJECT ROOT).
+    const applied = []; // { livePath, bakPath|null, swapped }
+    try {
+      for (const s of staged) {
+        const livePath = path.join(s.dir, s.name);
+        let bakPath = null;
+        if (fs.existsSync(livePath)) {
+          bakPath = path.join(s.dir, `${RESTORE_BAK_PREFIX}${token}-${s.name}`);
+          fs.renameSync(livePath, bakPath);
+        }
+        applied.push({ livePath, bakPath, swapped: false });
+        fs.renameSync(s.stagePath, livePath);
+        applied[applied.length - 1].swapped = true;
       }
+    } catch (swapErr) {
+      for (let i = applied.length - 1; i >= 0; i--) {
+        const a = applied[i];
+        try {
+          if (a.swapped) fs.rmSync(a.livePath, { force: true });
+          if (a.bakPath) fs.renameSync(a.bakPath, a.livePath);
+        } catch (_) { /* best-effort; the .bak is left in place if even rollback fails */ }
+      }
+      throw swapErr;
     } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      for (const s of staged) {
+        try { if (fs.existsSync(s.stagePath)) fs.rmSync(s.stagePath, { force: true }); } catch (_) {}
+      }
+    }
+
+    // Success — drop the pre-restore .bak files.
+    for (const a of applied) {
+      if (a.bakPath) { try { fs.rmSync(a.bakPath, { force: true }); } catch (_) {} }
     }
 
     log.audit('Backup', `Backup Restore → Success → Filename: [${filename}]`);

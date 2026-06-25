@@ -98,3 +98,65 @@ describe('backup metadata (BK-1)', () => {
     expect(Array.isArray(meta.files)).toBe(true);
   });
 });
+
+describe('backup.restoreBackup — transactional rollback (F1/FU-9)', () => {
+  it('rolls every file back to its pre-restore state when a mid-swap rename fails', () => {
+    fs.writeFileSync(path.join(DATA, 'auth.json'), '{"orig":"auth"}');
+    fs.writeFileSync(path.join(DATA, 'config.json'), '{"orig":"config"}');
+    makeZip('tx.zip', { 'auth.json': '{"new":"auth"}', 'config.json': '{"new":"config"}' });
+    const realRename = fs.renameSync;
+    let thrown = false;
+    fs.renameSync = (from, to) => {
+      if (!thrown && path.basename(to) === 'config.json') { thrown = true; const e = new Error('EXDEV simulated'); e.code = 'EXDEV'; throw e; }
+      return realRename(from, to);
+    };
+    let r;
+    try { r = backup.restoreBackup('tx.zip'); } finally { fs.renameSync = realRename; }
+    expect(r.success).toBe(false);
+    expect(JSON.parse(fs.readFileSync(path.join(DATA, 'auth.json'), 'utf8'))).toEqual({ orig: 'auth' });
+    expect(JSON.parse(fs.readFileSync(path.join(DATA, 'config.json'), 'utf8'))).toEqual({ orig: 'config' });
+    expect(fs.readdirSync(DATA).filter(f => f.startsWith('.telgrarr-restore'))).toEqual([]);
+  });
+});
+
+describe('backup.createBackup — manifest exclusions + integrity (G2/G3/F8)', () => {
+  it('never includes recovery.json or media-cache.json', () => {
+    fs.writeFileSync(path.join(DATA, 'config.json'), '{"x":1}');
+    fs.writeFileSync(path.join(DATA, 'recovery.json'), '{"token":"secret"}');
+    fs.writeFileSync(path.join(DATA, 'media-cache.json'), '{"c":1}');
+    const r = backup.createBackup();
+    expect(r.success).toBe(true);
+    const names = new AdmZip(path.join(BK, r.filename)).getEntries().map(e => e.entryName);
+    expect(names).not.toContain('recovery.json');
+    expect(names).not.toContain('media-cache.json');
+    expect(names).toContain('config.json');
+    expect(names).toContain('backup-meta.json');
+  });
+});
+
+describe('backup.restoreBackup — version skew proceeds (G4)', () => {
+  it('restores despite a backup-meta version mismatch (warn, not block)', () => {
+    makeZip('skew.zip', {
+      'backup-meta.json': JSON.stringify({ app: 'telgrarr', version: '0.0.0-ancient', files: ['config.json'] }),
+      'config.json': '{"v":"restored"}'
+    });
+    const r = backup.restoreBackup('skew.zip');
+    expect(r.success).toBe(true);
+    expect(JSON.parse(fs.readFileSync(path.join(DATA, 'config.json'), 'utf8'))).toEqual({ v: 'restored' });
+  });
+});
+
+describe('backup.listBackups — filename-first ordering (F6)', () => {
+  it('sorts by the embedded filename timestamp, not by unreliable birthtime', () => {
+    makeZip('telgrarr-backup-1.0.0-20260101000000.zip', { 'config.json': '{}' });
+    makeZip('telgrarr-backup-1.0.0-20260301000000.zip', { 'config.json': '{}' });
+    makeZip('telgrarr-backup-1.0.0-20260201000000.zip', { 'config.json': '{}' });
+    const list = backup.listBackups();
+    expect(list.map(b => b.filename)).toEqual([
+      'telgrarr-backup-1.0.0-20260301000000.zip',
+      'telgrarr-backup-1.0.0-20260201000000.zip',
+      'telgrarr-backup-1.0.0-20260101000000.zip'
+    ]);
+    expect(list[0].createdAt).toBe('2026-03-01T00:00:00.000Z');
+  });
+});
