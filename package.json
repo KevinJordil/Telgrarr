@@ -1,6 +1,6 @@
 {
   "name": "telgrarr",
-  "version": "0.1.0",
+  "version": "1.0.0-beta.1",
   "description": "Sonarr/Radarr webhook queue with Arabic Telegram notifications and Emby refresh",
   "keywords": [
     "sonarr",
