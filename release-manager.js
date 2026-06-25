@@ -29,7 +29,7 @@ function fail(msg) {
 }
 
 function usage() {
-  return `Usage: node release-manager.js <${VALID_TYPES.join('|')}>`;
+  return `Usage: node release-manager.js <${VALID_TYPES.join('|')}>\n       node release-manager.js set <X.Y.Z[-beta.N]>`;
 }
 
 // ── CLI parse ─────────────────────────────────────────────────────────────
@@ -41,7 +41,15 @@ if (releaseType === '-h' || releaseType === '--help') {
 if (!releaseType) {
   fail(`Missing release type.\n${usage()}`);
 }
-if (!VALID_TYPES.includes(releaseType)) {
+const EXPLICIT_SET   = releaseType === 'set';
+const explicitTarget = EXPLICIT_SET ? process.argv[3] : null;
+if (EXPLICIT_SET && !explicitTarget) {
+  fail(`Missing target version for "set".\n${usage()}`);
+}
+if (EXPLICIT_SET && !SEMVER_RE.test(explicitTarget)) {
+  fail(`Invalid target version "${explicitTarget}" (expected X.Y.Z or X.Y.Z-beta.N)\n${usage()}`);
+}
+if (!EXPLICIT_SET && !VALID_TYPES.includes(releaseType)) {
   fail(`Invalid release type: ${releaseType}\n${usage()}`);
 }
 
@@ -81,8 +89,17 @@ switch (releaseType) {
     break;
 }
 
-let newVersion = `${major}.${minor}.${patch}`;
-if (betaNum > 0) newVersion += `-beta.${betaNum}`;
+let newVersion;
+if (EXPLICIT_SET) {
+  // M-set: explicit target (SEMVER_RE-validated at parse). The switch above is a
+  // no-op for 'set'; re-derive betaNum from the target so tier resolves correctly.
+  newVersion = explicitTarget;
+  const em = SEMVER_RE.exec(explicitTarget);
+  betaNum = em[4] !== undefined ? Number(em[4]) : 0;
+} else {
+  newVersion = `${major}.${minor}.${patch}`;
+  if (betaNum > 0) newVersion += `-beta.${betaNum}`;
+}
 
 const timestamp = new Date().toISOString();
 const tier      = betaNum > 0 ? 'beta' : 'production';
