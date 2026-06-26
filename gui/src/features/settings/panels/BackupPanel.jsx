@@ -135,12 +135,13 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
         try {
           const res = await api.post(`/backups/restore/${filename}`);
           if (res.data.success) {
-            if (res.data.needsRestart) {
+            if (res.data.restartCapable) {
               setBackupStatus({ success: true, msg: 'Restore complete. Rebooting backend...' });
               startRestartPoll();
             } else {
-              setBackupStatus({ success: true, msg: 'Restore complete.' });
+              setBackupStatus({ success: true, msg: 'Restore complete. Restart to finish applying restored settings.' });
               fetchSettings();
+              startRestartPoll();
             }
           } else {
             setBackupStatus({ success: false, msg: res.data.error || 'Restore failed' });
