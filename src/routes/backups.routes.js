@@ -4,7 +4,7 @@ const router = express.Router();
 const { requireAuth } = require('../middlewares/auth');
 const backupEngine = require('../backup');
 const log = require('../logger');
-const { requestRestart } = require('../services/restart');
+const { requestRestart, isRestartCapable } = require('../services/restart');
 const path = require('path');
 const fs = require('fs');
 const config = require('../config');
@@ -54,9 +54,20 @@ router.post('/backups/restore/:filename', requireAuth, (req, res) => {
     const result = backupEngine.restoreBackup(filename);
     
     if (result.success) {
-      log.audit('Backup', `Backup Restore → Complete → Triggering Restart`);
-      res.on('finish', () => requestRestart('backup-restore'));
-      res.json({ success: true, needsRestart: true });
+      const capable = isRestartCapable();
+      if (capable) {
+        log.audit('Backup', `Backup Restore → Complete → Triggering Restart`);
+        res.on('finish', () => requestRestart('backup-restore'));
+      } else {
+        // No respawn is coming on this deployment: hot-reload live config from the
+        // just-restored config.json NOW, so a later config.save() merges onto restored
+        // truth (never stale pre-restore memory) and GET /settings serves restored
+        // values. Restart-tier values still need a manual restart, so needsRestart
+        // stays true. (F2 — closes the restore-clobber window.)
+        config.reload();
+        log.audit('Backup', `Backup Restore → Complete → Hot-reloaded (manual restart required)`);
+      }
+      res.json({ success: true, needsRestart: true, restartCapable: capable });
     } else {
       res.status(400).json(result);
     }
