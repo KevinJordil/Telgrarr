@@ -34,7 +34,15 @@ router.post('/backups', requireAuth, (req, res) => {
   }
 });
 
-router.post('/backups/upload', requireAuth, express.raw({ type: 'application/zip', limit: UPLOAD_LIMIT }), (req, res) => {
+router.post('/backups/upload', requireAuth, express.raw({ type: 'application/zip', limit: UPLOAD_LIMIT }), (err, req, res, next) => {
+  // R2: body-parser size/parse errors must map to a clean status (413 when over
+  // the size limit) instead of bubbling to a generic 500. A 4-arg handler is an
+  // Express error handler: it is SKIPPED on a successful parse (the normal handler
+  // below runs) and only fires when express.raw rejects the body.
+  const tooLarge = err && (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413);
+  log.error('Backup', 'Backup Import → Rejected → ' + (tooLarge ? 'over size limit' : 'bad upload'));
+  return res.status(tooLarge ? 413 : 400).json({ success: false, error: tooLarge ? 'Backup file is too large (max 25 MB).' : ((err && err.message) || 'Invalid upload.') });
+}, (req, res) => {
   try {
     const result = backupEngine.importBackup(req.body);
     if (result.success) {
