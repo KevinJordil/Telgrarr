@@ -13,7 +13,7 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [backups, setBackups] = useState([]);
   const [backupsLoading, setBackupsLoading] = useState(false);
-  const [backupConfig, setBackupConfig] = useState({ enabled: true, intervalDays: 7, retainCount: 5 });
+  const [backupConfig, setBackupConfig] = useState(null);
   const [backupStatus, setBackupStatus] = useState(null);
   const reduceMotion = useReducedMotion();
 
@@ -159,8 +159,10 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
       confirmLabel: 'Delete',
       danger: true,
       onConfirm: async () => {
+        setBackupStatus({ loading: true, msg: 'Deleting backup…' });
         try {
           await api.delete(`/backups/${filename}`);
+          setBackupStatus({ success: true, msg: 'Backup deleted.' });
           fetchBackupsList();
         } catch (err) {
           setBackupStatus({ success: false, msg: err.response?.data?.error || err.message });
@@ -196,6 +198,7 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
       </button>
       {isExpanded && (
         <div id="backup-panel-body" className="px-4 pb-5 space-y-4 border-t border-telgrarr-border/50 pt-4">
+          {backupConfig && (
           <div className="p-4 bg-telgrarr-elevated rounded-xl border border-telgrarr-border space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -236,6 +239,7 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
               Save Backup Settings
             </button>
           </div>
+          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-telgrarr-text">Manual Backup</h3>
@@ -255,13 +259,13 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
               <input ref={fileInputRef} type="file" accept=".zip" onChange={handleFileSelected} className="hidden" aria-hidden="true" />
               {backupStatus && (
               <p role="status" aria-live="polite" className={`text-xs flex items-center gap-1.5 ${statusColor}`}>
-                {backupStatus.loading ? <Loader2 className="w-3 h-3 animate-spin" /> : backupStatus.success ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                {backupStatus.loading ? <Loader2 className="w-3 h-3 animate-spin motion-reduce:animate-none" /> : backupStatus.success ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                 {backupStatus.msg}
               </p>
             )}
             {backupsLoading ? (
               <div className="flex justify-center p-4">
-                <Loader2 className="w-5 h-5 text-telgrarr-purple animate-spin" />
+                <Loader2 className="w-5 h-5 text-telgrarr-purple animate-spin motion-reduce:animate-none" />
               </div>
             ) : backups.length === 0 ? (
               <div className="text-center p-4 bg-telgrarr-elevated rounded-xl border border-telgrarr-border text-telgrarr-muted text-xs">
