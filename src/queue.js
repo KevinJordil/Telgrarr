@@ -87,4 +87,4 @@ async function drainQueue() {
   }
 }
 
-module.exports = { enqueue, drainQueue, getQueue };
+module.exports = { enqueue, drainQueue, getQueue, identityKey };
