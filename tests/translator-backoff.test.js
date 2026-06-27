@@ -176,12 +176,19 @@ describe('translator retry-on-429/transient (STEP 1.3 / WR-10 / C-GUARD)', () =>
 
   it('Retry-After header in seconds is honored', async () => {
     vi.useFakeTimers();
+    // Pin random=0 to zero out retry.js additive jitter; wait becomes exactly
+    // retry_after*1000 = 5000ms (literal-honor contract per WR-15/C-GUARD).
+    vi.spyOn(Math, 'random').mockReturnValue(0);
     config.translator = { apiKey: 'k' };
     const post = vi.spyOn(axios, 'post')
       .mockRejectedValueOnce(apiError(429, { headers: { 'retry-after': '5' } }))
       .mockResolvedValue(LLM_OK);
     const p = translateText('Hello');
-    await vi.advanceTimersByTimeAsync(6000);
+    // Below the literal: retry must NOT have fired (proves "never shorter").
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(post).toHaveBeenCalledTimes(1);
+    // At the literal: retry fires (proves seconds->ms: header '5' == 5000ms).
+    await vi.advanceTimersByTimeAsync(1);
     expect(await p).toBe('ai-out');
     expect(post).toHaveBeenCalledTimes(2);
   });
