@@ -10,7 +10,8 @@ const { startListener }                 = require('./listener');
 const blacklist                         = require('./blacklist');
 const { checkAndRotateLogs }            = require('./log-rotator');
 const { getQueue }                      = require('./queue');
-const { runSweep, recoverCrashedSweep } = require('./sweeper');
+const { runSweep, recoverCrashedSweep, scheduleSweep } = require('./sweeper');
+const { reconcile, INTERVAL_MS }        = require('./services/reconciler');
 const { flushSessions }                 = require('./middlewares/auth');
 const { loadEvents, flushEvents }       = require('./events');
 const templates = require('./templates');
@@ -47,6 +48,17 @@ let releaseLock = null;
 setTimeout(async () => {
   try {
     await recoverCrashedSweep();
+
+    // WR-6: boot reconcile -- catch imports missed during downtime (C-FAILSOFT)
+    try {
+      const result = await reconcile();
+      if (result.enqueued > 0) {
+        log.info('Reconcile', `Boot Reconcile → Enqueued ${result.enqueued} catch-up item(s)`);
+      }
+    } catch (err) {
+      log.error('Reconcile', `Boot Reconcile → Error → ${err.message}`);
+    }
+
     const q = await getQueue();
     if (q && q.length > 0) {
       log.warn('Sweeper', 'Startup Recovery → Scheduled → Queue non-empty on boot');
@@ -81,6 +93,17 @@ setInterval(checkAndRunBackup, 12 * 60 * 60 * 1000);
 // ── Log Rotation Scheduler ───────────────────────────────────────────────────
 setTimeout(checkAndRotateLogs, 2 * 60 * 1000);
 setInterval(checkAndRotateLogs, 60 * 60 * 1000);
+
+// ── Reconciliation Scheduler (WR-6) ─────────────────────────────────────────
+async function reconcileTick() {
+  try {
+    const result = await reconcile();
+    if (result.enqueued > 0) scheduleSweep();
+  } catch (err) {
+    log.error('Reconcile', `Reconcile Tick → Error → ${err.message}`);
+  }
+}
+setInterval(reconcileTick, INTERVAL_MS);
 
 // ── Centralized Graceful Shutdown Orchestrator ───────────────────────────────
 let isShuttingDown = false;
