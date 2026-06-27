@@ -92,7 +92,7 @@ export default function WebhookCard({ source }) {
       </div>
 
       <p className="text-xs text-telgrarr-muted/70 leading-relaxed">
-        In {app}, open Settings, Connect and add a Webhook (method: POST) with this URL. The secret is managed in Server settings.
+        In {app}, open Settings → Connect → + → Webhook, paste this URL (method: POST), and enable the On Import and On Upgrade triggers only — leave everything else off. The webhook secret is managed in Server settings.
       </p>
       {derived && (
         <p className="text-xs text-telgrarr-muted/70 leading-relaxed">
