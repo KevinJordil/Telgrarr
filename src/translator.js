@@ -6,6 +6,52 @@ const events  = require('./events');
 const EVENT_TYPES = require('../shared/events.json');
 const { buildPrompt } = require('./translator-prompts');
 const { LANGUAGE_NAME } = require('./languages');
+const { retryWithBackoff } = require('./utils/retry');
+
+// Shared 429/transient retry classifier for all translator tiers. Per-tier
+// timeouts (30s/10s/8s) are preserved as today. Retry sits AROUND the provider
+// call; on exhaustion the existing catch fires and escalates to the next tier
+// — parity with pre-change for all non-429/non-transient inputs.
+// Roadmap STEP 1.3 / WR-10 / WR-12 (provider-breaker untouched) / C-GUARD.
+const TRANSLATOR_RETRYABLE_CODES = new Set([
+  'ECONNRESET', 'ETIMEDOUT', 'ECONNABORTED', 'ENETUNREACH', 'EAI_AGAIN',
+]);
+
+function isTranslatorRetryable(err) {
+  const status = err && err.response && err.response.status;
+  if (status === 429) return true;
+  if (typeof status === 'number' && status >= 500 && status < 600) return true;
+  if (typeof status === 'number' && status >= 400 && status < 500) return false;
+  if (err && err.code && TRANSLATOR_RETRYABLE_CODES.has(err.code)) return true;
+  return false;
+}
+
+// Reads the standard HTTP Retry-After header (RFC 7231): integer seconds or
+// HTTP-date. Returns ms or undefined; the retry util falls back to exponential
+// backoff when undefined.
+function getTranslatorRetryAfterMs(err) {
+  const h = err && err.response && err.response.headers;
+  if (!h) return undefined;
+  const raw = h['retry-after'] || h['Retry-After'];
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+  const dateMs = Date.parse(raw);
+  if (Number.isFinite(dateMs)) {
+    const delta = dateMs - Date.now();
+    return delta > 0 ? delta : undefined;
+  }
+  return undefined;
+}
+
+const TRANSLATOR_RETRY_OPTS = {
+  shouldRetry: isTranslatorRetryable,
+  getRetryAfterMs: getTranslatorRetryAfterMs,
+  maxAttempts: 4,
+  baseDelayMs: 500,
+  maxDelayMs: 10000,
+  jitter: true,
+};
 
 const ARABIC_RE = /[؀-ۿ]/;
 
@@ -30,7 +76,7 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
 
   if (config.translator?.aiEnabled !== false && t1Key) {
     try {
-      const res = await axios.post(
+      const res = await retryWithBackoff(async () => axios.post(
         t1Endpoint,
         {
           model: t1Model,
@@ -41,7 +87,7 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
           temperature: 0.3
         },
         { headers: { 'Authorization': `Bearer ${t1Key}`, 'Content-Type': 'application/json' }, timeout: 30000 }
-      );
+      ), TRANSLATOR_RETRY_OPTS);
       const translated = res.data?.choices?.[0]?.message?.content?.trim();
       if (translated) {
         log.info('Translator', `Translation → Complete → Tier: [1 (AI)] | Length: [${text.length}]`);
@@ -60,11 +106,11 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
   const t2Key = config.translator?.deeplApiKey;
   if (config.translator?.deeplEnabled !== false && t2Key) {
     try {
-      const res = await axios.post(
+      const res = await retryWithBackoff(async () => axios.post(
         'https://api-free.deepl.com/v2/translate',
         new URLSearchParams({ auth_key: t2Key, text, source_lang: 'EN', target_lang: lang.deepl }),
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 }
-      );
+      ), TRANSLATOR_RETRY_OPTS);
       const translated = res.data?.translations?.[0]?.text;
       if (translated) {
         log.info('Translator', `Translation → Complete → Tier: [2 (DeepL)] | Length: [${text.length}]`);
@@ -90,17 +136,17 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
       let translated;
       if (gKey) {
         const gEndpoint = config.translator?.googleEndpoint || config.DEFAULTS.translator.googleEndpoint;
-        const gRes = await axios.post(
+        const gRes = await retryWithBackoff(async () => axios.post(
           `${gEndpoint}?key=${encodeURIComponent(gKey)}`,
           { q: text, source: 'en', target: lang.google, format: 'text' },
           { timeout: 8000 }
-        );
+        ), TRANSLATOR_RETRY_OPTS);
         translated = gRes.data?.data?.translations?.[0]?.translatedText;
       } else {
-        const res = await axios.get(
+        const res = await retryWithBackoff(async () => axios.get(
           `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${lang.google}&dt=t&q=${encodeURIComponent(text)}`,
           { timeout: 8000 }
-        );
+        ), TRANSLATOR_RETRY_OPTS);
         translated = res.data?.[0]?.[0]?.[0];
       }
       if (translated) {
