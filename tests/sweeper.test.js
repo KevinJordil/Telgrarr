@@ -28,6 +28,20 @@ stub('../src/events.js', { emit: (type, ...rest) => { emitCalls.push({ type, res
 stub('../src/queue.js', {
   drainQueue: async () => [{ source: 'radarr', movieId: '123', traceId: 't1' }],
   enqueue: async () => {},
+  // Mirrors src/queue.js identityKey (independently covered by queue-identity.test.js);
+  // a hermetic double so the sweeper ledger write-back can resolve identity keys.
+  identityKey: (item) => {
+    if (!item || typeof item !== 'object') return null;
+    if (item.source === 'sonarr' && item.seriesId != null) {
+      if (item.episodeId != null) return `sonarr:${item.seriesId}:eid:${item.episodeId}`;
+      if (item.seasonNumber != null && item.episodeNumber != null) {
+        return `sonarr:${item.seriesId}:s${item.seasonNumber}e${item.episodeNumber}`;
+      }
+      return null;
+    }
+    if (item.source === 'radarr' && item.movieId != null) return `radarr:${item.movieId}`;
+    return null;
+  },
 });
 stub('../src/formatter.js', { buildCaption: async () => 'caption', getPosterUrl: () => 'http://poster/show' });
 stub('../src/radarr-formatter.js', {
@@ -47,8 +61,14 @@ stub('../src/services/metadata.js', {
     omdbData: {},
   }),
 });
+let dispatchOverride = null;
 stub('../src/services/notifications.js', {
-  dispatchBatch: async (messages, historyItems) => ({ successful: historyItems, failed: [] }),
+  dispatchBatch: async (messages, historyItems) =>
+    dispatchOverride ? dispatchOverride(messages, historyItems) : ({ successful: historyItems, failed: [] }),
+});
+let recordSentCalls = [];
+stub('../src/reconcile-state.js', {
+  recordSent: (source, keys) => { recordSentCalls.push({ source, keys }); },
 });
 stub('../src/templates.js', { getActiveMode: () => 'standard', isElementEnabled: () => true });
 stub('write-file-atomic', (file, data, cb) => { if (cb) cb(null); });
@@ -63,6 +83,8 @@ afterAll(() => { fs.existsSync = origExists; });
 let sweeper;
 beforeEach(() => {
   emitCalls = [];
+  recordSentCalls = [];
+  dispatchOverride = null;
   delete require.cache[require.resolve('../src/sweeper.js')];
   sweeper = require('../src/sweeper.js');
 });
@@ -80,5 +102,23 @@ describe('Sweeper Emby emit (O5 — phantom SWEEP_EMBY suppression)', () => {
     await sweeper.runSweep();
     const embyEmits = emitCalls.filter((e) => e.type === EVENT_TYPES.SWEEP_EMBY);
     expect(embyEmits).toHaveLength(1);
+  });
+});
+
+describe('Sweeper reconcile ledger write-back (STEP 2.4 / WR-3 / C-LEDGER)', () => {
+  it('records sent identityKeys on dispatch success (radarr)', async () => {
+    embyReturn = false;
+    await sweeper.runSweep();
+    expect(recordSentCalls).toEqual([{ source: 'radarr', keys: ['radarr:123'] }]);
+  });
+
+  it('does NOT record when dispatch fails (lossless: item stays eligible)', async () => {
+    embyReturn = false;
+    dispatchOverride = (messages, historyItems) => ({
+      successful: [],
+      failed: historyItems.map((item) => ({ item, error: '429' })),
+    });
+    await sweeper.runSweep();
+    expect(recordSentCalls).toHaveLength(0);
   });
 });

@@ -2,7 +2,8 @@
 const fs          = require('fs');
 const path        = require('path');
 const writeAtomic = require('write-file-atomic');
-const { drainQueue, enqueue } = require('./queue');
+const { drainQueue, enqueue, identityKey } = require('./queue');
+const { recordSent } = require('./reconcile-state');
 const { buildCaption, getPosterUrl: getShowPosterUrl } = require('./formatter');
 const { buildMovieCaption, getPosterUrl: getMoviePosterUrl } = require('./radarr-formatter');
 const { refreshLibrary } = require('./emby');
@@ -130,6 +131,7 @@ async function runSweep() {
     }
     const messages     = [];
     const historyItems = [];
+    const messageMeta  = [];
     for (const seriesId of Object.keys(sonarrGroups)) {
       const episodes = sonarrGroups[seriesId];
       const activeMode = templates.getActiveMode();
@@ -157,6 +159,7 @@ async function runSweep() {
         timestamp: new Date().toISOString(),
         traces:    tracesOf(episodes),
       });
+      messageMeta.push({ source: 'sonarr', identityKeys: episodes.map(identityKey).filter(Boolean) });
       log.info('Sweeper', `Message Prep (Sonarr) → Success → "${series.title}" (${episodes.length} episode(s)) | Traces: [${tracesOf(episodes)}]`);
       events.emit(
         EVENT_TYPES.SWEEP_ITEM_READY,
@@ -210,6 +213,7 @@ async function runSweep() {
         language: config.translator?.targetLang || 'ar',
         traces:   tracesOf(radarrGroups[movieId]),
       });
+      messageMeta.push({ source: 'radarr', identityKeys: radarrGroups[movieId].map(identityKey).filter(Boolean) });
       log.info('Sweeper', `Message Prep (Radarr) → Success → "${movie.title}" | Pass: ${pass} | Length: ${length} | Traces: [${tracesOf(radarrGroups[movieId])}]`);
       events.emit(
         EVENT_TYPES.SWEEP_ITEM_READY,
@@ -223,6 +227,10 @@ async function runSweep() {
       log.warn('Sweeper', 'Sweep Execution → Skipped → No valid messages after processing');
       events.emit(EVENT_TYPES.SWEEP_ERROR, 'warn', 'Sweeper', 'No messages to send after processing.', {});
       return;
+    }
+    const metaByItem = new Map();
+    for (let mi = 0; mi < historyItems.length; mi++) {
+      metaByItem.set(historyItems[mi], messageMeta[mi]);
     }
     const sweepStart = Date.now();
     const { successful, failed } = await dispatchBatch(messages, historyItems);
@@ -248,6 +256,20 @@ async function runSweep() {
         `✅     ${sentCount} message(s) sent to Telegram`,
         { count: sentCount, errors: errorCount, durationMs: ms }
       );
+      try {
+        const sonarrKeys = [];
+        const radarrKeys = [];
+        for (const sentItem of successful) {
+          const meta = metaByItem.get(sentItem);
+          if (!meta) continue;
+          if (meta.source === 'sonarr') { for (const k of meta.identityKeys) sonarrKeys.push(k); }
+          else if (meta.source === 'radarr') { for (const k of meta.identityKeys) radarrKeys.push(k); }
+        }
+        if (sonarrKeys.length > 0) recordSent('sonarr', sonarrKeys);
+        if (radarrKeys.length > 0) recordSent('radarr', radarrKeys);
+      } catch (err) {
+        log.error('Sweeper', 'Ledger Write \u2192 Error \u2192 ' + err.message);
+      }
       await addHistory(successful);
     }
     if (sentCount === 0 && errorCount > 0) {
