@@ -61,6 +61,10 @@ const DEFAULTS = {
       error: { maxSizeMb: 10, maxAgeDays: 30  },
       audit: { maxSizeMb: 5,  maxAgeDays: 365 }
     }
+  },
+  history: {
+    maxItems:    500,
+    maxAgeDays:  0
   }
 };
 
