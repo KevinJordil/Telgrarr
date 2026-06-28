@@ -79,6 +79,7 @@ describe('reconciler.reconcile (STEP 2.3 / WR-3..WR-15 / C-IDENTITY / F-6)', () 
     expect(result.enqueued).toBe(0);
     expect(enqueueMock).not.toHaveBeenCalled();
     expect(setSinceMock).toHaveBeenCalledWith('sonarr', newestIso);
+    expect(reconcileState.recordSent).toHaveBeenCalledWith('sonarr', ['sonarr:5:eid:50']);
     expect(setSinceMock).toHaveBeenCalledWith('radarr', new Date(NOW).toISOString());
   });
 
@@ -88,6 +89,7 @@ describe('reconciler.reconcile (STEP 2.3 / WR-3..WR-15 / C-IDENTITY / F-6)', () 
     expect(result.enqueued).toBe(0);
     expect(setSinceMock).toHaveBeenCalledWith('sonarr', new Date(NOW).toISOString());
     expect(setSinceMock).toHaveBeenCalledWith('radarr', new Date(NOW).toISOString());
+    expect(reconcileState.recordSent).not.toHaveBeenCalled();
   });
 
   // ── steady-state fetch + enqueue (C-IDENTITY) ──

@@ -127,14 +127,6 @@ async function fetchImportHistorySince(source, cfg, fetchSinceMs) {
   return out;
 }
 
-// First-run seed (WR-4): newest known import date or null if none in page 1.
-async function fetchNewestImportDate(source, cfg) {
-  const records = await fetchHistoryPage(source, cfg, 1);
-  for (const r of records) {
-    if (IMPORT_EVENT_TYPES[source].has(r.eventType)) return r.date || null;
-  }
-  return null;
-}
 
 async function reconcileSource(source, nowMs) {
   const cfg = config[source];
@@ -148,10 +140,19 @@ async function reconcileSource(source, nowMs) {
 
   // First-run seed: set since to newest import time, enqueue nothing (WR-4).
   if (sinceStr === null) {
-    const newestIso = await fetchNewestImportDate(source, cfg);
-    const seed = newestIso || new Date(nowMs).toISOString();
+    const records = await fetchHistoryPage(source, cfg, 1);
+    const imports = records.filter(r => IMPORT_EVENT_TYPES[source].has(r.eventType));
+    const seed = (imports.length > 0 ? imports[0].date : null) || new Date(nowMs).toISOString();
+    // Pre-populate ledger so existing imports are never re-announced (safety-margin window)
+    const buildFn = source === 'sonarr' ? buildSonarrItem : buildRadarrItem;
+    const seedKeys = [];
+    for (const rec of imports) {
+      const item = buildFn(rec, nowMs);
+      if (item) { const k = queue.identityKey(item); if (k) seedKeys.push(k); }
+    }
+    if (seedKeys.length > 0) reconcileState.recordSent(source, seedKeys);
     reconcileState.setSince(source, seed);
-    log.info('Reconcile', `${source} → Seeded → since=${seed} (first run, no replay)`);
+    log.info('Reconcile', `${source} → Seeded → since=${seed} (first run, pre-populated ${seedKeys.length} ledger key(s))`);
     return 0;
   }
 
