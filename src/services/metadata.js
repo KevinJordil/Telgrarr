@@ -47,7 +47,7 @@ async function fetchSonarrMetadata(seriesId, activeMode, plotEnabled = true) {
     }
   }
   let omdbData = null;
-  if (includePlot && config.omdb?.apiKey && series.imdbId && (aiOnly || !(tmdbSeries && tmdbSeries.overview))) {
+  if (config.omdb?.apiKey && series.imdbId) {
     const omdbKey = `omdb:${series.imdbId}`;
     omdbData = await getFromCache(omdbKey);
     if (!omdbData) {
