@@ -7,8 +7,9 @@ const { recordSent } = require('./reconcile-state');
 const { buildCaption, getPosterUrl: getShowPosterUrl } = require('./formatter');
 const { buildMovieCaption, getPosterUrl: getMoviePosterUrl } = require('./radarr-formatter');
 const { refreshLibrary } = require('./emby');
-const { addHistory } = require('./history');
-const { enrichRadarrMedia } = require('./services/media-enricher');
+const { addHistory, pruneByAge } = require('./history');
+const { enrichSonarrMedia, enrichRadarrMedia } = require('./services/media-enricher');
+const { resolveRating }      = require('./utils/media-utils');
 const { fetchSonarrMetadata, fetchRadarrMetadata } = require('./services/metadata');
 const { dispatchBatch } = require('./services/notifications');
 const templates = require('./templates');
@@ -142,22 +143,78 @@ async function runSweep() {
         log.error('Sweeper', `Metadata Fetch (Sonarr) → Error → ID: ${seriesId} | Traces: [${tracesOf(episodes)}] | ${err.message}`);
         continue;
       }
+      // ── Enrich Sonarr series for history capture (HIST H1.3) ───────────────
+      // enrichSonarrMedia is called here explicitly so enriched fields
+      // (_overviewAr/_overviewEn, _genresAr/_genresEn) are available for the
+      // dispatch snapshot. buildCaption calls enrichSonarrMedia internally too;
+      // all translation/genre paths are cache-warm after the first call.
+      const enrichedSeries = await enrichSonarrMedia(
+        series, tmdbSeries, omdbData, activeMode,
+        undefined,
+        templates.isElementEnabled('sonarr', 'plot')
+      );
       const caption  = await buildCaption(series, episodes, tmdbSeries, omdbData, activeMode);
       const photoUrl = getShowPosterUrl(series);
       if (!photoUrl) {
-        log.warn('Sweeper', `Message Prep (Sonarr) → Skipped → Missing poster for "${series.title}" | Traces: [${tracesOf(episodes)}]`);
+        log.warn('Sweeper', `Message Prep (Sonarr) \u2192 Skipped \u2192 Missing poster for "${series.title}" | Traces: [${tracesOf(episodes)}]`);
         continue;
       }
+      // ── Sonarr ratings: OMDb + TMDb vote_average (HD-14A parity) ───────────
+      const _sOmdbImdb = omdbData?.imdbRating ? parseFloat(omdbData.imdbRating) : 0;
+      const _sRtRaw    = omdbData?.Ratings?.find(x => x.Source === 'Rotten Tomatoes')?.Value || '';
+      const _sMcRaw    = omdbData?.Ratings?.find(x => x.Source === 'Metacritic')?.Value     || '';
+      const _sOmdbRt   = _sRtRaw ? parseInt(_sRtRaw.replace('%', ''), 10) : 0;
+      const _sOmdbMc   = _sMcRaw ? parseInt(_sMcRaw.split('/')[0],   10) : 0;
+      const sonarrRatings = {
+        imdb:           resolveRating(0, _sOmdbImdb, v => `${v}`),
+        tmdb:           (tmdbSeries?.vote_average > 0) ? `${tmdbSeries.vote_average}` : null,
+        rottenTomatoes: resolveRating(0, _sOmdbRt,   v => `${v}`),
+        metacritic:     resolveRating(0, _sOmdbMc,   v => `${v}`),
+      };
+      // ── Sonarr quality — first non-null across the episode batch ───────────
+      const sonarrQuality  = episodes.find(ep => ep.quality)?.quality || null;
+      // ── Sonarr backdrop URL (TMDb CDN, nullable) ───────────────────────────
+      const sonarrBackdrop = tmdbSeries?.backdrop_path
+        ? `https://image.tmdb.org/t/p/w1280${tmdbSeries.backdrop_path}`
+        : null;
+      // ── Sonarr overview + genres — "what was sent" (HD-20) ────────────────
+      const _sonarrEnMode  = activeMode === 'default_en';
+      const sonarrOverview = _sonarrEnMode
+        ? (enrichedSeries._overviewEn || null)
+        : (enrichedSeries._overviewAr || enrichedSeries._overviewEn || null);
+      const sonarrGenres   = _sonarrEnMode
+        ? (enrichedSeries._genresEn   || null)
+        : (enrichedSeries._genresAr   || enrichedSeries._genresEn   || null);
       messages.push({ photoUrl, caption });
       historyItems.push({
-        id:        `sonarr-${seriesId}-${Date.now()}`,
-        title:     series.title,
-        type:      'show',
-        year:      series.year,
-        poster:    photoUrl,
-        details:   `${episodes.length} Episode${episodes.length > 1 ? 's' : ''}`,
-        timestamp: new Date().toISOString(),
-        traces:    tracesOf(episodes),
+        id:          `sonarr-${seriesId}-${Date.now()}`,
+        title:       series.title,
+        type:        'show',
+        year:        series.year,
+        poster:      photoUrl,
+        details:     `${episodes.length} Episode${episodes.length > 1 ? 's' : ''}`,
+        timestamp:   new Date().toISOString(),
+        traces:      tracesOf(episodes),
+        ratings:     sonarrRatings,
+        imdbId:      series.imdbId  || null,
+        tmdbId:      series.tmdbId  || null,
+        tvdbId:      series.tvdbId  || null,
+        language:    config.translator?.targetLang || 'ar',
+        overview:    sonarrOverview,
+        genres:      sonarrGenres,
+        runtime:     tmdbSeries?.episode_run_time?.[0] || null,
+        quality:     sonarrQuality,
+        backdropUrl: sonarrBackdrop,
+        episodes:    episodes.map(ep => ({
+          season:  ep.seasonNumber,
+          episode: ep.episodeNumber,
+          title:   ep.episodeTitle  || null,
+        })),
+        externalIds: {
+          tmdbId: series.tmdbId  || null,
+          imdbId: series.imdbId  || null,
+          tvdbId: series.tvdbId  || null,
+        },
       });
       messageMeta.push({ source: 'sonarr', identityKeys: episodes.map(identityKey).filter(Boolean) });
       log.info('Sweeper', `Message Prep (Sonarr) → Success → "${series.title}" (${episodes.length} episode(s)) | Traces: [${tracesOf(episodes)}]`);
@@ -194,24 +251,49 @@ async function runSweep() {
         continue;
       }
       messages.push({ photoUrl, caption });
+      // ── Radarr backdrop URL (TMDb CDN, nullable) ───────────────────────────
+      const radarrBackdrop = tmdbMovie?.backdrop_path
+        ? `https://image.tmdb.org/t/p/w1280${tmdbMovie.backdrop_path}`
+        : null;
+      // ── Radarr quality — first non-null value in the movie group ──────────
+      const radarrQuality  = radarrGroups[movieId].find(it => it.quality)?.quality || null;
+      // ── Radarr overview + genres — "what was sent" (HD-20) ────────────────
+      const _radarrEnMode  = activeMode === 'default_en';
+      const radarrOverview = _radarrEnMode
+        ? (tmdbMovie?._overviewEn || null)
+        : (tmdbMovie?._overviewAr || tmdbMovie?._overviewEn || null);
+      const radarrGenres   = _radarrEnMode
+        ? (movie._genresEn || null)
+        : (movie._genresAr || movie._genresEn || null);
       historyItems.push({
-        id:        `radarr-${movieId}-${Date.now()}`,
-        title:     movie.title,
-        type:      'movie',
-        year:      movie.year,
-        poster:    photoUrl,
-        details:   tmdbMovie?.runtime ? `${tmdbMovie.runtime} min` : 'Movie',
-        timestamp: new Date().toISOString(),
+        id:          `radarr-${movieId}-${Date.now()}`,
+        title:       movie.title,
+        type:        'movie',
+        year:        movie.year,
+        poster:      photoUrl,
+        details:     tmdbMovie?.runtime ? `${tmdbMovie.runtime} min` : 'Movie',
+        timestamp:   new Date().toISOString(),
         ratings: {
           imdb:           ratings.imdb           || null,
           tmdb:           ratings.tmdb           || null,
           rottenTomatoes: ratings.rottenTomatoes || null,
           metacritic:     ratings.metacritic     || null,
         },
-        imdbId:   movie.imdbId  || null,
-        tmdbId:   movie.tmdbId  || null,
-        language: config.translator?.targetLang || 'ar',
-        traces:   tracesOf(radarrGroups[movieId]),
+        imdbId:      movie.imdbId  || null,
+        tmdbId:      movie.tmdbId  || null,
+        language:    config.translator?.targetLang || 'ar',
+        traces:      tracesOf(radarrGroups[movieId]),
+        overview:    radarrOverview,
+        genres:      radarrGenres,
+        runtime:     tmdbMovie?.runtime || null,
+        quality:     radarrQuality,
+        backdropUrl: radarrBackdrop,
+        episodes:    null,
+        externalIds: {
+          tmdbId: movie.tmdbId  || null,
+          imdbId: movie.imdbId  || null,
+          tvdbId: null,
+        },
       });
       messageMeta.push({ source: 'radarr', identityKeys: radarrGroups[movieId].map(identityKey).filter(Boolean) });
       log.info('Sweeper', `Message Prep (Radarr) → Success → "${movie.title}" | Pass: ${pass} | Length: ${length} | Traces: [${tracesOf(radarrGroups[movieId])}]`);
@@ -297,6 +379,17 @@ async function runSweep() {
     events.emit(EVENT_TYPES.QUEUE_DRAINED, 'info', 'Sweeper', 'Queue drained.', { count: 0 });
   } finally {
     isSweeping = false;
+    // ── Age-based history retention — piggybacks on the sweep cycle (HIST H1.5) ──
+    // pruneByAge(0) is a strict no-op per contract; safe when maxAgeDays unset.
+    try {
+      const _maxAge = config.history?.maxAgeDays;
+      if (_maxAge > 0) {
+        const _pruned = await pruneByAge(_maxAge);
+        if (_pruned > 0) log.info('History', `Prune → Removed ${_pruned} entries older than ${_maxAge} days`);
+      }
+    } catch (_pruneErr) {
+      log.error('History', `Prune → Error → ${_pruneErr.message}`);
+    }
     if (sentCount > 0 && fs.existsSync(SWEEP_STATE_FILE)) {
       try {
         fs.unlinkSync(SWEEP_STATE_FILE);

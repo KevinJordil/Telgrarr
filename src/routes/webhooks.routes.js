@@ -63,7 +63,9 @@ router.post('/:token/sonarr', webhookAuth, async (req, res) => {
         episodeId: episode.id,
         seasonNumber: episode.seasonNumber,
         episodeNumber: episode.episodeNumber,
-        _receivedAt: new Date().toISOString(),
+        episodeTitle:  episode.title                                       || null,
+        quality:       payload.episodeFile?.quality?.quality?.name || null,
+        _receivedAt:   new Date().toISOString(),
       });
       if (added) {
         queuedCount++;
@@ -118,6 +120,7 @@ router.post('/:token/radarr', webhookAuth, async (req, res) => {
       source: 'radarr',
       traceId,
       movieId,
+      quality:     payload.movieFile?.quality?.quality?.name || null,
       _receivedAt: new Date().toISOString(),
     });
     if (added) {
