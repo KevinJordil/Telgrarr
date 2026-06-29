@@ -19,7 +19,7 @@ const SETTINGS_GROUPS = [
   { id: 'notifications', label: 'Notifications', Icon: Send,         sections: ['telegram'] },
   { id: 'metadata',      label: 'Metadata',      Icon: Database,     sections: ['tmdb', 'omdb', 'translator'] },
   { id: 'processing',    label: 'Processing',    Icon: Workflow,     sections: ['queue', 'mediaCache'] },
-  { id: 'system',        label: 'System',        Icon: ServerCog,    sections: ['network', 'advanced', 'logging'], panels: true },
+  { id: 'system',        label: 'System',        Icon: ServerCog,    sections: ['network', 'advanced', 'logging', 'history'], panels: true },
 ];
 
 export default function Settings() {

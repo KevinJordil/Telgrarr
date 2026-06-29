@@ -40,7 +40,8 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
           error: { maxSizeMb: 10, maxAgeDays: 30 },
           audit: { maxSizeMb: 5, maxAgeDays: 365 }
         }
-      }
+      },
+      history: { maxItems: 500, maxAgeDays: 0 }
     };
 
     // Clear data keys but preserve config functions (save/reload/DEFAULTS)
@@ -78,6 +79,7 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       'mediaCache',
       'backup',
       'logging',
+      'history',
       'publicBaseUrl',
       'corsOrigin',
       'trustProxy',
@@ -118,7 +120,8 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
           error: { maxSizeMb: 10, maxAgeDays: 30 },
           audit: { maxSizeMb: 5, maxAgeDays: 365 }
         }
-      }
+      },
+      history: { maxItems: 500, maxAgeDays: 0 }
     });
 
     // --- ASSERTION 4: NON-SCHEMA KEYS EXCLUDED ---

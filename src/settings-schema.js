@@ -125,6 +125,19 @@ const SETTINGS_SCHEMA = [
     ],
   },
   {
+    id: 'history', title: 'History', icon: 'Clock',
+    fields: [
+      { key: 'history.maxItems', label: 'Maximum History Entries', type: 'slider',
+        min: 50, max: 10000, step: 50, integer: true,
+        note: 'Maximum number of notification history entries to retain. Oldest entries are removed when the limit is reached. Default: 500.',
+        errorMessage: 'Must be between 50 and 10000' },
+      { key: 'history.maxAgeDays', label: 'Auto-Delete After (Days)', type: 'slider',
+        min: 0, max: 730, step: 1, integer: true,
+        note: 'Automatically remove history entries older than this many days. 0 = keep forever. Default: 0.',
+        errorMessage: 'Must be between 0 and 730' },
+    ],
+  },
+  {
     id: 'logging', title: 'Logging', icon: 'FileText',
     fields: [
       { key: 'logging.level', label: 'Log Level', type: 'select',
