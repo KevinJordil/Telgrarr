@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { Home, Ban, Settings, MoreHorizontal, Sparkles, ScrollText, Info } from 'lucide-react';
+import { Home, Ban, Settings, MoreHorizontal, Sparkles, ScrollText, Info, Clock } from 'lucide-react';
 import useNavGuard from '../store/navGuardStore';
 
 const PRIMARY_TABS = [
   { id: 'home',     label: 'Home',     icon: Home,     path: '/dashboard' },
+  { id: 'history',  label: 'History',  icon: Clock,    path: '/history'   },
   { id: 'preview',  label: 'Preview',  icon: Sparkles, path: '/preview'   },
   { id: 'settings', label: 'Settings', icon: Settings, path: '/settings'  },
 ];

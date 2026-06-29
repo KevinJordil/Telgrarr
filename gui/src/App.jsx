@@ -10,6 +10,7 @@ const Settings  = lazy(() => import('./pages/Settings'));
 const Logs      = lazy(() => import('./pages/Logs'));
 const Preview   = lazy(() => import('./pages/Preview'));
 const Blacklist = lazy(() => import('./pages/Blacklist'));
+const History   = lazy(() => import('./pages/History'));
 const About     = lazy(() => import('./pages/About'));
 import AuthLayout from './components/AuthLayout';
 
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="/logs"      element={<Logs />} />
               <Route path="/preview"   element={<Preview />} />
               <Route path="/blacklist" element={<Blacklist />} />
+              <Route path="/history"  element={<History />} />
               <Route path="/about"     element={<About />} />
             </Route>
             <Route path="*" element={<CatchAll />} />
