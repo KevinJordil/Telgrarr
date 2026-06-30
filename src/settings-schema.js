@@ -23,6 +23,10 @@ const SETTINGS_SCHEMA = [
         min: 30000, max: 1800000, step: 30000, displayFormat: 'ms-to-min',
         note: 'Wait time before processing a batch. Takes effect on the next new batch only.', integer: true,
         errorMessage: 'Must be between 30000 (30s) and 1800000 (30min)' },
+        { key: 'queue.maxItems', label: 'Maximum Queue Size', type: 'slider',
+          min: 100, max: 5000, step: 100, integer: true,
+          note: 'Maximum items held in the pending-dispatch queue. Oldest items are dropped if exceeded \u2014 protects memory/disk during an extended Telegram or *arr outage. Default: 1000.',
+          errorMessage: 'Must be between 100 and 5000' },
     ],
   },
   {

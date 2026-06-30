@@ -57,6 +57,13 @@ async function enqueue(item) {
       log.info('Queue', `Queue Append → Skipped (duplicate) → Source: [${source}] | Trace: [${trace}] | Key: [${dupKey}]`);
       return false;
     }
+    const maxItems = config.queue.maxItems;
+    if (data.length >= maxItems) {
+      const dropped = data.shift();
+      const droppedSource = dropped && dropped.source || 'unknown';
+      const droppedTrace  = dropped && dropped.traceId || '-';
+      log.audit('Queue', `Queue Overflow \u2192 Dropped oldest \u2192 Source: [${droppedSource}] | Trace: [${droppedTrace}] \u2192 Queue Length capped at ${maxItems}`);
+    }
     data.push(item);
     fs.writeFileSync(QUEUE_FILE, JSON.stringify(data, null, 2), 'utf8');
     log.info('Queue', `Queue Append → Success → Source: [${source}] | Trace: [${trace}] | Queue Length: ${data.length}`);

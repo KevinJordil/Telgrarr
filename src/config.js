@@ -24,6 +24,7 @@ const DEFAULTS = {
   cookieSecure:  'auto',
   batchWindowMs: 180000,
   queueFile:     path.join(__dirname, '../media_queue.json'),
+    queue:         { maxItems: 1000 },
   sonarr:     { baseUrl: '', apiKey: '' },
   telegram:   { botToken: '', chatId: '', delayMs: 6000 },
   emby:       { refreshUrl: '', apiKey: '' },
