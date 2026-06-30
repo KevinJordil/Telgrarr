@@ -11,9 +11,9 @@ const SETTINGS_SCHEMA = [
       { key: 'telegram.botToken', bootRequired: 'Telegram bot token', label: 'Bot Token', type: 'secret', placeholder: '1234567890:AAExxx...', required: true, rule: 'telegramToken' },
       { key: 'telegram.chatId', bootRequired: 'Telegram chat ID', label: 'Chat ID', type: 'text', placeholder: '-1001234567890', required: true, rule: 'chatId' },
       { key: 'telegram.delayMs', label: 'Delay Between Messages', type: 'slider',
-        min: 500, max: 10000, step: 500, displayFormat: 'ms-to-s',
-        note: 'Pause between consecutive messages in one batch.', integer: true,
-        errorMessage: 'Must be between 500ms and 10000ms' },
+        min: 5000, max: 10000, step: 500, displayFormat: 'ms-to-s',
+        note: 'Pause between consecutive messages. Telegram limits bots to 20 messages/minute in groups \u2014 5s keeps every install safely under that ceiling regardless of chat type.', integer: true,
+        errorMessage: 'Must be between 5000ms (5s) and 10000ms (10s)' },
     ],
   },
   {

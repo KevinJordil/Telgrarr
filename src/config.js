@@ -25,7 +25,7 @@ const DEFAULTS = {
   batchWindowMs: 180000,
   queueFile:     path.join(__dirname, '../media_queue.json'),
   sonarr:     { baseUrl: '', apiKey: '' },
-  telegram:   { botToken: '', chatId: '', delayMs: 3000 },
+  telegram:   { botToken: '', chatId: '', delayMs: 6000 },
   emby:       { refreshUrl: '', apiKey: '' },
   radarr:     { baseUrl: '', apiKey: '' },
   tmdb:       { apiKey: '' },
@@ -198,8 +198,32 @@ function ensureWebhookSecret() {
   }
 }
 
+/** Phase 1 (G1): one-time boot migration -- clamp any legacy telegram.delayMs below
+ *  the schema floor up to that floor. Reads the floor from SETTINGS_SCHEMA (R13: never
+ *  hardcode the number a second time). Idempotent: no-op when already at/above floor. */
+function migrateDelayFloor() {
+  const field = SETTINGS_SCHEMA.flatMap(s => s.fields).find(f => f.key === 'telegram.delayMs');
+  if (!field) return;
+  const floor = field.min;
+  if (config.telegram && typeof config.telegram.delayMs === 'number' && config.telegram.delayMs < floor) {
+    const legacy = config.telegram.delayMs;
+    config.telegram.delayMs = floor;
+    try {
+      writeFileAtomic.sync(
+        CONFIG_FILE,
+        JSON.stringify(stripVolatile(config), null, 2),
+        { mode: 0o600 }
+      );
+      log.audit('Config', `Pacing floor migration \u2192 clamped delayMs ${legacy} \u2192 ${floor} \u2192 legacy value was unsafe`);
+    } catch (err) {
+      log.error('Config', `Failed to persist pacing floor migration: ${err.message}`);
+    }
+  }
+}
+
 const config = loadFromDisk('boot');
 ensureWebhookSecret();
+migrateDelayFloor();
 log.setLevel(config.logging && config.logging.level);
 
 /**

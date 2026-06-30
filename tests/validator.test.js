@@ -80,7 +80,7 @@ describe('validator parity harness', () => {
     expectSingleError(
       { telegram: { delayMs: 100 } },
       'telegram.delayMs',
-      'Must be between 500ms and 10000ms'
+      'Must be between 5000ms (5s) and 10000ms (10s)'
     );
   });
 
@@ -203,7 +203,7 @@ describe('validator parity harness', () => {
       telegram: {
         botToken: '123456789:AAExampleTokenForTestingPurposesXX',
         chatId: '-1001234567890',
-        delayMs: 3000,
+        delayMs: 6000,
       },
       sonarr:  { baseUrl: 'http://127.0.0.1:8989', apiKey: 'abc123' },
       radarr:  { baseUrl: 'http://127.0.0.1:7878', apiKey: 'abc123' },
