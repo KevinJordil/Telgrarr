@@ -18,6 +18,7 @@ const log       = require('./logger');
 const events    = require('./events');
 const EVENT_TYPES = require('../shared/events.json');
 const providerBreaker = require('./services/provider-breaker');
+const { createLimit } = require('./utils/p-limit');
 const SWEEP_STATE_FILE = path.join(config.DATA_DIR, 'sweep-state.json');
 
 function tracesOf(items) {
@@ -32,6 +33,8 @@ let batchExpiresAt = null;
 let isSweeping    = false;
 let pendingSweep  = false;           // BLR-1 / DEC-BLR-1: wake-after-finish
 const SWEEP_NOW_THRESHOLD = 50;      // BLR-1 / DEC-BLR-3: depth trigger
+const METADATA_CONCURRENCY = 5;      // BLR-3 / DEC-BLR-11: ~25% of TMDb's ~40 req/sec ceiling
+
 async function scheduleSweep() {
   // Continuity guard (DEC-BLR-1): a sweep already in flight → mark the
   // wake-after-finish flag and return. runSweep's finally{} consumes it.
@@ -103,6 +106,7 @@ async function runSweep() {
   }
   isSweeping = true;
   providerBreaker.reset();
+  const metadataLimit = createLimit(METADATA_CONCURRENCY);
   let sentCount = 0;
   try {
     log.info('Sweeper', 'Sweep Execution → Started → Draining queue');
@@ -155,7 +159,16 @@ async function runSweep() {
     const messages     = [];
     const historyItems = [];
     const messageMeta  = [];
-    for (const seriesId of Object.keys(sonarrGroups)) {
+        // -- BLR-3 / DEC-BLR-11/12: metadata fetch + in-memory message-prep run
+    // through a bounded pool (METADATA_CONCURRENCY=5); messages/historyItems/
+    // messageMeta are pushed in a SEPARATE, deterministic flatten pass below,
+    // in INPUT order -- array order is unaffected by fetch completion order.
+    // Dispatch (further below) remains strictly sequential, untouched.
+    const sonarrKeys = Object.keys(sonarrGroups);
+    const sonarrResults = new Array(sonarrKeys.length).fill(null);
+    await Promise.all(sonarrKeys.map((seriesId, __idx) => metadataLimit(async () => {
+      const __result = {};
+
       const episodes = sonarrGroups[seriesId];
       const activeMode = templates.getActiveMode();
       let series, tmdbSeries, omdbData;
@@ -163,7 +176,7 @@ async function runSweep() {
         ({ series, tmdbSeries, omdbData } = await fetchSonarrMetadata(seriesId, activeMode, templates.isElementEnabled('sonarr', 'plot')));
       } catch (err) {
         log.error('Sweeper', `Metadata Fetch (Sonarr) → Error → ID: ${seriesId} | Traces: [${tracesOf(episodes)}] | ${err.message}`);
-        continue;
+        return;
       }
       // ── Enrich Sonarr series for history capture (HIST H1.3) ───────────────
       // enrichSonarrMedia is called here explicitly so enriched fields
@@ -179,7 +192,7 @@ async function runSweep() {
       const photoUrl = getShowPosterUrl(series);
       if (!photoUrl) {
         log.warn('Sweeper', `Message Prep (Sonarr) \u2192 Skipped \u2192 Missing poster for "${series.title}" | Traces: [${tracesOf(episodes)}]`);
-        continue;
+        return;
       }
       // ── Sonarr ratings: OMDb + TMDb vote_average (HD-14A parity) ───────────
       const _sOmdbImdb = omdbData?.imdbRating ? parseFloat(omdbData.imdbRating) : 0;
@@ -207,8 +220,8 @@ async function runSweep() {
       const sonarrGenres   = _sonarrEnMode
         ? (enrichedSeries._genresEn   || null)
         : (enrichedSeries._genresAr   || enrichedSeries._genresEn   || null);
-      messages.push({ photoUrl, caption });
-      historyItems.push({
+      __result.message = { photoUrl, caption };
+      __result.historyItem = {
         id:          `sonarr-${seriesId}-${Date.now()}`,
         title:       series.title,
         type:        'show',
@@ -237,8 +250,8 @@ async function runSweep() {
           imdbId: series.imdbId  || null,
           tvdbId: series.tvdbId  || null,
         },
-      });
-      messageMeta.push({ source: 'sonarr', identityKeys: episodes.map(identityKey).filter(Boolean) });
+      };
+      __result.meta = { source: 'sonarr', identityKeys: episodes.map(identityKey).filter(Boolean) };
       log.info('Sweeper', `Message Prep (Sonarr) → Success → "${series.title}" (${episodes.length} episode(s)) | Traces: [${tracesOf(episodes)}]`);
       events.emit(
         EVENT_TYPES.SWEEP_ITEM_READY,
@@ -247,19 +260,32 @@ async function runSweep() {
         `📺 "${series.title}" ready — ${episodes.length} episode(s)`,
         { title: series.title, type: 'show' }
       );
+    
+      sonarrResults[__idx] = __result;
+    })));
+    for (const __r of sonarrResults) {
+      if (!__r) continue;
+      messages.push(__r.message);
+      historyItems.push(__r.historyItem);
+      messageMeta.push(__r.meta);
     }
-    for (const movieId of Object.keys(radarrGroups)) {
+        // -- BLR-3: same bounded-pool + ordered-flatten pattern as the Sonarr loop above.
+    const radarrKeys = Object.keys(radarrGroups);
+    const radarrResults = new Array(radarrKeys.length).fill(null);
+    await Promise.all(radarrKeys.map((movieId, __idx) => metadataLimit(async () => {
+      const __result = {};
+
       const activeMode = templates.getActiveMode();
       let movie, tmdbMovie, omdbData;
       try {
         ({ movie, tmdbMovie, omdbData } = await fetchRadarrMetadata(movieId, activeMode, templates.isElementEnabled('radarr', 'plot')));
       } catch (err) {
         log.error('Sweeper', `Metadata Fetch (Radarr) → Error → ID: ${movieId} | Traces: [${tracesOf(radarrGroups[movieId])}] | ${err.message}`);
-        continue;
+        return;
       }
       if (!movie) {
         log.warn('Sweeper', `Message Prep (Radarr) → Skipped → Metadata unavailable for ID: ${movieId} | Traces: [${tracesOf(radarrGroups[movieId])}]`);
-        continue;
+        return;
       }
       const enriched = await enrichRadarrMedia(movie, tmdbMovie, omdbData, activeMode, undefined, templates.isElementEnabled('radarr', 'plot'));
       movie = enriched.movie;
@@ -270,9 +296,9 @@ async function runSweep() {
       const photoUrl = getMoviePosterUrl(movie);
       if (!photoUrl) {
         log.warn('Sweeper', `Message Prep (Radarr) → Skipped → Missing poster for "${movie.title}" | Traces: [${tracesOf(radarrGroups[movieId])}]`);
-        continue;
+        return;
       }
-      messages.push({ photoUrl, caption });
+      __result.message = { photoUrl, caption };
       // ── Radarr backdrop URL (TMDb CDN, nullable) ───────────────────────────
       const radarrBackdrop = tmdbMovie?.backdrop_path
         ? `https://image.tmdb.org/t/p/w1280${tmdbMovie.backdrop_path}`
@@ -287,7 +313,7 @@ async function runSweep() {
       const radarrGenres   = _radarrEnMode
         ? (movie._genresEn || null)
         : (movie._genresAr || movie._genresEn || null);
-      historyItems.push({
+      __result.historyItem = {
         id:          `radarr-${movieId}-${Date.now()}`,
         title:       movie.title,
         type:        'movie',
@@ -316,8 +342,8 @@ async function runSweep() {
           imdbId: movie.imdbId  || null,
           tvdbId: null,
         },
-      });
-      messageMeta.push({ source: 'radarr', identityKeys: radarrGroups[movieId].map(identityKey).filter(Boolean) });
+      };
+      __result.meta = { source: 'radarr', identityKeys: radarrGroups[movieId].map(identityKey).filter(Boolean) };
       log.info('Sweeper', `Message Prep (Radarr) → Success → "${movie.title}" | Pass: ${pass} | Length: ${length} | Traces: [${tracesOf(radarrGroups[movieId])}]`);
       events.emit(
         EVENT_TYPES.SWEEP_ITEM_READY,
@@ -326,6 +352,14 @@ async function runSweep() {
         `🎬 "${movie.title}" ready`,
         { title: movie.title, type: 'movie' }
       );
+    
+      radarrResults[__idx] = __result;
+    })));
+    for (const __r of radarrResults) {
+      if (!__r) continue;
+      messages.push(__r.message);
+      historyItems.push(__r.historyItem);
+      messageMeta.push(__r.meta);
     }
     if (messages.length === 0) {
       log.warn('Sweeper', 'Sweep Execution → Skipped → No valid messages after processing');
