@@ -3,8 +3,44 @@ const fs        = require('fs');
 const lockfile  = require('proper-lockfile');
 const config    = require('./config');
 const log       = require('./logger');
+const events    = require('./events');
+const EVENT_TYPES = require('../shared/events.json');
 
 const QUEUE_FILE = config.queueFile;
+
+// -- BLR Phase 4: queue observability (DEC-BLR-13/17/18) ---------------------
+// QUEUE_OVERFLOW: emitted adjacent to the existing pre-write audit log (same
+// exposure); enqueueMany rolls its whole eviction loop into ONE event with a
+// total droppedCount (DEC-BLR-17) -- never one event per dropped item.
+// QUEUE_DEPTH_WARNING: strict > 80% of maxItems (DEC-BLR-13, R13), at most
+// once per sweep cycle; the sweeper advances the cycle at each sweep start.
+const DEPTH_WARN_PCT = 0.8;
+let _currentSweepCycle = 0;
+let _lastWarnSweepCycle = null;
+
+function markSweepCycle(id) {
+  _currentSweepCycle = id;
+}
+
+function emitOverflowEvent(droppedCount, maxItems) {
+  events.emit(
+    EVENT_TYPES.QUEUE_OVERFLOW, 'warn', 'Queue',
+    `Queue overflow: dropped ${droppedCount} oldest item(s) [cap ${maxItems}]`,
+    { droppedCount, maxItems }
+  );
+}
+
+function checkDepthWarning(depth, maxItems) {
+  if (depth <= maxItems * DEPTH_WARN_PCT) return;
+  if (_lastWarnSweepCycle === _currentSweepCycle) return;
+  _lastWarnSweepCycle = _currentSweepCycle;
+  const pct = Math.round((depth / maxItems) * 100);
+  events.emit(
+    EVENT_TYPES.QUEUE_DEPTH_WARNING, 'warn', 'Queue',
+    `Queue depth ${depth}/${maxItems} (${pct}%) exceeded ${DEPTH_WARN_PCT * 100}% threshold`,
+    { depth, maxItems, pct }
+  );
+}
 
 function ensureQueueFile() {
   if (!fs.existsSync(QUEUE_FILE)) {
@@ -63,10 +99,12 @@ async function enqueue(item) {
       const droppedSource = dropped && dropped.source || 'unknown';
       const droppedTrace  = dropped && dropped.traceId || '-';
       log.audit('Queue', `Queue Overflow \u2192 Dropped oldest \u2192 Source: [${droppedSource}] | Trace: [${droppedTrace}] \u2192 Queue Length capped at ${maxItems}`);
+      emitOverflowEvent(1, maxItems);
     }
     data.push(item);
     fs.writeFileSync(QUEUE_FILE, JSON.stringify(data, null, 2), 'utf8');
     log.info('Queue', `Queue Append → Success → Source: [${source}] | Trace: [${trace}] | Queue Length: ${data.length}`);
+    checkDepthWarning(data.length, maxItems);
     return true;
   } catch (err) {
     log.error('Queue', `Queue Append → Error → ${err.message}`);
@@ -127,16 +165,20 @@ async function enqueueMany(items) {
     // Single-phase overflow eviction (DEC-BLR-4): evict the OLDEST items in
     // one tight loop AFTER the push, never interleaved with each push.
     const maxItems = config.queue.maxItems;
+    let overflowDropped = 0;
     while (data.length > maxItems) {
+      overflowDropped += 1;
       const dropped = data.shift();
       const droppedSource = (dropped && dropped.source) || 'unknown';
       const droppedTrace  = (dropped && dropped.traceId) || '-';
       log.audit('Queue', `Queue Overflow \u2192 Dropped oldest \u2192 Source: [${droppedSource}] | Trace: [${droppedTrace}] \u2192 Queue Length capped at ${maxItems}`);
     }
+    if (overflowDropped > 0) emitOverflowEvent(overflowDropped, maxItems);
     fs.writeFileSync(QUEUE_FILE, JSON.stringify(data, null, 2), 'utf8');
     const firstSource = additions[0].source || 'unknown';
     const firstTrace  = additions[0].traceId || '-';
     log.info('Queue', `Queue Append (Batch) → Success → Source: [${firstSource}] | Trace: [${firstTrace}] | Added: ${additions.length} | Queue Length: ${data.length}`);
+    checkDepthWarning(data.length, maxItems);
     return additions.length;
   } catch (err) {
     log.error('Queue', `Queue Append (Batch) → Error → ${err.message}`);
@@ -163,4 +205,4 @@ async function peekLength() {
   }
 }
 
-module.exports = { enqueue, enqueueMany, peekLength, drainQueue, getQueue, identityKey };
+module.exports = { enqueue, enqueueMany, peekLength, drainQueue, getQueue, identityKey, markSweepCycle };
