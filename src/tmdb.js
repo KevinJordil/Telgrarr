@@ -2,7 +2,7 @@
 const axios  = require('axios');
 const config = require('./config');
 const log    = require('./logger');
-const { isTmdbAuthError, trip, isTripped } = require('./services/provider-breaker');
+const { isTmdbAuthError, isTmdbRateLimitError, trip, tripRate, isTripped } = require('./services/provider-breaker');
 
 async function getTmdbMovieById(tmdbId, langOverride = null) {
   if (!tmdbId) return null;
@@ -13,10 +13,12 @@ async function getTmdbMovieById(tmdbId, langOverride = null) {
         api_key:  config.tmdb.apiKey,
         language: langOverride || 'en-US',
       },
+      timeout: 10000,
     });
     return res.data;
   } catch (error) {
     if (isTmdbAuthError(error)) trip('tmdb');
+    if (isTmdbRateLimitError(error)) tripRate('tmdb');
     log.error('TMDb', `Metadata Fetch → Error → TMDb ID: [${tmdbId}] | ${error.message}`);
     return null;
   }
@@ -31,10 +33,12 @@ async function getTmdbSeriesById(tmdbId, langOverride = null) {
         api_key:  config.tmdb.apiKey,
         language: langOverride || 'en-US',
       },
+      timeout: 10000,
     });
     return res.data;
   } catch (error) {
     if (isTmdbAuthError(error)) trip('tmdb');
+    if (isTmdbRateLimitError(error)) tripRate('tmdb');
     log.error('TMDb', `Metadata Fetch → Error → TV ID: [${tmdbId}] | ${error.message}`);
     return null;
   }
@@ -46,10 +50,12 @@ async function getTmdbTranslations(tmdbId, type) {
   try {
     const res = await axios.get(`https://api.themoviedb.org/3/${type}/${tmdbId}/translations`, {
       params: { api_key: config.tmdb.apiKey },
+      timeout: 10000,
     });
     return (res.data && Array.isArray(res.data.translations)) ? res.data.translations : null;
   } catch (error) {
     if (isTmdbAuthError(error)) trip('tmdb');
+    if (isTmdbRateLimitError(error)) tripRate('tmdb');
     log.error('TMDb', `Translations Fetch \u2192 Error \u2192 ${type} ID: [${tmdbId}] | ${error.message}`);
     return null;
   }
