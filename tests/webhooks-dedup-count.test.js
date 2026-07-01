@@ -22,9 +22,12 @@ let sweepCount = 0;
 stub('../src/sweeper.js', { scheduleSweep: () => { sweepCount++; } });
 
 const queueMod = require('../src/queue.js');
-const realEnqueue = queueMod.enqueue;
+const realEnqueue     = queueMod.enqueue;
+const realEnqueueMany = queueMod.enqueueMany;
 let enqueueCalls = 0;
-queueMod.enqueue = async (item) => { const r = await realEnqueue(item); enqueueCalls++; return r; };
+let enqueueManyCalls = 0;
+queueMod.enqueue     = async (item)  => { const r = await realEnqueue(item);     enqueueCalls++;     return r; };
+queueMod.enqueueMany = async (items) => { const r = await realEnqueueMany(items); enqueueManyCalls++; return r; };
 
 const events = require('../src/events.js');
 const EVENT_TYPES = require('../shared/events.json');
@@ -50,7 +53,7 @@ afterAll(async () => {
 beforeEach(() => {
   fs.writeFileSync(tmpQueue, '[]', 'utf8');
   try { fs.rmSync(`${tmpQueue}.lock`, { recursive: true, force: true }); } catch { /* noop */ }
-  emitted.length = 0; sweepCount = 0; enqueueCalls = 0;
+  emitted.length = 0; sweepCount = 0; enqueueCalls = 0; enqueueManyCalls = 0;
 });
 
 const eps = (...n) => n.map((x) => ({ id: 1000 + x, seasonNumber: 1, episodeNumber: x }));
@@ -71,7 +74,7 @@ describe('Webhook QUEUE_ITEM_ADDED reflects deduped enqueue (live-feed honesty)'
   it('in-payload duplicates (8 distinct + 8 repeats) => count 8, queue 8, one sweep', async () => {
     const r = await post([...eps(1,2,3,4,5,6,7,8), ...eps(1,2,3,4,5,6,7,8)]);
     expect(r.status).toBe(200);
-    await until(() => enqueueCalls >= 16); await settle();
+    await until(() => enqueueManyCalls >= 1); await settle();
     expect((await queueMod.getQueue()).length).toBe(8);
     expect(queuedEvents().length).toBe(1);
     expect(queuedEvents()[0][4].count).toBe(8);
@@ -79,20 +82,20 @@ describe('Webhook QUEUE_ITEM_ADDED reflects deduped enqueue (live-feed honesty)'
   });
   it('duplicate repeat webhook => no phantom event, no extra sweep, no queue growth', async () => {
     await post(eps(1,2,3,4,5,6,7,8));
-    await until(() => enqueueCalls >= 8); await settle();
+    await until(() => enqueueManyCalls >= 1); await settle();
     expect((await queueMod.getQueue()).length).toBe(8);
     expect(queuedEvents().length).toBe(1);
     expect(queuedEvents()[0][4].count).toBe(8);
     expect(sweepCount).toBe(1);
     await post(eps(1,2,3,4,5,6,7,8));
-    await until(() => enqueueCalls >= 16); await settle();
+    await until(() => enqueueManyCalls >= 2); await settle();
     expect((await queueMod.getQueue()).length).toBe(8);
     expect(queuedEvents().length).toBe(1);
     expect(sweepCount).toBe(1);
   });
   it('clean single-episode POST => count 1, queue 1, one sweep', async () => {
     await post(eps(4));
-    await until(() => enqueueCalls >= 1); await settle();
+    await until(() => enqueueManyCalls >= 1); await settle();
     expect((await queueMod.getQueue()).length).toBe(1);
     expect(queuedEvents().length).toBe(1);
     expect(queuedEvents()[0][4].count).toBe(1);

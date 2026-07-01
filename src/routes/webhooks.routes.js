@@ -6,7 +6,7 @@ const log        = require('../logger');
 const events     = require('../events');
 const EVENT_TYPES = require('../../shared/events.json');
 const blacklist  = require('../blacklist');
-const { enqueue } = require('../queue');
+const { enqueue, enqueueMany } = require('../queue');
 const { scheduleSweep } = require('../sweeper');
 const config = require('../config');
 const { tokenValid } = require('../auth/webhook-token');
@@ -52,30 +52,28 @@ router.post('/:token/sonarr', webhookAuth, async (req, res) => {
   }
 
   const episodes = payload.episodes || [];
+  // ── BLR-1 / DEC-BLR-4: bulk-enqueue → ONE lock per webhook ──────────────
+  // The per-episode "Queued" info log is intentionally retired (DEC-BLR-4 —
+  // "logging cleaner"); the Webhook Batch success line below preserves the
+  // per-webhook forensic record, and the queue file itself carries every
+  // item with its traceId.
+  const items = episodes.map((episode) => ({
+    source:        'sonarr',
+    traceId,
+    seriesId,
+    episodeId:     episode.id,
+    seasonNumber:  episode.seasonNumber,
+    episodeNumber: episode.episodeNumber,
+    episodeTitle:  episode.title || null,
+    quality:       payload.episodeFile?.quality?.quality?.name || null,
+    _receivedAt:   new Date().toISOString(),
+  }));
   let queuedCount = 0;
-
-  for (const episode of episodes) {
-    try {
-      const added = await enqueue({
-        source: 'sonarr',
-        traceId,
-        seriesId,
-        episodeId: episode.id,
-        seasonNumber: episode.seasonNumber,
-        episodeNumber: episode.episodeNumber,
-        episodeTitle:  episode.title                                       || null,
-        quality:       payload.episodeFile?.quality?.quality?.name || null,
-        _receivedAt:   new Date().toISOString(),
-      });
-      if (added) {
-        queuedCount++;
-        log.info('Webhook', `Webhook Event (Sonarr) → Queued → Title: [${title}] S${episode.seasonNumber}E${episode.episodeNumber} | trace=${traceId}`);
-      }
-    } catch (err) {
-      log.error('Webhook', `Webhook Event (Sonarr) → Error → Title: [${title}] S${episode.seasonNumber}E${episode.episodeNumber} | ${err.message} | trace=${traceId}`);
-    }
+  try {
+    queuedCount = await enqueueMany(items);
+  } catch (err) {
+    log.error('Webhook', `Webhook Event (Sonarr) → Error → Title: [${title}] | ${err.message} | trace=${traceId}`);
   }
-
   if (queuedCount > 0) {
     events.emit(EVENT_TYPES.QUEUE_ITEM_ADDED, 'info', 'Listener', `"${title}" — ${queuedCount} episode(s) queued`, { title, type: 'sonarr', count: queuedCount });
     scheduleSweep();

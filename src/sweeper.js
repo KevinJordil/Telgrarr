@@ -2,7 +2,7 @@
 const fs          = require('fs');
 const path        = require('path');
 const writeAtomic = require('write-file-atomic');
-const { drainQueue, enqueue, identityKey } = require('./queue');
+const { drainQueue, enqueue, peekLength, identityKey } = require('./queue');
 const { recordSent } = require('./reconcile-state');
 const { buildCaption, getPosterUrl: getShowPosterUrl } = require('./formatter');
 const { buildMovieCaption, getPosterUrl: getMoviePosterUrl } = require('./radarr-formatter');
@@ -30,8 +30,30 @@ function tracesOf(items) {
 let batchTimer    = null;
 let batchExpiresAt = null;
 let isSweeping    = false;
-function scheduleSweep() {
+let pendingSweep  = false;           // BLR-1 / DEC-BLR-1: wake-after-finish
+const SWEEP_NOW_THRESHOLD = 50;      // BLR-1 / DEC-BLR-3: depth trigger
+async function scheduleSweep() {
+  // Continuity guard (DEC-BLR-1): a sweep already in flight → mark the
+  // wake-after-finish flag and return. runSweep's finally{} consumes it.
+  if (isSweeping) { pendingSweep = true; return; }
   if (batchTimer !== null) return;
+  // Depth trigger (DEC-BLR-3): if the queue is already tsunami-shaped, skip
+  // the ${config.batchWindowMs/1000}s coalesce window and dispatch via
+  // setImmediate (the calling webhook handler has already returned 200; this
+  // lands on the next tick). peekLength is lock-free per DEC-BLR-2.
+  let depth = 0;
+  try { depth = await peekLength(); } catch (_) { /* lock-free; tolerate */ }
+  // Re-check after the async hop (defence-in-depth — a runSweep may have
+  // started, or another scheduleSweep may have armed the timer).
+  if (isSweeping) { pendingSweep = true; return; }
+  if (batchTimer !== null) return;
+  if (depth >= SWEEP_NOW_THRESHOLD) {
+    log.info('Sweeper', `Sweep Execution → Triggered (depth) → Queue Length: ${depth} ≥ ${SWEEP_NOW_THRESHOLD}`);
+    setImmediate(() => {
+      runSweep().catch((err) => log.error('Sweeper', `Sweep Immediate → Error → ${err.message}`));
+    });
+    return;
+  }
   const fireAt = Date.now() + config.batchWindowMs;
   batchExpiresAt = new Date(fireAt).toISOString();
   log.info('Sweeper', `Batch Timer → Started → Fires in ${config.batchWindowMs / 1000}s`);
@@ -396,6 +418,25 @@ async function runSweep() {
       } catch (err) {
         log.error('Sweeper', `Sweep State Marker → Cleanup Error → ${err.message}`);
       }
+    }
+    // ── BLR-1 / DEC-BLR-1: Sweep continuity — wake-after-finish + tail-rearm
+    // If a webhook arrived during this sweep, pendingSweep was set by
+    // scheduleSweep; consume it and rearm. Otherwise, if items are queued
+    // (e.g. an enqueue raced past drainQueue into finally), rearm anyway —
+    // belt-and-braces against the C-2 stranding mode. The rearm is
+    // intentionally fire-and-forget; .catch guards unhandled rejection.
+    try {
+      if (pendingSweep) {
+        pendingSweep = false;
+        scheduleSweep().catch((err) => log.error('Sweeper', `Sweep Rearm → Error → ${err.message}`));
+      } else {
+        const tail = await peekLength();
+        if (tail > 0) {
+          scheduleSweep().catch((err) => log.error('Sweeper', `Sweep Rearm → Error → ${err.message}`));
+        }
+      }
+    } catch (err) {
+      log.error('Sweeper', `Sweep Rearm → Error → ${err.message}`);
     }
   }
 }
