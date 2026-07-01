@@ -61,7 +61,7 @@ describe('Sweep continuity (BLR-1 / DEC-BLR-1: pendingSweep + tail-rearm)', () =
     expect(sweeper.getQueueState().active).toBe(false);   // no parallel timer
     release();
     await sweepP;
-    await new Promise((r) => setTimeout(r, 40));         // let rearm settle
+    await waitFor(() => sweeper.getQueueState().active === true, 500); // let rearm settle (polled, not fixed-sleep — avoids full-suite-load flake)
     expect(sweeper.getQueueState().active).toBe(true);   // pendingSweep consumed → timer armed
     await new Promise((r) => setTimeout(r, 200));        // drain rearmed timer
   });
@@ -82,7 +82,7 @@ describe('Sweep continuity (BLR-1 / DEC-BLR-1: pendingSweep + tail-rearm)', () =
     await queue.enqueue(son(2));
     release();
     await sweepP;
-    await new Promise((r) => setTimeout(r, 40));
+    await waitFor(() => sweeper.getQueueState().active === true, 500);
     expect(sweeper.getQueueState().active).toBe(true);
     await new Promise((r) => setTimeout(r, 200));
   });
