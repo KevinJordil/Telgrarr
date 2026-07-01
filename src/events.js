@@ -75,4 +75,37 @@ function getRecentEvents(limit = 15) {
   return recentEvents.slice(-limit);
 }
 
-module.exports = { bus, emit, getRecentEvents, loadEvents, flushEvents };
+const THROTTLE_DEFAULT_MS = 1000; // R13 default -- DEC-BLR-15 (Phase 4 burst-coalescing window)
+const _throttleState = new Map(); // type -> { timer, count, level, module, message, data } -- DEC-BLR-16
+
+// BLR Phase 4 (DEC-BLR-16): leading-edge emit immediately on the first call for a
+// given `type`; repeat calls within `windowMs` are coalesced into ONE trailing
+// rollup event (data.count, data.coalesced=true) instead of flooding the SSE
+// ring under burst load. A lone call with no repeats never gets a redundant
+// trailing event. Process-memory only, per-type independent state (sibling
+// class to translator-cooldown.js).
+function emitThrottled(type, payload = {}, windowMs = THROTTLE_DEFAULT_MS) {
+  const { level = 'info', module: moduleName = 'Events', message = type, data = {} } = payload;
+  const existing = _throttleState.get(type);
+  if (!existing) {
+    const emitted = emit(type, level, moduleName, message, data);
+    const timer = setTimeout(() => {
+      const state = _throttleState.get(type);
+      _throttleState.delete(type);
+      if (state && state.count > 1) {
+        emit(type, state.level, state.module, state.message, { ...state.data, coalesced: true, count: state.count });
+      }
+    }, windowMs);
+    if (typeof timer.unref === 'function') timer.unref();
+    _throttleState.set(type, { timer, count: 1, level, module: moduleName, message, data });
+    return emitted;
+  }
+  existing.count += 1;
+  existing.data = data;
+  existing.level = level;
+  existing.module = moduleName;
+  existing.message = message;
+  return null;
+}
+
+module.exports = { bus, emit, emitThrottled, getRecentEvents, loadEvents, flushEvents };

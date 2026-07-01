@@ -33,5 +33,10 @@
   "BLACKLIST_PATH_SKIPPED":   "blacklist.path_skipped",
   "TRANSLATOR_TIER_FAILED":   "translator.tier_failed",
   "TRANSLATOR_SKIPPED":       "translator.skipped",
-  "TRANSLATOR_TIER_SUCCESS":  "translator.tier_success"
+  "TRANSLATOR_TIER_SUCCESS":  "translator.tier_success",
+  "QUEUE_OVERFLOW":           "queue.overflow",
+  "QUEUE_DEPTH_WARNING":      "queue.depth_warning",
+  "SWEEP_LONG_RUNNING":       "sweep.long_running",
+  "PROVIDER_TRIPPED":         "provider.tripped",
+  "TRANSLATOR_TIER_COOLED":   "translator.tier_cooled"
 }
