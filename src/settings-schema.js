@@ -3,6 +3,45 @@
 
 const { STANDARD_PLOT_PROMPT } = require('./translator-prompts');
 const { LANGUAGES } = require('./languages');
+/**
+ * @typedef {Object} SettingsFieldOption
+ * @property {string} value
+ * @property {string} label
+ */
+
+/**
+ * @typedef {Object} SettingsField
+ * @property {string} key
+ * @property {string} [bootRequired]
+ * @property {string} label
+ * @property {string} type
+ * @property {string} [placeholder]
+ * @property {boolean} [required]
+ * @property {string} [rule]
+ * @property {number} [min]
+ * @property {number} [max]
+ * @property {number} [step]
+ * @property {string} [displayFormat]
+ * @property {string} [note]
+ * @property {boolean} [integer]
+ * @property {string} [errorMessage]
+ * @property {SettingsFieldOption[]} [options]
+ * @property {string} [envVar]
+ * @property {boolean} [mustBeString]
+ * @property {boolean} [nonWhitespaceIfProvided]
+ */
+
+/**
+ * @typedef {Object} SettingsSection
+ * @property {string} id
+ * @property {string} title
+ * @property {string} icon
+ * @property {string} [testEndpoint]
+ * @property {string} [testLabel]
+ * @property {SettingsField[]} fields
+ */
+
+/** @type {SettingsSection[]} */
 const SETTINGS_SCHEMA = [
   {
     id: 'telegram', title: 'Telegram', icon: 'Send',
