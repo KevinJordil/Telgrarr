@@ -1,4 +1,9 @@
 'use strict';
+// BLR Phase 4: events.js is the ONE sanctioned app require in this module --
+// it sits at the BOTTOM of the require chain (logger itself requires events),
+// so no cycle is possible; the no-logger/no-config constraint below holds.
+const events = require('../events');
+const EVENT_TYPES = require('../../shared/events.json');
 // Provider auth-failure breaker (P6.1a), extended (BLR Phase 3 / C-6) to a
 // reason-classified latch: auth | rate | quota. Recognizes a provider
 // key/auth failure, a volumetric 429, or a daily-quota exhaustion and
@@ -51,10 +56,25 @@ const REASON_QUOTA = 'quota';
 // provider -> reason ('auth'|'rate'|'quota'). Map (not Set) so callers/observability
 // (BLR Phase 4) can distinguish WHY a provider is sidelined this sweep.
 const trippedMap = new Map();
+// -- BLR Phase 4: trip observability (once per provider+reason per cycle) --
+// Re-armed at sweep start via resetCycle(id); id is accepted for call-site
+// symmetry with queue.markSweepCycle and is not otherwise consumed.
+const _notifiedThisCycle = new Set();
+function resetCycle(id) { _notifiedThisCycle.clear(); }
+function _notifyTripped(provider, reason) {
+  const key = provider + ':' + reason;
+  if (_notifiedThisCycle.has(key)) return;
+  _notifiedThisCycle.add(key);
+  events.emit(
+    EVENT_TYPES.PROVIDER_TRIPPED, 'warn', 'Breaker',
+    'Provider ' + provider + ' sidelined for this sweep (' + reason + ')',
+    { provider, reason }
+  );
+}
 
-function trip(provider, reason = REASON_AUTH) { trippedMap.set(provider, reason); }
-function tripRate(provider)                   { trippedMap.set(provider, REASON_RATE); }
-function tripQuota(provider)                  { trippedMap.set(provider, REASON_QUOTA); }
+function trip(provider, reason = REASON_AUTH) { trippedMap.set(provider, reason); _notifyTripped(provider, reason); }
+function tripRate(provider)                   { trippedMap.set(provider, REASON_RATE); _notifyTripped(provider, REASON_RATE); }
+function tripQuota(provider)                  { trippedMap.set(provider, REASON_QUOTA); _notifyTripped(provider, REASON_QUOTA); }
 function isTripped(provider)                  { return trippedMap.has(provider); }
 function getTrippedReason(provider)           { return trippedMap.get(provider) || null; }
 function reset()                              { trippedMap.clear(); }
@@ -71,4 +91,5 @@ module.exports = {
   isTripped,
   getTrippedReason,
   reset,
+  resetCycle,
 };
