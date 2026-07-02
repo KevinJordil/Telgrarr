@@ -22,6 +22,23 @@ const { createLimit } = require('./utils/p-limit');
 const translatorCooldown = require('./translator-cooldown');
 const SWEEP_STATE_FILE = path.join(config.DATA_DIR, 'sweep-state.json');
 
+// -- splitMachineTranslation (HIST-UPG P5 / DEC-P5-1) --------------------------
+// The enricher appends the Telegram-HTML machine-translation watermark
+// ("\n\n<blockquote>...</blockquote>") AFTER MAX_PLOT truncation, so a trailing
+// blockquote is always intact. History stores the CLEAN plot plus an additive
+// machineTranslated flag; the caption path is untouched (Telegram keeps the
+// watermark). Pure; exported for tests. Mirrors the GUI legacy-strip regex
+// (ContentDetailModal, DEC-P5-3 declared duplication across the JS/JSX boundary).
+const MT_BLOCKQUOTE_RE = /<blockquote>[\s\S]*?<\/blockquote>\s*$/;
+function splitMachineTranslation(text) {
+  if (typeof text !== 'string' || text === '') return { text: text || null, machineTranslated: false };
+  const m = MT_BLOCKQUOTE_RE.exec(text);
+  if (!m) return { text, machineTranslated: false };
+  const clean = text.slice(0, m.index).trim();
+  return { text: clean || null, machineTranslated: true };
+}
+
+
 function tracesOf(items) {
   if (!Array.isArray(items)) return '-';
   const set = new Set();
@@ -241,9 +258,10 @@ async function runSweep() {
         : null;
       // ── Sonarr overview + genres — "what was sent" (HD-20) ────────────────
       const _sonarrEnMode  = activeMode === 'default_en';
-      const sonarrOverview = _sonarrEnMode
+      const _sonarrOvSplit = splitMachineTranslation(_sonarrEnMode
         ? (enrichedSeries._overviewEn || null)
-        : (enrichedSeries._overviewAr || enrichedSeries._overviewEn || null);
+        : (enrichedSeries._overviewAr || enrichedSeries._overviewEn || null));
+      const sonarrOverview = _sonarrOvSplit.text;
       const sonarrGenres   = _sonarrEnMode
         ? (enrichedSeries._genresEn   || null)
         : (enrichedSeries._genresAr   || enrichedSeries._genresEn   || null);
@@ -263,6 +281,7 @@ async function runSweep() {
         tvdbId:      series.tvdbId  || null,
         language:    config.translator?.targetLang || 'ar',
         overview:    sonarrOverview,
+        machineTranslated: _sonarrOvSplit.machineTranslated,
         genres:      sonarrGenres,
         runtime:     tmdbSeries?.episode_run_time?.[0] || null,
         quality:     sonarrQuality,
@@ -334,9 +353,10 @@ async function runSweep() {
       const radarrQuality  = radarrGroups[movieId].find(it => it.quality)?.quality || null;
       // ── Radarr overview + genres — "what was sent" (HD-20) ────────────────
       const _radarrEnMode  = activeMode === 'default_en';
-      const radarrOverview = _radarrEnMode
+      const _radarrOvSplit = splitMachineTranslation(_radarrEnMode
         ? (tmdbMovie?._overviewEn || null)
-        : (tmdbMovie?._overviewAr || tmdbMovie?._overviewEn || null);
+        : (tmdbMovie?._overviewAr || tmdbMovie?._overviewEn || null));
+      const radarrOverview = _radarrOvSplit.text;
       const radarrGenres   = _radarrEnMode
         ? (movie._genresEn || null)
         : (movie._genresAr || movie._genresEn || null);
@@ -359,6 +379,7 @@ async function runSweep() {
         language:    config.translator?.targetLang || 'ar',
         traces:      tracesOf(radarrGroups[movieId]),
         overview:    radarrOverview,
+        machineTranslated: _radarrOvSplit.machineTranslated,
         genres:      radarrGenres,
         runtime:     tmdbMovie?.runtime || null,
         quality:     radarrQuality,
@@ -512,4 +533,4 @@ function getSweepStats() {
     lastCompletedAt: _lastCompletedAt != null ? new Date(_lastCompletedAt).toISOString() : null,
   };
 }
-module.exports = { scheduleSweep, getQueueState, getSweepStats, runSweep, recoverCrashedSweep };
+module.exports = { scheduleSweep, getQueueState, getSweepStats, runSweep, recoverCrashedSweep, splitMachineTranslation };
