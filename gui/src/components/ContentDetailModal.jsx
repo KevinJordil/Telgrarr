@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { X, ExternalLink } from 'lucide-react';
+import { Languages, X, ExternalLink } from 'lucide-react';
 import useHistoryStore from '../store/historyStore';
 import PosterImage from './PosterImage';
 import RatingBadge from './RatingBadge';
@@ -20,6 +20,19 @@ function ModalContent({ entry, titleId, closeRef, onClose }) {
     ratings.imdb || ratings.tmdb || ratings.rottenTomatoes || ratings.metacritic
   );
   const hasBackdrop = Boolean(entry.backdropUrl);
+  // Backdrop lifecycle (HIST-UPG P4): fade in on load; a failed URL falls back
+  // to the gradient base instead of rendering a broken/empty header.
+  const [bdLoaded, setBdLoaded] = useState(false);
+  const [bdFailed, setBdFailed] = useState(false);
+  const showBackdrop = hasBackdrop && !bdFailed;
+  // Overview hygiene (HIST-UPG P4): legacy records embed a literal Telegram-HTML
+  // machine-translation watermark; strip it for display and surface a styled
+  // pill instead. New records carry machineTranslated:true (P5, additive);
+  // honor both signals.
+  const rawOverview = typeof entry.overview === 'string' ? entry.overview : '';
+  const mtMatch = /<blockquote>[\s\S]*?<\/blockquote>\s*$/.exec(rawOverview);
+  const overviewText = (mtMatch ? rawOverview.slice(0, mtMatch.index) : rawOverview).trim();
+  const machineTranslated = entry.machineTranslated === true || mtMatch !== null;
   const hasEpisodes = (
     entry.type === 'show' &&
     Array.isArray(entry.episodes) &&
@@ -49,20 +62,21 @@ function ModalContent({ entry, titleId, closeRef, onClose }) {
     <>
       {/* ── Backdrop / hero header ──────────────────────────────────────────── */}
       <div className="relative shrink-0 h-44 md:h-52 rounded-t-2xl overflow-hidden">
-        {hasBackdrop ? (
+        {/* Gradient base: always rendered (pre-load state + no/failed-backdrop fallback; R15 tokens) */}
+        <div className="absolute inset-0 bg-linear-to-br from-telgrarr-purple/25 via-telgrarr-elevated to-telgrarr-black" />
+        {showBackdrop && (
           <>
             <img
               src={entry.backdropUrl}
               alt=""
               aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover"
+              onLoad={() => setBdLoaded(true)}
+              onError={() => setBdFailed(true)}
+              className={'absolute inset-0 w-full h-full object-cover transition-opacity duration-500 motion-reduce:transition-none ' + (bdLoaded ? 'opacity-100' : 'opacity-0')}
             />
-            {/* Dimming veil so the close button stays readable over the image */}
-            <div className="absolute inset-0 bg-telgrarr-black/60" />
+            {/* Scrim: dark top keeps the close button readable; melts into the panel surface below */}
+            <div className="absolute inset-0 bg-linear-to-b from-telgrarr-black/50 via-telgrarr-black/25 to-telgrarr-surface" />
           </>
-        ) : (
-          /* Gradient fallback — telgrarr tokens only (R15) */
-          <div className="absolute inset-0 bg-linear-to-br from-telgrarr-purple/25 via-telgrarr-elevated to-telgrarr-black" />
         )}
 
         {/* Close button — receives initial focus on open */}
@@ -138,12 +152,20 @@ function ModalContent({ entry, titleId, closeRef, onClose }) {
       <div className="mx-5 md:mx-6 mt-5 border-t border-telgrarr-border" role="separator" />
 
       {/* ── Overview ────────────────────────────────────────────────────────── */}
-      {entry.overview && (
+      {overviewText && (
         <div className="px-5 md:px-6 pt-5">
-          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-telgrarr-muted mb-2">
-            Overview
-          </h3>
-          <p className="text-sm text-telgrarr-text leading-relaxed">{entry.overview}</p>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-[10px] font-semibold uppercase tracking-widest text-telgrarr-muted">
+              Overview
+            </h3>
+            {machineTranslated && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-telgrarr-border bg-telgrarr-elevated px-2 py-0.5 text-[9px] font-medium text-telgrarr-muted">
+                <Languages className="w-2.5 h-2.5" aria-hidden="true" />
+                Machine translation
+              </span>
+            )}
+          </div>
+          <p dir="auto" className="text-sm text-telgrarr-text leading-relaxed">{overviewText}</p>
         </div>
       )}
 
@@ -307,7 +329,7 @@ export default function ContentDetailModal() {
             animate="animate"
             exit="exit"
             transition={panelTransition}
-            className="w-full md:max-w-3xl bg-telgrarr-surface border border-telgrarr-border rounded-t-2xl md:rounded-2xl max-h-[90vh] md:max-h-[85vh] overflow-y-auto flex flex-col"
+            className="w-full md:max-w-3xl bg-telgrarr-surface border border-telgrarr-border rounded-t-2xl md:rounded-2xl max-h-[90vh] md:max-h-[85vh] overflow-y-auto overscroll-contain flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {entry && (
