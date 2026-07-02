@@ -75,6 +75,14 @@ function noteQuotaExhausted(tier) {
   _notifyCooled(tier, 'quota', until);
 }
 
+// -- BLR Phase 4 (DEC-BLR-24): pure read-only cooldown inspector for /health.
+// Unlike isCoolingDown(), NEVER mutates (no delete-on-expiry) -- a health
+// probe must not change module state. Returns untilMs while cooling, else null.
+function getCooldownUntil(tier) {
+  const until = untilByTier.get(tier);
+  if (!until || Date.now() >= until) return null;
+  return until;
+}
 function clear() { untilByTier.clear(); }
 
 module.exports = {
@@ -83,6 +91,7 @@ module.exports = {
   noteQuotaExhausted,
   clear,
   resetCycle,
+  getCooldownUntil,
   MIN_COOLDOWN_MS,
   DEFAULT_COOLDOWN_MS,
   MAX_COOLDOWN_MS,

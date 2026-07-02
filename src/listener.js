@@ -6,6 +6,11 @@ const config        = require('./config');
 const log           = require('./logger');
 const requestLogger = require('./middlewares/request-logger');
 const { shouldServeAppShell } = require('./utils/spa-fallback');
+// -- BLR Phase 4 (BLR SD-4): observability data sources for /health -----------
+const { peekLength } = require('./queue');
+const { getSweepStats } = require('./sweeper');
+const providerBreaker = require('./services/provider-breaker');
+const translatorCooldown = require('./translator-cooldown');
 
 const app = express();
 
@@ -97,10 +102,29 @@ app.get('/health', async (req, res) => {
     config: checkConfigValid(),
   };
   const allOk = Object.values(checks).every(c => c.ok);
+  // -- BLR Phase 4 (BLR SD-4 / DEC-BLR-14): ADDITIVE observability sibling. --
+  // Enum/number/ISO-string values only -- no key material, URLs, retry-after,
+  // or error messages (D-E). Existing {status,time,checks} envelope unchanged.
+  const maxItems = config.queue.maxItems;
+  const len = await peekLength(); // fail-safe by contract (DEC-BLR-2): 0 on error
+  const observability = {
+    queue: { len, max: maxItems, pct: maxItems > 0 ? Math.round((len / maxItems) * 100) : 0 },
+    sweep: getSweepStats(),
+    providers: {
+      tmdb: { status: providerBreaker.getTrippedReason('tmdb') || 'ok' },
+      omdb: { status: providerBreaker.getTrippedReason('omdb') || 'ok' },
+    },
+    translator: { tiers: {} },
+  };
+  for (const t of [1, 2, 3]) {
+    const untilMs = translatorCooldown.getCooldownUntil(t);
+    observability.translator.tiers[t] = { coolingDown: untilMs != null, untilMs };
+  }
   res.status(allOk ? 200 : 503).json({
     status: allOk ? 'ok' : 'degraded',
     time:   new Date().toISOString(),
     checks,
+    observability,
   });
 });
 
@@ -145,4 +169,4 @@ function startListener() {
   return server;
 }
 
-module.exports = { startListener };
+module.exports = { startListener, app };
