@@ -6,7 +6,7 @@ const SIZE_MAP = { xs: 'w92', sm: 'w154', md: 'w342', lg: 'w500' };
 
 // Matches the TMDb CDN size segment in a URL, e.g. "image.tmdb.org/t/p/w500/".
 // Only URLs matching this pattern get size substitution; all others are used as-is.
-const TMDB_CDN_RE = /image\.tmdb\.org\/t\/p\/w\d+\//;
+const TMDB_CDN_RE = /image\.tmdb\.org\/t\/p\/(?:w\d+|original)\//;
 
 function resolveUrl(url, size) {
   if (!url) return null;
@@ -16,6 +16,20 @@ function resolveUrl(url, size) {
     return url.replace(TMDB_CDN_RE, 'image.tmdb.org/t/p/' + variant + '/');
   }
   return url;
+}
+
+// ---- Session image caches (HIST-UPG P1) -------------------------------------
+// Module-level, session-scoped, bounded in practice (short URL strings).
+// loadedUrls: URLs that finished loading this session; a remount renders them
+// at full opacity instantly (no blank + re-fade on view switches).
+// failedUrls: URLs that errored (no per-mount retry churn).
+// bestVariant: per-artwork key (URL minus its CDN size segment) -> the most
+// recently loaded variant, shown as a stand-in while another size loads.
+const loadedUrls  = new Set();
+const failedUrls  = new Set();
+const bestVariant = new Map();
+function variantKey(u) {
+  return u.replace(TMDB_CDN_RE, 'image.tmdb.org/t/p/{s}/');
 }
 
 // Film-reel silhouette placeholder — inherits text-telgrarr-muted for stroke.
@@ -41,34 +55,55 @@ function Placeholder({ className }) {
 
 /**
  * Poster image with TMDb CDN size-swapping, lazy loading, animated fade-in,
- * and a film-reel silhouette fallback on error.
+ * a film-reel silhouette fallback on error, and session URL caches: an
+ * already-loaded URL renders instantly on remount, and while a new size
+ * variant loads, an already-loaded sibling variant of the same artwork
+ * is shown beneath it (no blank card on view/size switches).
  *
  * @param {{ url?: string, size?: 'xs'|'sm'|'md'|'lg', alt: string, className?: string }} props
  */
 export default function PosterImage({ url, size = 'md', alt, className }) {
-  const [failed, setFailed] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  // Per-URL knowledge lives in the module caches above; this state exists
+  // only to re-render when the CURRENT url's cache status changes.
+  const [, bump] = useState(0);
   const prefersReduced = useReducedMotion();
-
-  const wrapClass = 'aspect-[2/3] overflow-hidden rounded-lg bg-telgrarr-surface ' + (className || '');
-  const resolved  = resolveUrl(url, size);
-
-  if (!resolved || failed) {
+  const wrapClass = 'relative aspect-[2/3] overflow-hidden rounded-lg bg-telgrarr-surface ' + (className || '');
+  const resolved = resolveUrl(url, size);
+  if (!resolved) {
     return <Placeholder className={wrapClass} />;
   }
-
+  const isLoaded = loadedUrls.has(resolved);
+  const isFailed = failedUrls.has(resolved);
+  // Already-loaded sibling variant of the same artwork (different CDN size):
+  // shown beneath the incoming image so size/view switches never blank the
+  // card; also the graceful stand-in if the requested variant errors.
+  const fallbackSrc = !isLoaded ? (bestVariant.get(variantKey(resolved)) || null) : null;
+  if (isFailed) {
+    if (!fallbackSrc) return <Placeholder className={wrapClass} />;
+    return (
+      <div className={wrapClass}>
+        <img src={fallbackSrc} alt={alt || ''} draggable={false}
+          className="absolute inset-0 w-full h-full object-cover" />
+      </div>
+    );
+  }
   return (
     <div className={wrapClass}>
+      {fallbackSrc && (
+        <img src={fallbackSrc} alt="" aria-hidden="true" draggable={false}
+          className="absolute inset-0 w-full h-full object-cover" />
+      )}
       <motion.img
+        key={resolved}
         src={resolved}
         alt={alt || ''}
         loading="lazy"
-        onLoad={() => setLoaded(true)}
-        onError={() => setFailed(true)}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: loaded ? 1 : 0 }}
+        onLoad={() => { loadedUrls.add(resolved); bestVariant.set(variantKey(resolved), resolved); bump((n) => n + 1); }}
+        onError={() => { failedUrls.add(resolved); bump((n) => n + 1); }}
+        initial={isLoaded ? false : { opacity: 0 }}
+        animate={{ opacity: isLoaded ? 1 : 0 }}
         transition={prefersReduced ? { duration: 0 } : { duration: 0.2 }}
-        className="w-full h-full object-cover"
+        className="relative w-full h-full object-cover"
         draggable={false}
       />
     </div>
