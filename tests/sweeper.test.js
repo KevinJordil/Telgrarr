@@ -28,6 +28,7 @@ stub('../src/events.js', { emit: (type, ...rest) => { emitCalls.push({ type, res
 stub('../src/queue.js', {
   drainQueue: async () => [{ source: 'radarr', movieId: '123', traceId: 't1' }],
   enqueue: async () => {},
+  markSweepCycle: () => {},
   // Mirrors src/queue.js identityKey (independently covered by queue-identity.test.js);
   // a hermetic double so the sweeper ledger write-back can resolve identity keys.
   identityKey: (item) => {

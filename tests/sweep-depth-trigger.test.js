@@ -24,7 +24,7 @@ stub('../src/services/metadata.js', {
   fetchSonarrMetadata: async () => ({ series: { title: 'T', year: 2020, imdbId: null, tmdbId: null, tvdbId: null }, tmdbSeries: { episode_run_time: [] }, omdbData: null }),
   fetchRadarrMetadata: async () => ({ movie: { title: 'M', year: 2020, imdbId: null, tmdbId: null }, tmdbMovie: null, omdbData: null }),
 });
-stub('../src/services/provider-breaker.js', { reset: () => {} });
+stub('../src/services/provider-breaker.js', { reset: () => {}, resetCycle: () => {} });
 stub('../src/templates.js', { getActiveMode: () => 'default_en', isElementEnabled: () => false });
 stub('../src/services/notifications.js', { dispatchBatch: async () => ({ successful: [], failed: [] }) });
 const queue       = require('../src/queue.js');

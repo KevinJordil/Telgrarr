@@ -2,7 +2,7 @@
 const fs          = require('fs');
 const path        = require('path');
 const writeAtomic = require('write-file-atomic');
-const { drainQueue, enqueue, peekLength, identityKey } = require('./queue');
+const { drainQueue, enqueue, peekLength, identityKey, markSweepCycle } = require('./queue');
 const { recordSent } = require('./reconcile-state');
 const { buildCaption, getPosterUrl: getShowPosterUrl } = require('./formatter');
 const { buildMovieCaption, getPosterUrl: getMoviePosterUrl } = require('./radarr-formatter');
@@ -19,6 +19,7 @@ const events    = require('./events');
 const EVENT_TYPES = require('../shared/events.json');
 const providerBreaker = require('./services/provider-breaker');
 const { createLimit } = require('./utils/p-limit');
+const translatorCooldown = require('./translator-cooldown');
 const SWEEP_STATE_FILE = path.join(config.DATA_DIR, 'sweep-state.json');
 
 function tracesOf(items) {
@@ -34,6 +35,14 @@ let isSweeping    = false;
 let pendingSweep  = false;           // BLR-1 / DEC-BLR-1: wake-after-finish
 const SWEEP_NOW_THRESHOLD = 50;      // BLR-1 / DEC-BLR-3: depth trigger
 const METADATA_CONCURRENCY = 5;      // BLR-3 / DEC-BLR-11: ~25% of TMDb's ~40 req/sec ceiling
+// -- BLR Phase 4: sweep-cycle observability state (DEC-BLR-22) --------------
+// _sweepCycleId re-arms the once-per-cycle notifications (queue depth warn,
+// provider trips, translator cooldowns) at each sweep start; the stats fields
+// feed getSweepStats() for the /health observability sibling (BLR SD-4).
+let _sweepCycleId    = 0;
+let _sweepStartedAt  = null;
+let _lastCompletedAt = null;
+let _lastDurationMs  = null;
 
 async function scheduleSweep() {
   // Continuity guard (DEC-BLR-1): a sweep already in flight → mark the
@@ -106,6 +115,24 @@ async function runSweep() {
   }
   isSweeping = true;
   providerBreaker.reset();
+  // -- BLR Phase 4: advance the sweep cycle + arm the long-running watchdog --
+  _sweepCycleId += 1;
+  markSweepCycle(_sweepCycleId);
+  providerBreaker.resetCycle(_sweepCycleId);
+  translatorCooldown.resetCycle(_sweepCycleId);
+  _sweepStartedAt = Date.now();
+  let _sweepLongTimer = null;
+  const _longMs = 2 * config.batchWindowMs;
+  if (Number.isFinite(_longMs) && _longMs > 0) {
+    _sweepLongTimer = setTimeout(() => {
+      events.emit(
+        EVENT_TYPES.SWEEP_LONG_RUNNING, 'warn', 'Sweeper',
+        'Sweep running longer than ' + Math.round(_longMs / 1000) + 's (2x batch window)',
+        { thresholdMs: _longMs, startedAtMs: _sweepStartedAt }
+      );
+    }, _longMs);
+    if (typeof _sweepLongTimer.unref === 'function') _sweepLongTimer.unref();
+  }
   const metadataLimit = createLimit(METADATA_CONCURRENCY);
   let sentCount = 0;
   try {
@@ -435,6 +462,9 @@ async function runSweep() {
     events.emit(EVENT_TYPES.QUEUE_DRAINED, 'info', 'Sweeper', 'Queue drained.', { count: 0 });
   } finally {
     isSweeping = false;
+    if (_sweepLongTimer) { clearTimeout(_sweepLongTimer); _sweepLongTimer = null; }
+    _lastCompletedAt = Date.now();
+    _lastDurationMs  = _sweepStartedAt != null ? _lastCompletedAt - _sweepStartedAt : null;
     // ── Age-based history retention — piggybacks on the sweep cycle (HIST H1.5) ──
     // pruneByAge(0) is a strict no-op per contract; safe when maxAgeDays unset.
     try {
@@ -474,4 +504,12 @@ async function runSweep() {
     }
   }
 }
-module.exports = { scheduleSweep, getQueueState, runSweep, recoverCrashedSweep };
+function getSweepStats() {
+  return {
+    active:          isSweeping,
+    startedAt:       _sweepStartedAt  != null ? new Date(_sweepStartedAt).toISOString()  : null,
+    durationMs:      _lastDurationMs,
+    lastCompletedAt: _lastCompletedAt != null ? new Date(_lastCompletedAt).toISOString() : null,
+  };
+}
+module.exports = { scheduleSweep, getQueueState, getSweepStats, runSweep, recoverCrashedSweep };

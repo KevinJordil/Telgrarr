@@ -169,6 +169,7 @@ function buildContext(opts = {}) {
     }],
     ['write-file-atomic', wfaStub],
     ['../src/queue.js', {
+      markSweepCycle: () => {},
       drainQueue:  async () => [...sonarrItems, ...radarrItems],
       enqueue:     async () => true,
       identityKey: (item) =>
@@ -223,7 +224,7 @@ function buildContext(opts = {}) {
       getLayout:        () => ({ sonarr: null, radarr: null }),
     }],
     ['../src/events.js',                    { emit: () => {} }],
-    ['../src/services/provider-breaker.js', { reset: () => {} }],
+    ['../src/services/provider-breaker.js', { resetCycle: () => {}, reset: () => {} }],
     // media-utils: use real resolveRating (pure fn; its config dependency
     // (attachSeerr) is not invoked in the history extraction code path).
   ];

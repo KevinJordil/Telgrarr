@@ -27,7 +27,7 @@ stub('../src/services/media-enricher.js', {
   enrichRadarrMedia: async (m, t) => ({ movie: m, tmdbMovie: t, ratings: {} }),
 });
 stub('../src/utils/media-utils.js', { resolveRating: () => null });
-stub('../src/services/provider-breaker.js', { reset: () => {} });
+stub('../src/services/provider-breaker.js', { reset: () => {}, resetCycle: () => {} });
 stub('../src/templates.js', { getActiveMode: () => 'default_en', isElementEnabled: () => false });
 
 let inFlight = 0;
