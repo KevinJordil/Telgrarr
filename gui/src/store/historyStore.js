@@ -38,6 +38,10 @@ const safeSearch     = (v) => typeof v === 'string'          ? v : '';
 // Read persisted prefs once at module load (same pattern as authStore/themeStore).
 const _p = loadPrefs();
 
+// Monotonic fetch sequence (HIST-UPG P2). Each fetchHistory call takes the
+// next number; only the LATEST call may write state. A slow, superseded
+// response (success or error) is discarded instead of clobbering newer data.
+let _fetchSeq = 0;
 const useHistoryStore = create((set, get) => ({
   // ── Server state (ephemeral — never persisted) ────────────────────────────
   items:       [],
@@ -60,6 +64,7 @@ const useHistoryStore = create((set, get) => ({
   // ── Server actions ────────────────────────────────────────────────────────
 
   fetchHistory: async () => {
+    const seq = ++_fetchSeq;
     const { sort, typeFilter, searchQuery, page, pageSize } = get();
     set({ loading: true, error: null });
     try {
@@ -70,6 +75,7 @@ const useHistoryStore = create((set, get) => ({
       if (typeFilter !== 'all')        params.set('type',   typeFilter);
       if (searchQuery.trim().length)   params.set('search', searchQuery.trim());
       const res = await api.get('/history?' + params.toString());
+      if (seq !== _fetchSeq) return; // stale response — superseded by a newer fetch
       set({
         items:    res.data.items,
         total:    res.data.total,
@@ -78,6 +84,7 @@ const useHistoryStore = create((set, get) => ({
         loading:  false,
       });
     } catch (err) {
+      if (seq !== _fetchSeq) return; // stale error — superseded by a newer fetch
       set({
         loading: false,
         error:   err?.response?.data?.error || 'Failed to load history.',
@@ -108,6 +115,7 @@ const useHistoryStore = create((set, get) => ({
   clearHistory: async () => {
     // Axios DELETE body requires the `data` key (not second positional arg).
     await api.delete('/history', { data: { confirm: 'CLEAR_HISTORY' } });
+    _fetchSeq++; // invalidate any in-flight fetch — it predates the clear
     set({ items: [], total: 0, page: 1, stats: null });
     await get().fetchStats();
   },
