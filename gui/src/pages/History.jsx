@@ -35,7 +35,6 @@ function SegCtrl({ options, value, onChange, label, className }) {
 
 // ── PosterCard ────────────────────────────────────────────────────────────────
 function PosterCard({ entry, onOpen, density, imgSize }) {
-  const reduceMotion = useReducedMotion();
   const ariaLabel = [entry.title, entry.year != null && '(' + entry.year + ')']
     .filter(Boolean).join(' ') + ' \u2014 view details';
   return (
@@ -43,9 +42,6 @@ function PosterCard({ entry, onOpen, density, imgSize }) {
       title={density === 'none' ? (entry.title || '') : undefined}
       onClick={() => onOpen(entry)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(entry))}
-      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
-      animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-      transition={{ duration: 0.15 }}
       className="focus-ring cursor-pointer rounded-xl border border-transparent hover:border-telgrarr-purple/40 hover:shadow-lg transition-all duration-200">
       <PosterImage url={entry.poster} size={imgSize} alt={entry.title || ''} />
       {density !== 'none' && (
@@ -329,7 +325,7 @@ export default function History() {
 
   // ── Body (IIFE — clean conditional branches, no nested ternary chains) ─────
   const body = (() => {
-    if (showSkeleton) return skeleton;
+    if (showSkeleton && items.length === 0) return skeleton;
 
     if (error) return (
       <div className="px-4 py-16 flex flex-col items-center text-center gap-3" role="alert">
@@ -412,7 +408,7 @@ export default function History() {
     })();
 
     return (
-      <div className="px-4 py-4 space-y-4">
+      <div className={'px-4 py-4 space-y-4 transition-opacity duration-200 ' + (loading ? 'opacity-60' : 'opacity-100')}>
         {listContent}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-3 pt-2">
@@ -463,11 +459,11 @@ export default function History() {
                 { mode: 'poster',  Icon: LayoutGrid, label: 'Poster grid'  },
                 { mode: 'compact', Icon: List,        label: 'Compact list' },
                 { mode: 'table',   Icon: Table,       label: 'Table view'   },
-              ].map(({ mode, Icon, label }) => (
+              ].filter(({ mode }) => !(mode === 'table' && isMobile)).map(({ mode, Icon, label }) => (
                 <button key={mode} onClick={() => setViewMode(mode)}
-                  aria-pressed={viewMode === mode} aria-label={label}
+                  aria-pressed={effectiveViewMode === mode} aria-label={label}
                   className={'focus-ring p-1.5 rounded-lg transition-all active:scale-95 ' +
-                    (viewMode === mode
+                    (effectiveViewMode === mode
                       ? 'bg-telgrarr-surface text-telgrarr-text shadow-xs border border-telgrarr-border/50'
                       : 'text-telgrarr-muted hover:text-telgrarr-text')}>
                   <Icon className="w-3.5 h-3.5" aria-hidden="true" />
