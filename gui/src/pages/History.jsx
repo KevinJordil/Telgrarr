@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import useHistoryStore    from '../store/historyStore';
 import ConfirmModal       from '../components/ConfirmModal';
-import ContentDetailModal from '../components/ContentDetailModal';
 import PosterImage        from '../components/PosterImage';
 import RatingBadge        from '../components/RatingBadge';
 import SourceBadge        from '../components/SourceBadge';
@@ -531,7 +530,6 @@ export default function History() {
         onConfirm={handleClear}
         onCancel={() => !clearing && setShowClearConfirm(false)}
       />
-      <ContentDetailModal />
     </div>
   );
 }

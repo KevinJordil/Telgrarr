@@ -6,6 +6,7 @@ import useThemeStore from '../store/themeStore';
 import BottomNav from './BottomNav';
 import ThemeSwitcher from './ThemeSwitcher';
 import PullToRefresh from './PullToRefresh';
+import ContentDetailModal from './ContentDetailModal';
 import logoUrlDark  from '../assets/header-logo-dark.png?format=webp&w=128&quality=80';
 import logoUrlLight from '../assets/header-logo-light.png?format=webp&w=128&quality=80';
 
@@ -59,6 +60,7 @@ export default function AuthLayout() {
       </PullToRefresh>
 
       <BottomNav />
+      <ContentDetailModal />
 
     </div>
   );

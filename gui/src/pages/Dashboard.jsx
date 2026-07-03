@@ -7,7 +7,6 @@ import QueueWidget from '../components/QueueWidget';
 import LiveFeed from '../components/LiveFeed';
 import { useNavigate } from 'react-router-dom';
 import useHistoryStore from '../store/historyStore';
-import ContentDetailModal from '../components/ContentDetailModal';
 
 export default function Dashboard() {
   const [history, setHistory] = useState([]);
@@ -102,7 +101,6 @@ export default function Dashboard() {
       <div className="max-w-5xl mx-auto">
         <LiveFeed events={events} connected={connected} />
       </div>
-      <ContentDetailModal />
     </div>
   );
 }

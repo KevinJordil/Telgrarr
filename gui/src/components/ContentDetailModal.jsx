@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Languages, Trash2, X, ExternalLink } from 'lucide-react';
 import useHistoryStore from '../store/historyStore';
+import { useLocation } from 'react-router-dom';
 import ConfirmModal from './ConfirmModal';
 import PosterImage from './PosterImage';
 import RatingBadge from './RatingBadge';
@@ -301,11 +302,11 @@ export default function ContentDetailModal() {
     }
   };
   const isOpen    = detailEntry !== null;
-  // Close on host-page unmount (HIST-UPG HF1): detailEntry is global store
-  // state and multiple pages mount this modal; navigating away (nav tap,
-  // browser back) must not carry an open modal to the next page or back to
-  // this one. Cleanup-only; closeDetail is a stable zustand action.
-  useEffect(() => () => { closeDetail(); }, [closeDetail]);
+  // Close on route change (HIST-UPG HF2): the modal renders once in AuthLayout
+  // (global mount, not per-page); a nav tap must dismiss any open detail overlay.
+  // closeDetail() is idempotent when nothing is open.
+  const location = useLocation();
+  useEffect(() => { closeDetail(); }, [location.pathname, closeDetail]);
 
   // ── Focus management — pattern: ConfirmModal ──────────────────────────────
   useEffect(() => {
