@@ -10,6 +10,8 @@ import { formatRelativeTime, formatFullTime } from '../utils/timeFormat';
 
 // Unique ID counter for ARIA labelling — same pattern as ConfirmModal.
 let idSeq = 0;
+// Episodes shown before the "Show all" expander (HIST-UPG HF2).
+const EPISODES_CLAMP = 8;
 
 // ── ModalContent ─────────────────────────────────────────────────────────────
 // Kept separate from ContentDetailModal so the outer shell can hold the
@@ -25,6 +27,9 @@ function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
   // to the gradient base instead of rendering a broken/empty header.
   const [bdLoaded, setBdLoaded] = useState(false);
   const [bdFailed, setBdFailed] = useState(false);
+  // Episodes clamp (HIST-UPG HF2): season packs can carry long lists; clamp
+  // with an explicit expander so the sheet cannot balloon unbounded.
+  const [showAllEpisodes, setShowAllEpisodes] = useState(false);
   const showBackdrop = hasBackdrop && !bdFailed;
   // Overview hygiene (HIST-UPG P4): legacy records embed a literal Telegram-HTML
   // machine-translation watermark; strip it for display and surface a styled
@@ -61,6 +66,19 @@ function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
 
   return (
     <>
+            {/* Sticky close rail (HIST-UPG HF2): zero-height sticky wrapper keeps
+          the close button reachable at ANY scroll depth - previously the X
+          lived inside the hero and scrolled away on tall content. */}
+      <div className="sticky top-0 z-[2] h-0">
+        <button
+          ref={closeRef}
+          onClick={onClose}
+          aria-label="Close"
+          className="focus-ring absolute top-3 right-3 flex items-center justify-center w-8 h-8 rounded-full bg-telgrarr-black/60 text-white hover:bg-telgrarr-black/80 transition-colors"
+        >
+          <X className="w-4 h-4" aria-hidden="true" />
+        </button>
+      </div>
       {/* ── Backdrop / hero header ──────────────────────────────────────────── */}
       <div className="relative shrink-0 h-44 md:h-52 rounded-t-2xl overflow-hidden">
         {/* Gradient base: always rendered (pre-load state + no/failed-backdrop fallback; R15 tokens) */}
@@ -80,15 +98,7 @@ function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
           </>
         )}
 
-        {/* Close button — receives initial focus on open */}
-        <button
-          ref={closeRef}
-          onClick={onClose}
-          aria-label="Close"
-          className="focus-ring absolute top-3 right-3 z-[1] flex items-center justify-center w-8 h-8 rounded-full bg-telgrarr-black/60 text-white hover:bg-telgrarr-black/80 transition-colors"
-        >
-          <X className="w-4 h-4" aria-hidden="true" />
-        </button>
+        
       </div>
 
       {/* ── Poster + metadata ───────────────────────────────────────────────── */}
@@ -177,8 +187,9 @@ function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
             {hasEpisodes ? 'Episodes' : 'Content'}
           </h3>
           {hasEpisodes ? (
+            <>
             <ul className="space-y-1.5">
-              {entry.episodes.map((ep, idx) => (
+              {(showAllEpisodes ? entry.episodes : entry.episodes.slice(0, EPISODES_CLAMP)).map((ep, idx) => (
                 <li key={idx} className="flex items-baseline gap-2 text-sm text-telgrarr-text">
                   {/* \u2014 = em dash; straight quotes per roadmap example */}
                   <span className="font-mono text-xs text-telgrarr-muted shrink-0 tabular-nums">
@@ -190,6 +201,15 @@ function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
                 </li>
               ))}
             </ul>
+            {entry.episodes.length > EPISODES_CLAMP && (
+              <button
+                onClick={() => setShowAllEpisodes((v) => !v)}
+                className="focus-ring mt-2.5 text-xs font-medium text-telgrarr-purple hover:underline rounded"
+              >
+                {showAllEpisodes ? 'Show less' : 'Show all ' + entry.episodes.length + ' episodes'}
+              </button>
+            )}
+            </>
           ) : (
             /* Old entry fallback: entry.details holds "2 Episodes" etc. */
             <p className="text-sm text-telgrarr-text">{entry.details}</p>
@@ -281,6 +301,11 @@ export default function ContentDetailModal() {
     }
   };
   const isOpen    = detailEntry !== null;
+  // Close on host-page unmount (HIST-UPG HF1): detailEntry is global store
+  // state and multiple pages mount this modal; navigating away (nav tap,
+  // browser back) must not carry an open modal to the next page or back to
+  // this one. Cleanup-only; closeDetail is a stable zustand action.
+  useEffect(() => () => { closeDetail(); }, [closeDetail]);
 
   // ── Focus management — pattern: ConfirmModal ──────────────────────────────
   useEffect(() => {
@@ -346,7 +371,7 @@ export default function ContentDetailModal() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[50] flex items-end md:items-center justify-center bg-telgrarr-black/70 backdrop-blur-xs"
+          className="fixed inset-0 z-[55] flex items-end md:items-center justify-center bg-telgrarr-black/70 backdrop-blur-xs"
           onClick={closeDetail}
           onKeyDown={onKeyDown}
         >
