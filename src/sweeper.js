@@ -50,6 +50,7 @@ let batchTimer    = null;
 let batchExpiresAt = null;
 let isSweeping    = false;
 let pendingSweep  = false;           // BLR-1 / DEC-BLR-1: wake-after-finish
+let immediateArmed = false;          // BCS P1 / F8: depth-path setImmediate single-flight guard
 const SWEEP_NOW_THRESHOLD = 50;      // BLR-1 / DEC-BLR-3: depth trigger
 const METADATA_CONCURRENCY = 5;      // BLR-3 / DEC-BLR-11: ~25% of TMDb's ~40 req/sec ceiling
 // -- BLR Phase 4: sweep-cycle observability state (DEC-BLR-22) --------------
@@ -66,6 +67,7 @@ async function scheduleSweep() {
   // wake-after-finish flag and return. runSweep's finally{} consumes it.
   if (isSweeping) { pendingSweep = true; return; }
   if (batchTimer !== null) return;
+  if (immediateArmed) return;
   // Depth trigger (DEC-BLR-3): if the queue is already tsunami-shaped, skip
   // the ${config.batchWindowMs/1000}s coalesce window and dispatch via
   // setImmediate (the calling webhook handler has already returned 200; this
@@ -76,9 +78,12 @@ async function scheduleSweep() {
   // started, or another scheduleSweep may have armed the timer).
   if (isSweeping) { pendingSweep = true; return; }
   if (batchTimer !== null) return;
+  if (immediateArmed) return;
   if (depth >= SWEEP_NOW_THRESHOLD) {
     log.info('Sweeper', `Sweep Execution → Triggered (depth) → Queue Length: ${depth} ≥ ${SWEEP_NOW_THRESHOLD}`);
+    immediateArmed = true;
     setImmediate(() => {
+      immediateArmed = false;
       runSweep().catch((err) => log.error('Sweeper', `Sweep Immediate → Error → ${err.message}`));
     });
     return;
@@ -96,7 +101,11 @@ async function scheduleSweep() {
   batchTimer = setTimeout(async () => {
     batchTimer = null;
     batchExpiresAt = null;
-    await runSweep();
+    try {
+      await runSweep();
+    } catch (err) {
+      log.error('Sweeper', `Sweep Timer → Error → ${err.message}`);
+    }
   }, config.batchWindowMs);
 }
 function getQueueState() {
@@ -127,7 +136,8 @@ async function recoverCrashedSweep() {
 }
 async function runSweep() {
   if (isSweeping) {
-    log.warn('Sweeper', 'Sweep Execution → Rejected → Sweep already in progress');
+    log.info('Sweeper', 'Sweep Execution → Rejected → Sweep already in progress');
+    pendingSweep = true;
     return;
   }
   isSweeping = true;
@@ -152,6 +162,7 @@ async function runSweep() {
   }
   const metadataLimit = createLimit(METADATA_CONCURRENCY);
   let sentCount = 0;
+  let terminallyProcessed = false;
   try {
     log.info('Sweeper', 'Sweep Execution → Started → Draining queue');
     let items;
@@ -412,6 +423,7 @@ async function runSweep() {
     if (messages.length === 0) {
       log.warn('Sweeper', 'Sweep Execution → Skipped → No valid messages after processing');
       events.emit(EVENT_TYPES.SWEEP_ERROR, 'warn', 'Sweeper', 'No messages to send after processing.', {});
+      terminallyProcessed = true;
       return;
     }
     const metaByItem = new Map();
@@ -419,7 +431,14 @@ async function runSweep() {
       metaByItem.set(historyItems[mi], messageMeta[mi]);
     }
     const sweepStart = Date.now();
-    const { successful, failed } = await dispatchBatch(messages, historyItems);
+    let successful, failed;
+    try {
+      ({ successful, failed } = await dispatchBatch(messages, historyItems));
+    } catch (err) {
+      log.error('Sweeper', `Telegram Dispatch → Error → Batch failed: ${err.message}`);
+      events.emit(EVENT_TYPES.SWEEP_ERROR, 'error', 'Sweeper', `Dispatch batch failed: ${err.message}`, {});
+      return;
+    }
     const ms = Date.now() - sweepStart;
     sentCount = successful.length;
     const errorCount = failed.length;
@@ -456,7 +475,11 @@ async function runSweep() {
       } catch (err) {
         log.error('Sweeper', 'Ledger Write \u2192 Error \u2192 ' + err.message);
       }
-      await addHistory(successful);
+      try {
+        await addHistory(successful);
+      } catch (err) {
+        log.error('Sweeper', `History Write → Error → ${err.message}`);
+      }
     }
     if (sentCount === 0 && errorCount > 0) {
       log.error('Sweeper', 'Sweep Execution → Aborted → All Telegram dispatches failed');
@@ -497,7 +520,7 @@ async function runSweep() {
     } catch (_pruneErr) {
       log.error('History', `Prune → Error → ${_pruneErr.message}`);
     }
-    if (sentCount > 0 && fs.existsSync(SWEEP_STATE_FILE)) {
+    if ((sentCount > 0 || terminallyProcessed) && fs.existsSync(SWEEP_STATE_FILE)) {
       try {
         fs.unlinkSync(SWEEP_STATE_FILE);
       } catch (err) {
