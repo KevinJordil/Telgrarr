@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { Languages, X, ExternalLink } from 'lucide-react';
+import { Languages, Trash2, X, ExternalLink } from 'lucide-react';
 import useHistoryStore from '../store/historyStore';
+import ConfirmModal from './ConfirmModal';
 import PosterImage from './PosterImage';
 import RatingBadge from './RatingBadge';
 import SourceBadge from './SourceBadge';
@@ -14,7 +15,7 @@ let idSeq = 0;
 // Kept separate from ContentDetailModal so the outer shell can hold the
 // lastEntryRef snapshot while AnimatePresence plays the dismiss animation
 // after detailEntry is cleared to null.
-function ModalContent({ entry, titleId, closeRef, onClose }) {
+function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
   const ratings    = entry.ratings || {};
   const hasRatings = !!(
     ratings.imdb || ratings.tmdb || ratings.rottenTomatoes || ratings.metacritic
@@ -226,6 +227,17 @@ function ModalContent({ entry, titleId, closeRef, onClose }) {
         </div>
       )}
 
+      {/* Per-entry delete (HIST-UPG P7) - ConfirmModal-gated, mirrors History trash styling */}
+      <div className="px-5 md:px-6 pt-5">
+        <button
+          onClick={onRequestDelete}
+          className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-telgrarr-border px-3 py-1.5 text-xs font-medium text-telgrarr-muted hover:text-telgrarr-danger hover:border-telgrarr-danger/50 transition-colors"
+        >
+          <Trash2 className="w-3 h-3" aria-hidden="true" />
+          Delete from history
+        </button>
+      </div>
+
       {/* Safe bottom padding (extra on mobile for gesture-bar clearance) */}
       <div className="pb-6 md:pb-5" />
     </>
@@ -236,6 +248,9 @@ function ModalContent({ entry, titleId, closeRef, onClose }) {
 export default function ContentDetailModal() {
   const detailEntry = useHistoryStore((s) => s.detailEntry);
   const closeDetail = useHistoryStore((s) => s.closeDetail);
+  const removeEntry = useHistoryStore((s) => s.removeEntry);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const prefersReduced = useReducedMotion();
 
   // Retain the last non-null entry so ModalContent renders correctly while
@@ -250,6 +265,21 @@ export default function ContentDetailModal() {
   const prevFocus = useRef(null);
   const idRef     = useRef(`cdm-${++idSeq}`);
   const titleId   = `${idRef.current}-title`;
+  // Per-entry delete (HIST-UPG P7). On success close both modals; on failure
+  // keep the confirm open so the user can retry or cancel (clear-all pattern).
+  const handleDeleteConfirm = async () => {
+    if (deleting || !entry?.id) return;
+    setDeleting(true);
+    try {
+      await removeEntry(entry.id);
+      setConfirmDeleteOpen(false);
+      closeDetail();
+    } catch (_) {
+      /* confirm stays open */
+    } finally {
+      setDeleting(false);
+    }
+  };
   const isOpen    = detailEntry !== null;
 
   // ── Focus management — pattern: ConfirmModal ──────────────────────────────
@@ -307,6 +337,7 @@ export default function ContentDetailModal() {
       : { type: 'spring', damping: 25, stiffness: 300 };
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -338,11 +369,23 @@ export default function ContentDetailModal() {
                 titleId={titleId}
                 closeRef={closeRef}
                 onClose={closeDetail}
+                onRequestDelete={() => setConfirmDeleteOpen(true)}
               />
             )}
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+      {/* Sibling of the overlay (DEC-P7-1): its Tab/Escape must not bubble into the detail modal's trap */}
+      <ConfirmModal
+        isOpen={confirmDeleteOpen}
+        title="Delete Entry"
+        message={'Remove "' + (entry?.title || 'this entry') + '" from history? This cannot be undone.'}
+        confirmLabel={deleting ? 'Deleting\u2026' : 'Delete'}
+        danger
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => !deleting && setConfirmDeleteOpen(false)}
+      />
+    </>
   );
 }
