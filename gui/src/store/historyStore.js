@@ -52,6 +52,10 @@ const useHistoryStore = create((set, get) => ({
   loading:     false,
   error:       null,
   detailEntry: null,
+  // Mutation signal (HIST-UPG P7-B / DEC-P7B-2): bumped on any successful
+  // history mutation (removeEntry/clearHistory). Consumers running their own
+  // history queries (Dashboard strip) refetch when it changes.
+  dataVersion: 0,
 
   // ── View preferences (persisted to localStorage) ──────────────────────────
   viewMode:    safeViewMode(_p.viewMode),
@@ -108,6 +112,14 @@ const useHistoryStore = create((set, get) => ({
 
   removeEntry: async (id) => {
     await api.delete('/history/' + id);
+    // Page clamp (DEC-P7B-1): deleting the last item of the last page must not
+    // refetch a now-empty page. Clamp BEFORE the fetch — one request, no blank
+    // flash. (If the History page-effect also fires on the clamp, the P2
+    // sequence guard discards the superseded response.)
+    const { total, page, pageSize } = get();
+    const maxPage = Math.max(1, Math.ceil(Math.max(0, total - 1) / pageSize));
+    if (page > maxPage) set({ page: maxPage });
+    set((v) => ({ dataVersion: v.dataVersion + 1 }));
     await get().fetchHistory();
     await get().fetchStats();
   },
@@ -116,7 +128,7 @@ const useHistoryStore = create((set, get) => ({
     // Axios DELETE body requires the `data` key (not second positional arg).
     await api.delete('/history', { data: { confirm: 'CLEAR_HISTORY' } });
     _fetchSeq++; // invalidate any in-flight fetch — it predates the clear
-    set({ items: [], total: 0, page: 1, stats: null });
+    set((v) => ({ items: [], total: 0, page: 1, stats: null, dataVersion: v.dataVersion + 1 }));
     await get().fetchStats();
   },
 
