@@ -16,6 +16,9 @@ export default function Dashboard() {
   const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
   const openDetail = useHistoryStore(st => st.openDetail);
+  // Mutation signal (HIST-UPG P7-B2 / DEC-P7B-2): a history delete/clear made
+  // anywhere (e.g. the detail modal) bumps dataVersion; re-run the strip query.
+  const dataVersion = useHistoryStore(st => st.dataVersion);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,7 +33,7 @@ export default function Dashboard() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [dataVersion]);
 
   return (
     <div className="bg-telgrarr-black text-telgrarr-text p-4 overflow-x-hidden relative">
