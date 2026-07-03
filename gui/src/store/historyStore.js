@@ -80,6 +80,19 @@ const useHistoryStore = create((set, get) => ({
       if (searchQuery.trim().length)   params.set('search', searchQuery.trim());
       const res = await api.get('/history?' + params.toString());
       if (seq !== _fetchSeq) return; // stale response — superseded by a newer fetch
+      // Out-of-range page self-heal (HIST-UPG P7-B3): retention pruning or a
+      // delete made elsewhere can shrink history between visits, and the server
+      // does not clamp `page` — an out-of-range request returns empty items with
+      // a non-zero total. Clamp to the last valid page and refetch once. The
+      // recursive call takes a fresh seq (supersedes this one); the strict
+      // lastPage < page guard + monotonic page decrease make a loop impossible.
+      if (res.data.items.length === 0 && res.data.total > 0 && res.data.page > 1) {
+        const lastPage = Math.max(1, Math.ceil(res.data.total / res.data.pageSize));
+        if (lastPage < res.data.page) {
+          set({ page: lastPage });
+          return get().fetchHistory();
+        }
+      }
       set({
         items:    res.data.items,
         total:    res.data.total,
