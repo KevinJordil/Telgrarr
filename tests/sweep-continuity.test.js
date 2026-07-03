@@ -61,9 +61,9 @@ describe('Sweep continuity (BLR-1 / DEC-BLR-1: pendingSweep + tail-rearm)', () =
     expect(sweeper.getQueueState().active).toBe(false);   // no parallel timer
     release();
     await sweepP;
-    await waitFor(() => sweeper.getQueueState().active === true, 500); // let rearm settle (polled, not fixed-sleep — avoids full-suite-load flake)
+    await waitFor(() => sweeper.getQueueState().active === true); // let rearm settle (polled, not fixed-sleep — avoids full-suite-load flake)
     expect(sweeper.getQueueState().active).toBe(true);   // pendingSweep consumed → timer armed
-    await new Promise((r) => setTimeout(r, 200));        // drain rearmed timer
+    await waitFor(() => sweeper.getQueueState().isSweeping === false && sweeper.getQueueState().active === false);        // drain rearmed timer
   });
   it('queue-empty after sweep does NOT rearm (no pendingSweep, peekLength === 0)', async () => {
     await queue.enqueue(son(99));
@@ -82,8 +82,8 @@ describe('Sweep continuity (BLR-1 / DEC-BLR-1: pendingSweep + tail-rearm)', () =
     await queue.enqueue(son(2));
     release();
     await sweepP;
-    await waitFor(() => sweeper.getQueueState().active === true, 500);
+    await waitFor(() => sweeper.getQueueState().active === true);
     expect(sweeper.getQueueState().active).toBe(true);
-    await new Promise((r) => setTimeout(r, 200));
+    await waitFor(() => sweeper.getQueueState().isSweeping === false && sweeper.getQueueState().active === false);
   });
 });
