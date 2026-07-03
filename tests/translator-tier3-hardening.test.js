@@ -30,12 +30,12 @@ describe('translator Tier 3 (gtx) hardened cooldown (BLR SD-2)', () => {
     expect(cooldown.isCoolingDown('tier3')).toBe(true);
   });
 
-  it('authenticated path (googleApiKey set), non-retryable 401 with no quota signature does NOT trip cooldown (DEC-BLR-8 scope: authenticated keeps strict 429/quota-only, matching Tiers 1/2)', async () => {
+  it('authenticated path (googleApiKey set), non-retryable 401 with no quota signature DOES trip cooldown at MAX (BCS SD-3 supersedes DEC-BLR-8 scope for 401/403: authenticated Google Cloud path now sidelines on auth failure, matching Tiers 1/2 auth symmetry)', async () => {
     config.translator = { aiEnabled: false, deeplEnabled: false, googleApiKey: 'gk' };
     const post = vi.spyOn(axios, 'post').mockRejectedValue(apiError(401));
     expect(await translateText('Hello', { fallback: 'FB' })).toBe('FB');
     expect(post).toHaveBeenCalledTimes(1);
-    expect(cooldown.isCoolingDown('tier3')).toBe(false);
+    expect(cooldown.isCoolingDown('tier3')).toBe(true);   // [BCS T1] authed 401 => MAX cooldown
   });
 
   it('persistent 5xx exhausts in-tier retries (maxAttempts=4), THEN trips tier3 cooldown', async () => {

@@ -58,7 +58,7 @@ describe('translator retry-on-transient (BLR Phase 2 / SD-1: 5xx + network still
     expect(post).toHaveBeenCalledTimes(2);
   });
 
-  it('T1: non-retryable 401 → immediate escalation, no retry burn', async () => {
+  it('T1: non-retryable 401 → immediate escalation, no retry burn, tier1 sidelined at MAX (BCS SD-3)', async () => {
     config.translator = { apiKey: 'k', deeplApiKey: 'd' };
     const post = vi.spyOn(axios, 'post').mockImplementation(async (url) => {
       if (url.includes('deepl')) return DEEPL_OK;
@@ -66,7 +66,7 @@ describe('translator retry-on-transient (BLR Phase 2 / SD-1: 5xx + network still
     });
     expect(await translateText('Hello')).toBe('deepl-out');
     expect(post).toHaveBeenCalledTimes(2);   // 1 T1 + 1 T2
-    expect(cooldown.isCoolingDown('tier1')).toBe(false);
+    expect(cooldown.isCoolingDown('tier1')).toBe(true);   // [BCS T1] 401 => MAX cooldown
   });
 
   it('T2: 503 once → retries and succeeds at Tier 2', async () => {
@@ -81,14 +81,14 @@ describe('translator retry-on-transient (BLR Phase 2 / SD-1: 5xx + network still
     expect(post).toHaveBeenCalledTimes(2);
   });
 
-  it('T2: non-retryable 403 → immediate escalation to T3, no cooldown', async () => {
+  it('T2: non-retryable 403 → immediate escalation to T3, tier2 sidelined at MAX (BCS SD-3)', async () => {
     config.translator = { aiEnabled: false, deeplApiKey: 'd' };
     const post = vi.spyOn(axios, 'post').mockRejectedValue(apiError(403, { data: { message: 'forbidden' } }));
     const get  = vi.spyOn(axios, 'get').mockResolvedValue(GOOGLE_OK);
     expect(await translateText('Hello')).toBe('google-out');
     expect(post).toHaveBeenCalledTimes(1);
     expect(get).toHaveBeenCalledTimes(1);
-    expect(cooldown.isCoolingDown('tier2')).toBe(false);   // T2 (authenticated) stricter semantics NOT applied
+    expect(cooldown.isCoolingDown('tier2')).toBe(true);   // [BCS T1] 403 (DeepL auth) => MAX cooldown
   });
 
   it('T3 (no key): 503 once → retries and succeeds at Tier 3 (retry within tier)', async () => {

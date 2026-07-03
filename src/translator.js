@@ -118,17 +118,18 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
         const translated = res.data?.choices?.[0]?.message?.content?.trim();
         if (translated) {
           log.info('Translator', `Translation → Complete → Tier: [1 (AI)] | Length: [${text.length}]`);
-          events.emit(EVENT_TYPES.TRANSLATOR_TIER_SUCCESS, { tier: 1, length: text.length });
+          events.emit(EVENT_TYPES.TRANSLATOR_TIER_SUCCESS, 'info', 'Translator', `Translation → Complete → Tier: [1 (AI)] | Length: [${text.length}]`, { tier: 1, length: text.length });
           return translated;
         }
         throw new Error('Invalid LLM response structure');
       } catch (err) {
         const status = err.response?.status;
         if (isT1QuotaExhausted(err))    cooldown.noteQuotaExhausted('tier1');
+        else if (status === 401)         cooldown.noteQuotaExhausted('tier1'); // [BCS SD-3] auth => MAX cooldown
         else if (status === 429)         cooldown.noteRateLimit('tier1', getTranslatorRetryAfterMs(err));
         const msg = err.response?.data?.error?.message || err.message;
         log.warn('Translator', `Tier 1 (AI) → Failed → Escalating | ${msg}`);
-        events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, { tier: 1, error: msg });
+        events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, 'warn', 'Translator', `Tier 1 (AI) → Failed → Escalating | ${msg}`, { tier: 1, error: msg });
       }
     }
   }
@@ -147,17 +148,18 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
         const translated = res.data?.translations?.[0]?.text;
         if (translated) {
           log.info('Translator', `Translation → Complete → Tier: [2 (DeepL)] | Length: [${text.length}]`);
-          events.emit(EVENT_TYPES.TRANSLATOR_TIER_SUCCESS, { tier: 2, length: text.length });
+          events.emit(EVENT_TYPES.TRANSLATOR_TIER_SUCCESS, 'info', 'Translator', `Translation → Complete → Tier: [2 (DeepL)] | Length: [${text.length}]`, { tier: 2, length: text.length });
           return translated;
         }
         throw new Error('Invalid DeepL response structure');
       } catch (err) {
         const status = err.response?.status;
         if (isT2QuotaExhausted(err))    cooldown.noteQuotaExhausted('tier2');
+        else if (status === 403)         cooldown.noteQuotaExhausted('tier2'); // [BCS SD-3] DeepL auth => MAX cooldown
         else if (status === 429)         cooldown.noteRateLimit('tier2', getTranslatorRetryAfterMs(err));
         const msg = err.response?.data?.message || err.message;
         log.warn('Translator', `Tier 2 (DeepL) → Failed → Escalating | ${msg}`);
-        events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, { tier: 2, error: msg });
+        events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, 'warn', 'Translator', `Tier 2 (DeepL) → Failed → Escalating | ${msg}`, { tier: 2, error: msg });
       }
     }
   } else if (config.translator?.deeplEnabled === false) {
@@ -190,13 +192,14 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
         }
         if (translated) {
           log.info('Translator', `Translation → Complete → Tier: [3 (Google)] | Length: [${text.length}]`);
-          events.emit(EVENT_TYPES.TRANSLATOR_TIER_SUCCESS, { tier: 3, length: text.length });
+          events.emit(EVENT_TYPES.TRANSLATOR_TIER_SUCCESS, 'info', 'Translator', `Translation → Complete → Tier: [3 (Google)] | Length: [${text.length}]`, { tier: 3, length: text.length });
           return translated;
         }
         throw new Error('Invalid Google response structure');
       } catch (err) {
         const status = err.response?.status;
         if (isT3QuotaExhausted(err))    cooldown.noteQuotaExhausted('tier3');
+        else if (gKey && (status === 401 || status === 403)) cooldown.noteQuotaExhausted('tier3'); // [BCS SD-3] Google Cloud auth => MAX cooldown (authed path only; unauth gtx keeps SD-2)
         else if (status === 429)         cooldown.noteRateLimit('tier3', getTranslatorRetryAfterMs(err));
         else if (!gKey && typeof status === 'number' && (status < 200 || status >= 300)) {
           // [BLR SD-2 / DEC-BLR-8] "Any non-2xx trips cooldown" hardening is
@@ -207,7 +210,7 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
           cooldown.noteRateLimit('tier3', undefined);
         }
         log.warn('Translator', `Tier 3 (Google) → Failed → Escalating | ${err.message}`);
-        events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, { tier: 3, error: err.message });
+        events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, 'warn', 'Translator', `Tier 3 (Google) → Failed → Escalating | ${err.message}`, { tier: 3, error: err.message });
       }
     }
   } else {
@@ -215,7 +218,7 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
   }
   // ── Tier 4: Graceful degradation ────────────────────────────────────────────
   log.warn('Translator', `Translation → Skipped → All tiers exhausted | Length: [${text.length}]`);
-  events.emit(EVENT_TYPES.TRANSLATOR_SKIPPED, { length: text.length });
+  events.emit(EVENT_TYPES.TRANSLATOR_SKIPPED, 'warn', 'Translator', `Translation → Skipped → All tiers exhausted | Length: [${text.length}]`, { length: text.length });
   return fallback;
 }
 
