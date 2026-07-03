@@ -67,19 +67,20 @@ function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
 
   return (
     <>
-            {/* Sticky close rail (HIST-UPG HF2): zero-height sticky wrapper keeps
-          the close button reachable at ANY scroll depth - previously the X
-          lived inside the hero and scrolled away on tall content. */}
-      <div className="sticky top-0 z-[2] h-0">
+      {/* Sheet header — flex-shrink-0, never scrolls (HIST-UPG HF3) */}
+      <div className="flex-shrink-0 relative flex items-center justify-end px-4 pt-3 pb-2">
+        <div className="md:hidden absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1 rounded-full bg-telgrarr-muted/30" aria-hidden="true" />
         <button
           ref={closeRef}
           onClick={onClose}
           aria-label="Close"
-          className="focus-ring absolute top-3 right-3 flex items-center justify-center w-8 h-8 rounded-full bg-telgrarr-black/60 text-white hover:bg-telgrarr-black/80 transition-colors"
+          className="focus-ring flex items-center justify-center w-8 h-8 rounded-full bg-telgrarr-elevated border border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-text transition-colors"
         >
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
+      {/* Scrollable body (HIST-UPG HF3) */}
+      <div className="flex-1 overflow-y-auto overscroll-contain">
       {/* ── Backdrop / hero header ──────────────────────────────────────────── */}
       <div className="relative shrink-0 h-44 md:h-52 rounded-t-2xl overflow-hidden">
         {/* Gradient base: always rendered (pre-load state + no/failed-backdrop fallback; R15 tokens) */}
@@ -261,6 +262,7 @@ function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
 
       {/* Safe bottom padding (extra on mobile for gesture-bar clearance) */}
       <div className="pb-6 md:pb-5" />
+      </div>
     </>
   );
 }
@@ -386,7 +388,7 @@ export default function ContentDetailModal() {
             animate="animate"
             exit="exit"
             transition={panelTransition}
-            className="w-full md:max-w-3xl bg-telgrarr-surface border border-telgrarr-border rounded-t-2xl md:rounded-2xl max-h-[90vh] md:max-h-[85vh] overflow-y-auto overscroll-contain flex flex-col"
+            className="w-full md:max-w-3xl bg-telgrarr-surface border border-telgrarr-border rounded-t-2xl md:rounded-2xl max-h-[75vh] md:max-h-[85vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {entry && (
