@@ -1,5 +1,7 @@
 'use strict';
 const fs        = require('fs');
+const path      = require('path');
+const crypto    = require('crypto');
 const lockfile  = require('proper-lockfile');
 const config    = require('./config');
 const log       = require('./logger');
@@ -49,13 +51,48 @@ function ensureQueueFile() {
   }
 }
 
+// -- BCS P2 / F2 (FLAG B): quarantine-and-reset. Called ONLY inside a held
+// lock (getQueue/enqueue/enqueueMany/drainQueue); peekLength's lock-free
+// transient read must NEVER quarantine. A poisoned snapshot (unparseable, or
+// valid JSON that is not an array) is renamed to media_queue.corrupt.<ts>.json
+// for forensics, the live file is re-initialized to '[]', and
+// QUEUE_CORRUPT_RESET is emitted -- one bad write no longer means silent
+// permanent ingest loss until manual repair.
+function readQueueSafe() {
+  const raw = fs.readFileSync(QUEUE_FILE, 'utf8');
+  let data = null;
+  let reason = null;
+  try {
+    data = JSON.parse(raw);
+  } catch (parseErr) {
+    reason = parseErr.message;
+  }
+  if (reason === null && !Array.isArray(data)) reason = 'snapshot is not an array';
+  if (reason === null) return data;
+  const base = QUEUE_FILE.endsWith('.json') ? QUEUE_FILE.slice(0, -5) : QUEUE_FILE;
+  const quarantinePath = `${base}.corrupt.${Date.now()}.json`;
+  const quarantineName = path.basename(quarantinePath);
+  try {
+    fs.renameSync(QUEUE_FILE, quarantinePath);
+  } catch (renameErr) {
+    log.error('Queue', `Queue Quarantine → Rename Error → ${renameErr.message}`);
+  }
+  fs.writeFileSync(QUEUE_FILE, '[]', 'utf8');
+  log.error('Queue', `Queue Read → Corrupt → Quarantined and reset → ${quarantineName}`);
+  events.emit(
+    EVENT_TYPES.QUEUE_CORRUPT_RESET, 'error', 'Queue',
+    `Corrupt queue snapshot quarantined and reset (${quarantineName})`,
+    { quarantineFile: quarantineName, reason }
+  );
+  return [];
+}
+
 async function getQueue() {
   ensureQueueFile();
   let release;
   try {
     release = await lockfile.lock(QUEUE_FILE, { retries: { retries: 10, minTimeout: 50 } });
-    const raw = fs.readFileSync(QUEUE_FILE, 'utf8');
-    return JSON.parse(raw);
+    return readQueueSafe();
   } catch (err) {
     log.error('Queue', `Queue Read → Error → ${err.message}`);
     throw err;
@@ -71,7 +108,11 @@ function identityKey(item) {
     if (item.seasonNumber != null && item.episodeNumber != null) {
       return `sonarr:${item.seriesId}:s${item.seasonNumber}e${item.episodeNumber}`;
     }
-    return null;
+    // BCS P2 / F7 (FLAG C): no episode identity -- coalesce identical malformed
+    // payloads via a stable content fingerprint (volatile fields like
+    // _receivedAt excluded by construction).
+    const fp = crypto.createHash('sha1').update(`${item.episodeTitle || ''}|${item.quality || ''}`).digest('hex');
+    return `sonarr:${item.seriesId}:fp:${fp}`;
   }
   if (item.source === 'radarr' && item.movieId != null) {
     return `radarr:${item.movieId}`;
@@ -84,8 +125,7 @@ async function enqueue(item) {
   let release;
   try {
     release = await lockfile.lock(QUEUE_FILE, { retries: { retries: 10, minTimeout: 50 } });
-    const raw  = fs.readFileSync(QUEUE_FILE, 'utf8');
-    const data = JSON.parse(raw);
+    const data = readQueueSafe();
     const source = item.source || 'unknown';
     const trace  = item.traceId || '-';
     const dupKey = identityKey(item);
@@ -119,8 +159,7 @@ async function drainQueue() {
   let release;
   try {
     release = await lockfile.lock(QUEUE_FILE, { retries: { retries: 10, minTimeout: 50 } });
-    const raw   = fs.readFileSync(QUEUE_FILE, 'utf8');
-    const items = JSON.parse(raw);
+    const items = readQueueSafe();
     fs.writeFileSync(QUEUE_FILE, '[]', 'utf8');
     log.info('Queue', `Queue Drain → Success → Drained [${items.length}] item(s)`);
     return items;
@@ -141,8 +180,7 @@ async function enqueueMany(items) {
   let release;
   try {
     release = await lockfile.lock(QUEUE_FILE, { retries: { retries: 10, minTimeout: 50 } });
-    const raw  = fs.readFileSync(QUEUE_FILE, 'utf8');
-    const data = JSON.parse(raw);
+    const data = readQueueSafe();
     const existingKeys = new Set();
     for (const e of data) {
       const k = identityKey(e);

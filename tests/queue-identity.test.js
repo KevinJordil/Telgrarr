@@ -30,16 +30,16 @@ describe('queue.identityKey export (STEP 2.2 / R02 / C-IDENTITY)', () => {
       })).toBe('sonarr:42:eid:7');
     });
 
-    it('seriesId alone (no episodeId, no season/episode) → null', () => {
-      expect(identityKey({ source: 'sonarr', seriesId: 42 })).toBeNull();
+    it('seriesId alone (no episodeId, no season/episode) → fingerprint fallback (BCS F7)', () => {
+      expect(identityKey({ source: 'sonarr', seriesId: 42 })).toMatch(/^sonarr:42:fp:[0-9a-f]{40}$/);
     });
 
-    it('seriesId + only seasonNumber (episodeNumber missing) → null', () => {
-      expect(identityKey({ source: 'sonarr', seriesId: 42, seasonNumber: 3 })).toBeNull();
+    it('seriesId + only seasonNumber (episodeNumber missing) → fingerprint fallback (BCS F7)', () => {
+      expect(identityKey({ source: 'sonarr', seriesId: 42, seasonNumber: 3 })).toMatch(/^sonarr:42:fp:[0-9a-f]{40}$/);
     });
 
-    it('seriesId + only episodeNumber (seasonNumber missing) → null', () => {
-      expect(identityKey({ source: 'sonarr', seriesId: 42, episodeNumber: 9 })).toBeNull();
+    it('seriesId + only episodeNumber (seasonNumber missing) → fingerprint fallback (BCS F7)', () => {
+      expect(identityKey({ source: 'sonarr', seriesId: 42, episodeNumber: 9 })).toMatch(/^sonarr:42:fp:[0-9a-f]{40}$/);
     });
 
     it('missing seriesId → null', () => {

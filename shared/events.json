@@ -38,5 +38,6 @@
   "QUEUE_DEPTH_WARNING":      "queue.depth_warning",
   "SWEEP_LONG_RUNNING":       "sweep.long_running",
   "PROVIDER_TRIPPED":         "provider.tripped",
-  "TRANSLATOR_TIER_COOLED":   "translator.tier_cooled"
+  "TRANSLATOR_TIER_COOLED":   "translator.tier_cooled",
+  "QUEUE_CORRUPT_RESET":      "queue.corrupt_reset"
 }

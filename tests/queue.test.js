@@ -41,9 +41,16 @@ describe('Queue contract (D.2 / C1 / R10)', () => {
     expect(fs.readFileSync(tmpQueue, 'utf8')).toBe('[]');
   });
 
-  it('corrupt JSON throws (D.2a flipped read-error path; no swallow to [])', async () => {
-    cleanupQueueFile();
-    fs.writeFileSync(tmpQueue, '{not valid json', 'utf8');
-    await expect(queue.getQueue()).rejects.toThrow();
-  });
+    it('corrupt JSON is quarantined and healed (BCS P2 / F2, FLAG B)', async () => {
+      cleanupQueueFile();
+      fs.writeFileSync(tmpQueue, '{not valid json', 'utf8');
+      const q = await queue.getQueue();
+      expect(q).toEqual([]);
+      expect(fs.readFileSync(tmpQueue, 'utf8')).toBe('[]');
+      const dir = path.dirname(tmpQueue);
+      const base = path.basename(tmpQueue, '.json');
+      const quarantined = fs.readdirSync(dir).filter(x => x.startsWith(base) && x.includes('.corrupt.'));
+      expect(quarantined.length).toBe(1);
+      for (const qf of quarantined) try { fs.unlinkSync(path.join(dir, qf)); } catch (_) {}
+    });
 });
