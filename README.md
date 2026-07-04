@@ -291,6 +291,15 @@ HTTP with `X-Forwarded-Proto: https`.
 - **Version bumps:** `node release-manager.js <patch|minor|major|beta-bump>`
   bumps `package.json` and appends to the version ledger atomically.
   Restart through your process manager to load the new version.
+- **Burst handling:** a large webhook burst (e.g. ~400 imports arriving in one
+  sweep window) dispatches strictly serially at `telegram.delayMs` (default 6s)
+  — roughly 40 minutes for 400 items. A `SWEEP_LONG_RUNNING` log during a burst
+  sweep is an expected watchdog notice, not a fault. Queue overflow (oldest
+  items dropped first) only begins once more than `queue.maxItems` (default
+  1000, adjustable 100–5000) items are pending at once. Tunable operator
+  levers: `queue.maxItems`, `batchWindowMs`, and `telegram.delayMs` (all in
+  Settings) — `telegram.delayMs` is floor-clamped on boot so it can never
+  regress to an unsafe pacing value.
 
 ## Development
 

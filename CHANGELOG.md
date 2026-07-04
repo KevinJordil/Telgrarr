@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Queue saturation test simulating a 400+ concurrent webhook burst (408
+  simultaneous lock acquisitions across single and batch enqueue calls) —
+  verifies zero throws, exact overflow-eviction arithmetic, and clean
+  lockfile release under peak contention (BCS Phase 5 / F6).
+
+### Fixed
+- **Queue lock contention under burst (BCS Phase 5 / F6):** a large
+  simultaneous webhook burst (~50+ near-concurrent Sonarr/Radarr deliveries)
+  could exhaust the queue file's lock-retry budget, causing the majority of
+  import notifications to be silently dropped (Sonarr/Radarr do not retry
+  failed deliveries). Fixed by serializing this process's own queue
+  reads/writes ahead of the file lock, eliminating the self-contention;
+  verified via a reproduction harness confirming both the drop and its
+  elimination.
+
+### Documentation
+- README: documented burst-dispatch timing and the queue/pacing tuning
+  levers available for large notification bursts (BCS Phase 5 / T2).
+
 ## [0.1.0] - 2026-06-04
 
 Initial public release. Telgrarr is a webhook-driven notification bridge

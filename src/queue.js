@@ -10,6 +10,22 @@ const EVENT_TYPES = require('../shared/events.json');
 
 const QUEUE_FILE = config.queueFile;
 
+// -- BCS P5 / F6: in-process serialization ahead of the FS lock. ------------
+// RD-8 already guarantees no second OS process shares this DATA_DIR; the FS
+// lock's retries:10/minTimeout:50 budget only needs to cover that genuine
+// cross-process case. Verified this session: under a 408-concurrent-call
+// burst, intra-process contention alone drove 354/408 calls to exhaust that
+// entire budget (measured ~51.7s runtime against the retry package's default
+// factor:2 backoff ceiling of ~51.15s) and throw ELOCKED. A plain promise-
+// chain mutex here means only ONE in-process caller ever attempts the FS lock
+// at a time -- the FS lock itself is untouched, still the correctness backstop.
+let _queueMutexTail = Promise.resolve();
+function withQueueMutex(fn) {
+  const turn = _queueMutexTail.then(fn, fn);
+  _queueMutexTail = turn.then(() => {}, () => {});
+  return turn;
+}
+
 // -- BLR Phase 4: queue observability (DEC-BLR-13/17/18) ---------------------
 // QUEUE_OVERFLOW: emitted adjacent to the existing pre-write audit log (same
 // exposure); enqueueMany rolls its whole eviction loop into ONE event with a
@@ -90,6 +106,7 @@ function readQueueSafe() {
 async function getQueue() {
   ensureQueueFile();
   let release;
+  return withQueueMutex(async () => {
   try {
     release = await lockfile.lock(QUEUE_FILE, { retries: { retries: 10, minTimeout: 50 } });
     return readQueueSafe();
@@ -99,6 +116,7 @@ async function getQueue() {
   } finally {
     if (release) await release();
   }
+  });
 }
 
 function identityKey(item) {
@@ -123,6 +141,7 @@ function identityKey(item) {
 async function enqueue(item) {
   ensureQueueFile();
   let release;
+  return withQueueMutex(async () => {
   try {
     release = await lockfile.lock(QUEUE_FILE, { retries: { retries: 10, minTimeout: 50 } });
     const data = readQueueSafe();
@@ -152,11 +171,13 @@ async function enqueue(item) {
   } finally {
     if (release) await release();
   }
+  });
 }
 
 async function drainQueue() {
   ensureQueueFile();
   let release;
+  return withQueueMutex(async () => {
   try {
     release = await lockfile.lock(QUEUE_FILE, { retries: { retries: 10, minTimeout: 50 } });
     const items = readQueueSafe();
@@ -169,6 +190,7 @@ async function drainQueue() {
   } finally {
     if (release) await release();
   }
+  });
 }
 
 // ── BLR-1 / DEC-BLR-4: bulk-insert (single lock per webhook). ────────────
@@ -178,6 +200,7 @@ async function enqueueMany(items) {
   if (!Array.isArray(items) || items.length === 0) return 0;
   ensureQueueFile();
   let release;
+  return withQueueMutex(async () => {
   try {
     release = await lockfile.lock(QUEUE_FILE, { retries: { retries: 10, minTimeout: 50 } });
     const data = readQueueSafe();
@@ -224,6 +247,7 @@ async function enqueueMany(items) {
   } finally {
     if (release) await release();
   }
+  });
 }
 
 // ── BLR-1 / DEC-BLR-2: lock-free length read. ────────────────────────────────
