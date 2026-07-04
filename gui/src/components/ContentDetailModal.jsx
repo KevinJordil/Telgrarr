@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion, useDragControls } from 'motion/react';
 import { Languages, Trash2, X, ExternalLink } from 'lucide-react';
 import useHistoryStore from '../store/historyStore';
 import { useLocation } from 'react-router-dom';
@@ -18,7 +18,7 @@ const EPISODES_CLAMP = 8;
 // Kept separate from ContentDetailModal so the outer shell can hold the
 // lastEntryRef snapshot while AnimatePresence plays the dismiss animation
 // after detailEntry is cleared to null.
-function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
+function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete, onHeaderPointerDown }) {
   const ratings    = entry.ratings || {};
   const hasRatings = !!(
     ratings.imdb || ratings.tmdb || ratings.rottenTomatoes || ratings.metacritic
@@ -68,11 +68,15 @@ function ModalContent({ entry, titleId, closeRef, onClose, onRequestDelete }) {
   return (
     <>
       {/* Sheet header — flex-shrink-0, never scrolls (HIST-UPG HF3) */}
-      <div className="flex-shrink-0 relative flex items-center justify-end px-4 pt-3 pb-2">
-        <div className="md:hidden absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1 rounded-full bg-telgrarr-muted/30" aria-hidden="true" />
+      <div
+        className="flex-shrink-0 relative flex items-center justify-end px-4 pt-3 pb-2 touch-none"
+        onPointerDown={onHeaderPointerDown}
+      >
+        <div className="md:hidden absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1 rounded-full bg-telgrarr-muted/30 cursor-grab active:cursor-grabbing" aria-hidden="true" />
         <button
           ref={closeRef}
           onClick={onClose}
+          onPointerDown={(e) => e.stopPropagation()}
           aria-label="Close"
           className="focus-ring flex items-center justify-center w-8 h-8 rounded-full bg-telgrarr-elevated border border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-text transition-colors"
         >
@@ -287,7 +291,15 @@ export default function ContentDetailModal() {
   const closeRef  = useRef(null);
   const prevFocus = useRef(null);
   const idRef     = useRef(`cdm-${++idSeq}`);
-  const titleId   = `${idRef.current}-title`;
+
+  // Drag-to-dismiss (HIST-UPG HF4): the mobile grab handle now performs a
+  // real gesture instead of being decorative. dragListener=false means only
+  // the header handle (dragControls.start) can begin a drag - the scrollable
+  // body (HF3) is never draggable, so list scrolling is unaffected.
+  const dragControls = useDragControls();
+  const handleDragEnd = (_e, info) => {
+    if (info.offset.y > 120 || info.velocity.y > 600) closeDetail();
+  };  const titleId   = `${idRef.current}-title`;
   // Per-entry delete (HIST-UPG P7). On success close both modals; on failure
   // keep the confirm open so the user can retry or cancel (clear-all pattern).
   const handleDeleteConfirm = async () => {
@@ -388,6 +400,12 @@ export default function ContentDetailModal() {
             animate="animate"
             exit="exit"
             transition={panelTransition}
+            drag={isMobile ? 'y' : false}
+            dragControls={dragControls}
+            dragListener={false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
+            onDragEnd={handleDragEnd}
             className="w-full md:max-w-3xl bg-telgrarr-surface border border-telgrarr-border rounded-t-2xl md:rounded-2xl max-h-[75vh] md:max-h-[85vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
@@ -398,6 +416,7 @@ export default function ContentDetailModal() {
                 closeRef={closeRef}
                 onClose={closeDetail}
                 onRequestDelete={() => setConfirmDeleteOpen(true)}
+                onHeaderPointerDown={(e) => { if (isMobile) dragControls.start(e); }}
               />
             )}
           </motion.div>
