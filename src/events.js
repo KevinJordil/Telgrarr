@@ -108,4 +108,11 @@ function emitThrottled(type, payload = {}, windowMs = THROTTLE_DEFAULT_MS) {
   return null;
 }
 
-module.exports = { bus, emit, emitThrottled, getRecentEvents, loadEvents, flushEvents };
+function resetThrottleState() {
+  for (const state of _throttleState.values()) {
+    clearTimeout(state.timer);
+  }
+  _throttleState.clear();
+}
+
+module.exports = { bus, emit, emitThrottled, getRecentEvents, loadEvents, flushEvents, resetThrottleState };

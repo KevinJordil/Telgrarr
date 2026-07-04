@@ -75,7 +75,7 @@ router.post('/:token/sonarr', webhookAuth, async (req, res) => {
     log.error('Webhook', `Webhook Event (Sonarr) → Error → Title: [${title}] | ${err.message} | trace=${traceId}`);
   }
   if (queuedCount > 0) {
-    events.emit(EVENT_TYPES.QUEUE_ITEM_ADDED, 'info', 'Listener', `"${title}" — ${queuedCount} episode(s) queued`, { title, type: 'sonarr', count: queuedCount });
+    events.emitThrottled(EVENT_TYPES.QUEUE_ITEM_ADDED, { level: 'info', module: 'Listener', message: `"${title}" — ${queuedCount} episode(s) queued`, data: { title, type: 'sonarr', count: queuedCount } });
     scheduleSweep();
     log.info('Webhook', `Webhook Batch (Sonarr) → Success → Title: [${title}] | Queued: ${queuedCount} episode(s) | trace=${traceId}`);
   }
@@ -122,7 +122,7 @@ router.post('/:token/radarr', webhookAuth, async (req, res) => {
       _receivedAt: new Date().toISOString(),
     });
     if (added) {
-      events.emit(EVENT_TYPES.QUEUE_ITEM_ADDED, 'info', 'Listener', `"${title}" queued`, { title, type: 'radarr', count: 1 });
+      events.emitThrottled(EVENT_TYPES.QUEUE_ITEM_ADDED, { level: 'info', module: 'Listener', message: `"${title}" queued`, data: { title, type: 'radarr', count: 1 } });
       scheduleSweep();
       log.info('Webhook', `Webhook Event (Radarr) → Queued → Title: [${title}] | trace=${traceId}`);
     }

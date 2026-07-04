@@ -32,8 +32,10 @@ queueMod.enqueueMany = async (items) => { const r = await realEnqueueMany(items)
 const events = require('../src/events.js');
 const EVENT_TYPES = require('../shared/events.json');
 const emitted = [];
-const origEmit = events.emit.bind(events);
-events.emit = (...a) => { emitted.push(a); return origEmit(...a); };
+// (origEmit spy removed -- BCS P4: emitThrottled's internal leading-edge
+// call is a module-scope closure, not the exports.emit property, so
+// property-patching emit no longer observes it; listen on the bus instead.)
+events.bus.on('event', (e) => { emitted.push(e); });
 
 const express = require('express');
 const webhooks = require('../src/routes/webhooks.routes.js');
@@ -53,7 +55,7 @@ afterAll(async () => {
 beforeEach(() => {
   fs.writeFileSync(tmpQueue, '[]', 'utf8');
   try { fs.rmSync(`${tmpQueue}.lock`, { recursive: true, force: true }); } catch { /* noop */ }
-  emitted.length = 0; sweepCount = 0; enqueueCalls = 0; enqueueManyCalls = 0;
+  emitted.length = 0; sweepCount = 0; enqueueCalls = 0; enqueueManyCalls = 0; events.resetThrottleState();
 });
 
 const eps = (...n) => n.map((x) => ({ id: 1000 + x, seasonNumber: 1, episodeNumber: x }));
@@ -68,7 +70,7 @@ const until = async (pred, ms = 3000) => {
   throw new Error('timeout waiting for webhook async processing');
 };
 const settle = () => new Promise((r) => setTimeout(r, 40));
-const queuedEvents = () => emitted.filter((a) => a[0] === EVENT_TYPES.QUEUE_ITEM_ADDED);
+const queuedEvents = () => emitted.filter((e) => e.type === EVENT_TYPES.QUEUE_ITEM_ADDED);
 
 describe('Webhook QUEUE_ITEM_ADDED reflects deduped enqueue (live-feed honesty)', () => {
   it('in-payload duplicates (8 distinct + 8 repeats) => count 8, queue 8, one sweep', async () => {
@@ -77,7 +79,7 @@ describe('Webhook QUEUE_ITEM_ADDED reflects deduped enqueue (live-feed honesty)'
     await until(() => enqueueManyCalls >= 1); await settle();
     expect((await queueMod.getQueue()).length).toBe(8);
     expect(queuedEvents().length).toBe(1);
-    expect(queuedEvents()[0][4].count).toBe(8);
+    expect(queuedEvents()[0].data.count).toBe(8);
     expect(sweepCount).toBe(1);
   });
   it('duplicate repeat webhook => no phantom event, no extra sweep, no queue growth', async () => {
@@ -85,7 +87,7 @@ describe('Webhook QUEUE_ITEM_ADDED reflects deduped enqueue (live-feed honesty)'
     await until(() => enqueueManyCalls >= 1); await settle();
     expect((await queueMod.getQueue()).length).toBe(8);
     expect(queuedEvents().length).toBe(1);
-    expect(queuedEvents()[0][4].count).toBe(8);
+    expect(queuedEvents()[0].data.count).toBe(8);
     expect(sweepCount).toBe(1);
     await post(eps(1,2,3,4,5,6,7,8));
     await until(() => enqueueManyCalls >= 2); await settle();
@@ -98,7 +100,7 @@ describe('Webhook QUEUE_ITEM_ADDED reflects deduped enqueue (live-feed honesty)'
     await until(() => enqueueManyCalls >= 1); await settle();
     expect((await queueMod.getQueue()).length).toBe(1);
     expect(queuedEvents().length).toBe(1);
-    expect(queuedEvents()[0][4].count).toBe(1);
+    expect(queuedEvents()[0].data.count).toBe(1);
     expect(sweepCount).toBe(1);
   });
 });
