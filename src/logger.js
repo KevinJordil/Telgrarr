@@ -10,9 +10,11 @@ const events = require('./events');
 const logsDir = process.env.LOGS_DIR || path.join(__dirname, '../logs');
 fs.mkdirSync(logsDir, { recursive: true });
 
-const appDest   = pino.destination({ dest: path.join(logsDir, 'app.log'),   sync: true });
-const errDest   = pino.destination({ dest: path.join(logsDir, 'error.log'), sync: true });
-const auditDest = pino.destination({ dest: path.join(logsDir, 'audit.log'), sync: true });
+// FA-24(i): explicit 0600 on all three destinations (fresh create + post-rotation
+// reopen). A PRE-EXISTING default-mode log file is untouched -- chmod it manually.
+const appDest   = pino.destination({ dest: path.join(logsDir, 'app.log'), mode: 0o600,   sync: true });
+const errDest   = pino.destination({ dest: path.join(logsDir, 'error.log'), mode: 0o600, sync: true });
+const auditDest = pino.destination({ dest: path.join(logsDir, 'audit.log'), mode: 0o600, sync: true });
 
 const fileLogger  = pino(appDest);
 const errorLogger = pino(errDest);
