@@ -8,6 +8,7 @@ async function getSeriesById(seriesId) {
   try {
     const res = await axios.get(url, {
       headers: { 'X-Api-Key': config.sonarr.apiKey },
+      timeout: 15000,
     });
     return res.data;
   } catch (error) {
