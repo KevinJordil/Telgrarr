@@ -64,6 +64,10 @@ function createBackup() {
     };
     zip.addFile(BACKUP_META_NAME, Buffer.from(JSON.stringify(meta, null, 2)));
     zip.writeZip(backupPath);
+      // FA-24(ii): adm-zip writeZip has no mode option; chmod immediately after write.
+      // No inner try/catch: consistent with the rest of this function -- an unexpected
+      // failure here propagates to the outer catch (logged and reported, never silent).
+      fs.chmodSync(backupPath, 0o600);
 
     // BK-FIX-1 (F8): integrity verify — re-open the written archive and confirm it is a
     // complete, readable zip carrying the meta + at least one data entry. Catches a truncated
@@ -195,7 +199,7 @@ function restoreBackup(filename) {
         }
       }
       const stagePath = path.join(item.dir, `${RESTORE_STAGE_PREFIX}${token}-${item.name}`);
-      fs.writeFileSync(stagePath, data);
+      fs.writeFileSync(stagePath, data, { mode: 0o600 });
       staged.push({ dir: item.dir, name: item.name, stagePath });
     }
     if (staged.length === 0) {
@@ -303,7 +307,7 @@ function importBackup(buffer) {
     }
     const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
     const filename = `telgrarr-imported-${timestamp}.zip`;
-    fs.writeFileSync(path.join(BACKUP_DIR, filename), buffer);
+    fs.writeFileSync(path.join(BACKUP_DIR, filename), buffer, { mode: 0o600 });
     log.audit('Backup', `Backup Import → Success → Filename: [${filename}] | Bytes: ${buffer.length}`);
     pruneBackups();
     return { success: true, filename };
