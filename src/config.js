@@ -312,7 +312,13 @@ async function save(incoming) {
 
 config.reload   = reload;
 config.save     = save;
-config.DEFAULTS = DEFAULTS;
+// FA-12: non-enumerable — save()'s Object.keys(config) snapshot and reload()'s
+// Object.keys(config) delete-loop must never see (and thus never destroy) this
+// property. Same B.1 pattern as DATA_DIR/PORT/etc below. A require-time-only
+// consumer (connection-tester.js) was never at risk; a call-time consumer
+// (translator.js:179) now survives every reload() instead of TypeError-ing
+// mid-cascade after the first settings save.
+Object.defineProperty(config, 'DEFAULTS', { value: DEFAULTS, enumerable: false, configurable: true });
 config.getMissingCredentials = getMissingCredentials;
 // ── B.1: resolved environment layer (additive; env -> file -> DEFAULTS) ──────
 // Non-enumerable: save() never persists these and reload() never wipes them.
