@@ -195,6 +195,10 @@ async function reconcileSource(source, nowMs) {
 
   let enqueuedCount = 0;
   let newestTakenDate = sinceStr;
+  // FA-38: earliest same-run failed-enqueue date (ms). The cursor must
+  // never advance to or past it, or the failed record falls outside next
+  // tick's safety-margin window and is lost to reconcile permanently.
+  let minFailedDateMs = null;
   for (const { record, item } of taken) {
     try {
       const wasAdded = await queue.enqueue(item);
@@ -213,10 +217,21 @@ async function reconcileSource(source, nowMs) {
         log.info('Reconcile', `${source} → Enqueued → ${idKey}`);
       }
       if (record.date && (!newestTakenDate || record.date > newestTakenDate)) {
-        newestTakenDate = record.date;
+        // FA-38: a later success in this batch must not advance past an
+        // earlier same-run failure -- see minFailedDateMs above.
+        const takenDateMs = Date.parse(record.date);
+        if (!minFailedDateMs || !Number.isFinite(takenDateMs) || takenDateMs < minFailedDateMs) {
+          newestTakenDate = record.date;
+        }
       }
     } catch (err) {
       log.error('Reconcile', `${source} → Enqueue failed → ${err.message}`);
+      // FA-38: track the oldest same-run failure date so later successes
+      // cannot advance the cursor past it (see minFailedDateMs above).
+      const failedDateMs = record.date ? Date.parse(record.date) : NaN;
+      if (Number.isFinite(failedDateMs) && (!minFailedDateMs || failedDateMs < minFailedDateMs)) {
+        minFailedDateMs = failedDateMs;
+      }
       // Do NOT advance newestTakenDate for failed enqueues — re-attempt next tick.
     }
   }
