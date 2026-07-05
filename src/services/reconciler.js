@@ -199,9 +199,18 @@ async function reconcileSource(source, nowMs) {
     try {
       const wasAdded = await queue.enqueue(item);
       if (wasAdded) {
-        events.emit(EVENT_TYPES.QUEUE_ITEM_ADDED, { source: item.source, traceId: item.traceId });
+        const idKey = queue.identityKey(item);
+          // FA-37: emitThrottled (not plain emit) for symmetry with the BLR SD-4
+          // webhook sites -- a post-downtime boot reconcile can enqueue up to
+          // 50 items (25 x 2 sources), enough to wipe the 50-slot SSE ring.
+          events.emitThrottled(EVENT_TYPES.QUEUE_ITEM_ADDED, {
+            level: 'info',
+            module: 'Reconcile',
+            message: `${source} → Enqueued (reconcile) → ${idKey}`,
+            data: { source: item.source, traceId: item.traceId, viaReconcile: true, idKey },
+          });
         enqueuedCount += 1;
-        log.info('Reconcile', `${source} → Enqueued → ${queue.identityKey(item)}`);
+        log.info('Reconcile', `${source} → Enqueued → ${idKey}`);
       }
       if (record.date && (!newestTakenDate || record.date > newestTakenDate)) {
         newestTakenDate = record.date;
