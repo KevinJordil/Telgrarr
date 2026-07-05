@@ -1,3 +1,5 @@
+'use strict';
+
 const axios  = require('axios');
 const config = require('./config');
 
@@ -11,7 +13,9 @@ async function refreshLibrary() {
   // invalid '?api_key=' and throw every sweep (config logs a warn at load).
   if (!config.emby.refreshUrl || !config.emby.apiKey) return false;
   const url = `${config.emby.refreshUrl}?api_key=${config.emby.apiKey}`;
-  await axios.post(url);
+  // FA-43: 10s timeout -- a hung Emby socket must not block runSweep forever
+  // (aligns with tmdb.js's ceiling); unconfigured emby is already handled above.
+  await axios.post(url, undefined, { timeout: 10000 });
   return true;
 }
 
