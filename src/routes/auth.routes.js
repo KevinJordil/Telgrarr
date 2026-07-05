@@ -21,7 +21,7 @@ const RECOVERY_FILE = path.join(config.DATA_DIR, 'recovery.json');
 function persistNow() {
   try {
     const data = JSON.stringify(Object.fromEntries(activeSessions), null, 2);
-    writeAtomic.sync(SESSION_FILE, data);
+    writeAtomic.sync(SESSION_FILE, data, { mode: 0o600 });
   } catch (err) {
     log.error('Auth', `Session Persistence → Error → ${err.message}`);
   }
@@ -75,7 +75,7 @@ router.post('/login', async (req, res) => {
       rateLimit.clear(ip, username);
       if (needsUpgrade(authData)) {
         try {
-          writeAtomic.sync(AUTH_FILE, JSON.stringify({ username: authData.username, ...hashNew(password) }, null, 2));
+          writeAtomic.sync(AUTH_FILE, JSON.stringify({ username: authData.username, ...hashNew(password) }, null, 2), { mode: 0o600 });
           log.audit('Auth', `Credential Upgrade → Success → [${username}]`);
         } catch (err) {
           log.error('Auth', `Credential Upgrade → Error → ${err.message}`);
@@ -118,7 +118,7 @@ router.post('/auth/password', requireAuth, (req, res) => {
     
     writeAtomic.sync(
       AUTH_FILE,
-      JSON.stringify({ username: authData.username, ...hashNew(newPassword) }, null, 2)
+      JSON.stringify({ username: authData.username, ...hashNew(newPassword) }, null, 2), { mode: 0o600 }
     );
     
     log.audit('Auth', `Password Change → Success → [${authData.username}]`);
@@ -174,7 +174,7 @@ router.post('/auth/recover', (req, res) => {
     
     writeAtomic.sync(
       AUTH_FILE,
-      JSON.stringify({ username: authData.username, ...hashNew(newPassword) }, null, 2)
+      JSON.stringify({ username: authData.username, ...hashNew(newPassword) }, null, 2), { mode: 0o600 }
     );
     
     activeSessions.clear();
