@@ -155,7 +155,8 @@ function loadFromDisk(context = 'boot') {
   }
   try {
     const raw = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-    const { templates, DEFAULTS: _d, reload: _r, save: _s, ...clean } = raw;
+    // FA-1: ignore any disk-persisted queueFile -- the boot-resolved default always wins.
+    const { templates, DEFAULTS: _d, reload: _r, save: _s, queueFile: _qf, ...clean } = raw;
     const merged = deepMerge(DEFAULTS, clean);
     validateRequiredCredentials(merged, context);
     warnIncompleteEmby(merged);
@@ -172,15 +173,19 @@ function loadFromDisk(context = 'boot') {
 /** Strip volatile, never-persisted keys before an atomic write (shared by save()
  *  and the first-boot secret bootstrap so both emit an identical on-disk shape). */
 function stripVolatile(obj) {
-  const { DEFAULTS: _d, reload: _r, save: _s, templates: _t, ...rest } = obj;
+  // FA-1: queueFile is PROJECT-ROOT / __dirname-resolved per Master Section 4 -- never persisted.
+  const { DEFAULTS: _d, reload: _r, save: _s, templates: _t, queueFile: _q, ...rest } = obj;
   return rest;
 }
 
-/** H5.0 (SD-11/SD-1): generate the webhook secret on FIRST boot ONLY when neither env
- *  nor the config.json file tier supplies one (strictly idempotent). An env-set secret
- *  is used as-is and NEVER persisted/overwritten (precedence env > file). Removes the
- *  "401 until you hand-edit config.json" trap on a fresh install without weakening
- *  closed-by-default (C.5): the only transition is unset -> a freshly generated secret. */
+/** SD-18: seed/generate the webhook secret on FIRST boot ONLY when the config.json
+ *  file tier does not already have one (idempotent -- a saved config.webhookSecret is
+ *  a no-op). WEBHOOK_SECRET env, when present, SEEDS this first-boot value only; the
+ *  result (seeded or generated) is PERSISTED to config.json and is FILE-TIER-
+ *  AUTHORITATIVE thereafter -- env no longer wins at runtime, and the secret is always
+ *  GUI-regenerable. Removes the "401 until you hand-edit config.json" trap on a fresh
+ *  install without weakening closed-by-default (C.5): the only transition is unset ->
+ *  a freshly generated/seeded secret, persisted once. */
 function ensureWebhookSecret() {
   if (config.webhookSecret) return;                    // already saved -> idempotent
   const envSecret = process.env.WEBHOOK_SECRET;
