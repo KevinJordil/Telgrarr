@@ -101,7 +101,7 @@ describe('/health observability sibling (BLR Phase 4, BLR SD-4 / DEC-BLR-14)', (
     qLen = 40;
     tripped = { tmdb: 'rate', omdb: 'quota' };
     const until = Date.now() + 60000;
-    cooldowns = { 2: until };
+    cooldowns = { tier2: until };
     sweepStats = { active: false, startedAt: '2026-07-02T00:00:00.000Z', durationMs: 1234, lastCompletedAt: '2026-07-02T00:00:01.234Z' };
     const { body } = await getHealth();
     const obs = body.observability;

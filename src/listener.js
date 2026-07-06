@@ -117,7 +117,7 @@ app.get('/health', async (req, res) => {
     translator: { tiers: {} },
   };
   for (const t of [1, 2, 3]) {
-    const untilMs = translatorCooldown.getCooldownUntil(t);
+    const untilMs = translatorCooldown.getCooldownUntil('tier' + t); // FA-44: key is 'tier1'/'tier2'/'tier3' (translator.js's write-side format), not the numeric loop var
     observability.translator.tiers[t] = { coolingDown: untilMs != null, untilMs };
   }
   res.status(allOk ? 200 : 503).json({
