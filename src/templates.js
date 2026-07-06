@@ -125,8 +125,14 @@ function getLayout() {
 // "Is element <key> enabled in <kind>'s layout?" — the P4.5 plot gate reads THIS
 // (not the retired config.<kind>.includePlot). Routes through module.exports.getLayout()
 // so unit tests can stub the layout (same CJS-exports seam as resolveTemplate).
-function isElementEnabled(kind, key) {
-  const layout = module.exports.getLayout()[kind] || [];
+// FA-48 (F10): optional layoutOverride lets a caller gate against an
+// UNPERSISTED layout (preview.routes.js's B4 draft-as-you-edit path: a
+// normalized draft, or the composed persisted layout when no draft is
+// present) instead of always reading the persisted getLayout(). Omitted/
+// non-array (every pre-existing call site: sweeper.js x4, formatter.js x1)
+// falls back to persisted -- additive-only, byte-identical when omitted.
+function isElementEnabled(kind, key, layoutOverride) {
+  const layout = Array.isArray(layoutOverride) ? layoutOverride : (module.exports.getLayout()[kind] || []);
   for (const it of layout) {
     if (typeof it === 'string') { if (it === key) return true; }
     else if (it && it.key === key) return it.enabled !== false;

@@ -64,14 +64,14 @@ async function renderPreview(body = {}) {
         : templates.getLayout());
 
   if (type === 'sonarr') {
-    const series = await enrichSonarrMedia(MOCK_SONARR.series, null, null, enrichMode, langOverride, templates.isElementEnabled('sonarr', 'plot'));
+    const series = await enrichSonarrMedia(MOCK_SONARR.series, null, null, enrichMode, langOverride, templates.isElementEnabled('sonarr', 'plot', layoutSrc && layoutSrc.sonarr));
     const eps = MOCK_SONARR[scenario] || MOCK_SONARR.single;
     const tpl = advanced ? template : resolveComposed('sonarr', 'DEFAULT_AR', lang, layoutSrc.sonarr).template;
     return { caption: renderSonarr(tpl, series, eps, opts), photoUrl: SONARR_POSTER };
   }
 
   const previewMovie = buildPreviewRadarrMovie();
-  const { movie, tmdbMovie, ratings } = await enrichRadarrMedia(previewMovie, MOCK_RADARR.tmdb, null, enrichMode, langOverride, templates.isElementEnabled('radarr', 'plot'));
+  const { movie, tmdbMovie, ratings } = await enrichRadarrMedia(previewMovie, MOCK_RADARR.tmdb, null, enrichMode, langOverride, templates.isElementEnabled('radarr', 'plot', layoutSrc && layoutSrc.radarr));
   if (tmdbMovie && tmdbMovie._overviewAr) tmdbMovie.overview = tmdbMovie._overviewAr;
   const tpl = advanced ? template : resolveComposed('radarr', 'DEFAULT_AR', lang, layoutSrc.radarr).template;
   return { caption: renderRadarr(tpl, movie, tmdbMovie, ratings, opts).caption, photoUrl: RADARR_POSTER };
