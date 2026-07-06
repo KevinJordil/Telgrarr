@@ -47,6 +47,11 @@ router.post('/settings', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid payload' });
     }
 
+    if ('webhookSecret' in incoming) {
+      log.warn('Settings', 'Settings Update \u2192 Rejected \u2192 webhookSecret is not settable via this endpoint');
+      return res.status(400).json({ error: 'webhookSecret is managed via regenerate only', field: 'webhookSecret' });
+    }
+
     const errs = validateSettings(incoming);
     if (errs.length > 0) {
       return res.status(400).json({ error: 'Validation failed', details: errs });
@@ -276,8 +281,9 @@ router.post('/settings/reveal', requireAuth, (req, res) => {
     log.warn('Settings', 'Secret Reveal → Rejected → Unknown or non-secret field');
     return res.status(400).json({ error: 'Unknown or non-secret field' });
   }
-  // H5.1: webhookSecret reveals the EFFECTIVE secret (config.WEBHOOK_SECRET, env
-  // wins) so the copied URL is the one the /hooks guard actually accepts.
+  // H5.1 (SD-18): webhookSecret reveals the EFFECTIVE secret (config.WEBHOOK_SECRET,
+  // the file-tier-authoritative value) so the copied URL is the one the /hooks guard
+  // actually accepts.
   const value = key === 'webhookSecret'
     ? config.WEBHOOK_SECRET
     : key.split('.').reduce((o, k) => (o != null ? o[k] : undefined), config);
@@ -311,11 +317,14 @@ router.get('/settings/webhook', requireAuth, (req, res) => {
   });
 });
 
-// ──── POST /api/settings/webhook/regenerate (H5.1) ────
-// Credential rotation. env-managed secret => 409 (SD-1: env wins; the file tier is
-// inert). WEBHOOK_SECRET is boot-resolved, so rotation is restart-required and
-// reuses the POST /settings finish-hook restart convention (ONE convention). The
-// old secret keeps working until the restart lands, then is rejected.
+// ---- POST /api/settings/webhook/regenerate (H5.1) ----
+// Credential rotation (SD-18): the webhook secret is file-tier-authoritative and
+// ALWAYS GUI-regenerable -- there is no env-managed 409 case (SD-18 supersedes the
+// old env-wins/never-persist model for this ONE value; SD-1 env>file still holds
+// for every OTHER env-tier value). WEBHOOK_SECRET is boot-resolved, so rotation is
+// restart-required and reuses the POST /settings finish-hook restart convention
+// (ONE convention). The old secret keeps working until the restart lands, then is
+// rejected.
 router.post('/settings/webhook/regenerate', requireAuth, async (req, res) => {
   try {
     const secret = generateWebhookSecret();
