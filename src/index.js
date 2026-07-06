@@ -15,6 +15,7 @@ const { reconcile, INTERVAL_MS }        = require('./services/reconciler');
 const { flushSessions }                 = require('./middlewares/auth');
 const { loadEvents, flushEvents }       = require('./events');
 const templates = require('./templates');
+const { formatReason } = require('./utils/format-reason'); // FA-10 reason-rendering fix
 
 log.info('App', '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 log.info('App', 'System Startup → Success → telgrarr initialized');
@@ -149,6 +150,6 @@ process.on('uncaughtException', (err) => {
 });
 
 process.on('unhandledRejection', (reason) => {
-  log.error('App', `Process → Crash → Unhandled rejection: ${reason}`);
+  log.error('App', `Process → Crash → Unhandled rejection: ${formatReason(reason)}`);
   gracefulShutdown('unhandledRejection', 1);
 });
