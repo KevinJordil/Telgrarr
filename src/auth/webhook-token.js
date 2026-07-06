@@ -13,11 +13,15 @@ function tokenValid(provided, secret) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-// Redact the secret path segment so the request logger never persists it:
-// /hooks/<token>/sonarr -> /hooks/***/sonarr. Header-form / non-hook URLs are left as-is.
+// FA-15: redact the secret path segment UNCONDITIONALLY so the request logger
+// never persists it, regardless of what (if anything) follows: /hooks/<token>/sonarr
+// -> /hooks/***/sonarr; /hooks/<token> (bare, or a typo'd/near-miss suffix) ->
+// /hooks/*** (+ whatever followed). Superset of the old sonarr|radarr-only mask --
+// every previously-masked case stays byte-identical. Header-form / non-hook URLs
+// are left as-is.
 function maskHooksUrl(url) {
   return String(url == null ? '' : url)
-    .replace(/(\/hooks\/)[^/?#]+(\/(?:sonarr|radarr)\b)/i, '$1***$2');
+    .replace(/(\/hooks\/)[^/?#]+/i, '$1***');
 }
 
 // C.6 / S2 — generalized redaction for the request-logger seam: secret query values

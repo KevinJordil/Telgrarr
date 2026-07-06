@@ -30,8 +30,19 @@ describe('Webhook token (C.5 / S1)', () => {
 
   it('leaves non-hook and header-form URLs untouched', () => {
     expect(maskHooksUrl('/api/login')).toBe('/api/login');
-    expect(maskHooksUrl('/hooks/sonarr')).toBe('/hooks/sonarr');
     expect(maskHooksUrl(undefined)).toBe('');
+  });
+
+  it('FA-15: masks unconditionally, closing the near-miss/bare-secret leak class', () => {
+    // bare /hooks/<secret> with no route suffix at all (the FA-15 headline case)
+    expect(maskHooksUrl('/hooks/sonarr')).toBe('/hooks/***');
+    expect(maskHooksUrl('/hooks/abc123')).toBe('/hooks/***');
+    // trailing slash, no suffix
+    expect(maskHooksUrl('/hooks/abc123/')).toBe('/hooks/***/');
+    // typo'd source segment
+    expect(maskHooksUrl('/hooks/abc123/sonar')).toBe('/hooks/***/sonar');
+    // querystring on a near-miss path
+    expect(maskHooksUrl('/hooks/abc123/x?y=1')).toBe('/hooks/***/x?y=1');
   });
 });
 
