@@ -16,6 +16,8 @@ process.env.LOGS_DIR = tmp;
 const FILE = path.join(tmp, 'blacklist.json');
 const lockfile = require('proper-lockfile');
 const realLock = lockfile.lock;
+const writeAtomicModule = require('write-file-atomic');
+const realWriteAtomicSync = writeAtomicModule.sync;
 const blacklist = require('../src/blacklist.js');
 
 const VALID = { sonarr: { ids: [7], paths: [] }, radarr: { ids: [], paths: [] } };
@@ -25,8 +27,8 @@ function cleanup() {
   try { fs.rmSync(`${FILE}.lock`, { recursive: true, force: true }); } catch (_) {}
 }
 
-beforeEach(() => { lockfile.lock = realLock; cleanup(); });
-afterAll(() => { lockfile.lock = realLock; cleanup(); try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_) {} });
+beforeEach(() => { lockfile.lock = realLock; writeAtomicModule.sync = realWriteAtomicSync; cleanup(); });
+afterAll(() => { lockfile.lock = realLock; writeAtomicModule.sync = realWriteAtomicSync; cleanup(); try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_) {} });
 
 describe('blacklist.writeToDisk — corruption-safe under lock failure', () => {
   it('happy path: writes valid JSON containing the new id', async () => {
@@ -41,5 +43,41 @@ describe('blacklist.writeToDisk — corruption-safe under lock failure', () => {
     await expect(blacklist.addId('radarr', 99)).rejects.toThrow();
     const parsed = JSON.parse(fs.readFileSync(FILE, 'utf8')); // must still parse
     expect(parsed).toEqual(VALID);
+  });
+});
+
+describe('blacklist.writeToDisk — atomic write (R09 / FA-26i)', () => {
+  it('writes via write-file-atomic.sync inside the lock', async () => {
+    const calls = [];
+    writeAtomicModule.sync = (...args) => { calls.push(args); return realWriteAtomicSync(...args); };
+    await blacklist.addId('radarr', 123);
+    writeAtomicModule.sync = realWriteAtomicSync;
+    expect(calls.length).toBe(1);
+    expect(calls[0][0]).toBe(FILE);
+    const written = JSON.parse(calls[0][1]);
+    expect(written.radarr.ids).toContain(123);
+  });
+});
+
+describe('blacklist.load — malformed shape normalization (FA-26ii)', () => {
+  it('loads an EMPTY skeleton (no throw) when the file is valid JSON but an empty object', () => {
+    fs.writeFileSync(FILE, JSON.stringify({}, null, 2));
+    expect(() => blacklist.load()).not.toThrow();
+    expect(blacklist.getAll()).toEqual({ sonarr: { ids: [], paths: [] }, radarr: { ids: [], paths: [] } });
+  });
+
+  it('loads an EMPTY skeleton (no throw) when the file is a JSON array', () => {
+    fs.writeFileSync(FILE, JSON.stringify([1, 2, 3], null, 2));
+    expect(() => blacklist.load()).not.toThrow();
+    expect(blacklist.getAll()).toEqual({ sonarr: { ids: [], paths: [] }, radarr: { ids: [], paths: [] } });
+  });
+
+  it('normalizes per-source: keeps a valid sub-shape, defaults only the malformed side', () => {
+    fs.writeFileSync(FILE, JSON.stringify({ sonarr: { ids: [5], paths: ['x'] } }, null, 2));
+    blacklist.load();
+    expect(blacklist.getAll()).toEqual({
+      sonarr: { ids: [5], paths: ['x'] },
+      radarr: { ids: [], paths: [] },
+    });
   });
 });
