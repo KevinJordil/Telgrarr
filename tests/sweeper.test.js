@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { createRequire } from 'module';
 import path from 'path';
 import os from 'os';
@@ -16,18 +16,32 @@ const EVENT_TYPES = require('../shared/events.json');
 
 let emitCalls = [];
 let embyReturn = false;
+let enqueueManyCalls = [];
+let enqueueManyImpl = async (items) => items.length;
 
 function stub(relPath, exports) {
   const resolved = require.resolve(relPath);
   require.cache[resolved] = { id: resolved, filename: resolved, loaded: true, exports };
 }
 
-stub('../src/config.js', { DATA_DIR: path.join(os.tmpdir(), 'telgrarr-sweeper-test-' + process.pid), batchWindowMs: 1000, tmdb: { language: 'en' } });
+const TEST_DATA_DIR = path.join(os.tmpdir(), 'telgrarr-sweeper-test-' + process.pid);
+const SWEEP_STATE_FILE = path.join(TEST_DATA_DIR, 'sweep-state.json'); // mirrors src/sweeper.js's own formula
+const configStub = {
+  DATA_DIR: TEST_DATA_DIR,
+  batchWindowMs: 1000,
+  tmdb: { language: 'en' },
+  translator: { targetLang: 'ar' },
+  // FA-7: sweeper.js now sources its fallback from config.DEFAULTS.translator.targetLang
+  // (R13 single source) instead of a duplicated 'ar' literal -- mirror the real config.js
+  // shape or every historyItem construction in this suite throws.
+  DEFAULTS: { translator: { targetLang: 'ar' } },
+};
+stub('../src/config.js', configStub);
 stub('../src/logger.js', { info() {}, warn() {}, error() {}, audit() {}, setLevel() {} });
 stub('../src/events.js', { emit: (type, ...rest) => { emitCalls.push({ type, rest }); } });
 stub('../src/queue.js', {
   drainQueue: async () => [{ source: 'radarr', movieId: '123', traceId: 't1' }],
-  enqueue: async () => {},
+  enqueueMany: async (items) => { enqueueManyCalls.push(items); return enqueueManyImpl(items); },
   markSweepCycle: () => {},
   // Mirrors src/queue.js identityKey (independently covered by queue-identity.test.js);
   // a hermetic double so the sweeper ledger write-back can resolve identity keys.
@@ -86,6 +100,9 @@ beforeEach(() => {
   emitCalls = [];
   recordSentCalls = [];
   dispatchOverride = null;
+  enqueueManyCalls = [];
+  enqueueManyImpl = async (items) => items.length;
+  configStub.translator.targetLang = 'ar';
   delete require.cache[require.resolve('../src/sweeper.js')];
   sweeper = require('../src/sweeper.js');
 });
@@ -121,5 +138,89 @@ describe('Sweeper reconcile ledger write-back (STEP 2.4 / WR-3 / C-LEDGER)', () 
     });
     await sweeper.runSweep();
     expect(recordSentCalls).toHaveLength(0);
+  });
+});
+
+
+describe('Sweeper crash recovery (FA-8 — recoverCrashedSweep via single enqueueMany)', () => {
+  const ambientExistsSync = fs.existsSync;
+  let readFileSyncOrig, unlinkSyncOrig, unlinkCalls, fakeMarkerContent;
+
+  beforeEach(() => {
+    unlinkCalls = [];
+    fakeMarkerContent = null;
+    readFileSyncOrig = fs.readFileSync;
+    unlinkSyncOrig   = fs.unlinkSync;
+    fs.existsSync = (p) => (p === SWEEP_STATE_FILE ? fakeMarkerContent !== null : ambientExistsSync(p));
+    fs.readFileSync = (p, enc) => (p === SWEEP_STATE_FILE ? fakeMarkerContent : readFileSyncOrig(p, enc));
+    fs.unlinkSync = (p) => { if (p === SWEEP_STATE_FILE) { unlinkCalls.push(p); return; } return unlinkSyncOrig(p); };
+  });
+
+  afterEach(() => {
+    fs.existsSync   = ambientExistsSync;
+    fs.readFileSync = readFileSyncOrig;
+    fs.unlinkSync   = unlinkSyncOrig;
+  });
+
+  it('calls enqueueMany ONCE with the full orphaned batch, then deletes the marker', async () => {
+    fakeMarkerContent = JSON.stringify([{ source: 'radarr', movieId: 'x' }, { source: 'radarr', movieId: 'y' }]);
+    const result = await sweeper.recoverCrashedSweep();
+    expect(result).toBe(true);
+    expect(enqueueManyCalls).toHaveLength(1);
+    expect(enqueueManyCalls[0]).toHaveLength(2);
+    expect(unlinkCalls).toEqual([SWEEP_STATE_FILE]);
+  });
+
+  it('returns false and calls nothing when no marker file exists (parity)', async () => {
+    fakeMarkerContent = null;
+    const result = await sweeper.recoverCrashedSweep();
+    expect(result).toBe(false);
+    expect(enqueueManyCalls).toHaveLength(0);
+  });
+
+  it('skips enqueueMany for an empty-array marker but still deletes it (parity)', async () => {
+    fakeMarkerContent = JSON.stringify([]);
+    const result = await sweeper.recoverCrashedSweep();
+    expect(result).toBe(true);
+    expect(enqueueManyCalls).toHaveLength(0);
+    expect(unlinkCalls).toEqual([SWEEP_STATE_FILE]);
+  });
+
+  it('returns false and retains the marker on malformed JSON (parity)', async () => {
+    fakeMarkerContent = '{not valid json';
+    const result = await sweeper.recoverCrashedSweep();
+    expect(result).toBe(false);
+    expect(enqueueManyCalls).toHaveLength(0);
+    expect(unlinkCalls).toHaveLength(0);
+  });
+
+  it('FA-8: an enqueueMany failure retains the marker for a clean all-or-nothing retry (declared behavior change)', async () => {
+    fakeMarkerContent = JSON.stringify([{ source: 'radarr', movieId: 'z' }]);
+    enqueueManyImpl = async () => { throw new Error('simulated batch write failure'); };
+    const result = await sweeper.recoverCrashedSweep();
+    expect(result).toBe(false);
+    expect(enqueueManyCalls).toHaveLength(1);
+    expect(unlinkCalls).toHaveLength(0);
+  });
+});
+
+describe('Sweeper history language field (FA-7 — R13 single default source, no duplicated literal)', () => {
+  it('uses config.translator.targetLang when explicitly set to a non-default language', async () => {
+    configStub.translator.targetLang = 'fr';
+    embyReturn = false;
+    let captured = null;
+    dispatchOverride = (messages, historyItems) => { captured = historyItems; return { successful: historyItems, failed: [] }; };
+    await sweeper.runSweep();
+    expect(captured[0].language).toBe('fr');
+  });
+
+  it('falls back to config.DEFAULTS.translator.targetLang when config.translator.targetLang is falsy', async () => {
+    configStub.translator.targetLang = '';
+    embyReturn = false;
+    let captured = null;
+    dispatchOverride = (messages, historyItems) => { captured = historyItems; return { successful: historyItems, failed: [] }; };
+    await sweeper.runSweep();
+    expect(captured[0].language).toBe(configStub.DEFAULTS.translator.targetLang);
+    expect(captured[0].language).toBe('ar');
   });
 });

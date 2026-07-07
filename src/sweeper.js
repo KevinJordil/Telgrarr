@@ -2,7 +2,7 @@
 const fs          = require('fs');
 const path        = require('path');
 const writeAtomic = require('write-file-atomic');
-const { drainQueue, enqueue, peekLength, identityKey, markSweepCycle } = require('./queue');
+const { drainQueue, enqueueMany, peekLength, identityKey, markSweepCycle } = require('./queue');
 const { recordSent } = require('./reconcile-state');
 const { buildCaption, getPosterUrl: getShowPosterUrl } = require('./formatter');
 const { buildMovieCaption, getPosterUrl: getMoviePosterUrl } = require('./radarr-formatter');
@@ -123,9 +123,7 @@ async function recoverCrashedSweep() {
     const items = JSON.parse(raw);
     if (Array.isArray(items) && items.length > 0) {
       log.warn('Sweeper', `Crash Recovery → Found ${items.length} orphaned item(s) → Re-queuing`);
-      for (const item of items) {
-        await enqueue(item);
-      }
+      await enqueueMany(items);
     }
     fs.unlinkSync(SWEEP_STATE_FILE);
     return true;
@@ -290,7 +288,7 @@ async function runSweep() {
         imdbId:      series.imdbId  || null,
         tmdbId:      series.tmdbId  || null,
         tvdbId:      series.tvdbId  || null,
-        language:    config.translator?.targetLang || 'ar',
+        language:    config.translator?.targetLang || config.DEFAULTS.translator.targetLang,
         overview:    sonarrOverview,
         machineTranslated: _sonarrOvSplit.machineTranslated,
         genres:      sonarrGenres,
@@ -387,7 +385,7 @@ async function runSweep() {
         },
         imdbId:      movie.imdbId  || null,
         tmdbId:      movie.tmdbId  || null,
-        language:    config.translator?.targetLang || 'ar',
+        language:    config.translator?.targetLang || config.DEFAULTS.translator.targetLang,
         traces:      tracesOf(radarrGroups[movieId]),
         overview:    radarrOverview,
         machineTranslated: _radarrOvSplit.machineTranslated,
