@@ -5,8 +5,6 @@ const router   = express.Router();
 const { requireAuth }       = require('../middlewares/auth');
 const { getFilteredLogs }   = require('../logger');
 
-// ── GET /api/history ─────────────────────────────────────────────────────────
-
 // ── GET /api/logs ─────────────────────────────────────────────────────────────
 
 router.get('/logs', requireAuth, (req, res) => {

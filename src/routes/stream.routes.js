@@ -8,7 +8,7 @@ const { getQueueState }  = require('../sweeper');
 const { issue, consume } = require('../auth/stream-ticket');
 
 // C.6b / S2 — issue a short-lived single-use ticket for the EventSource connect
-// (browsers can't set an auth header on EventSource). requireAuth = current Bearer.
+// (browsers can't set an auth header on EventSource). requireAuth = cookie-based session auth (Blueprint C.7, httpOnly -- no Bearer).
 router.get('/stream-ticket', requireAuth, function(req, res) {
   res.json({ ticket: issue() });
 });

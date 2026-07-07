@@ -30,6 +30,12 @@ async function fetchSonarrMetadata(seriesId, activeMode, plotEnabled = true) {
   const series = await getSeriesById(seriesId);
   const includePlot = plotEnabled;
   const aiOnly = config.translator?.aiOnlyPlot === true;
+  // R13 note (FA-7, not code-fixed here): this fallback, and its byte-identical twin
+  // in fetchRadarrMetadata() below, duplicate the DEFAULTS.translator.targetLang
+  // literal ('ar') that config.js already guarantees post-merge -- dead-but-harmless
+  // duplication, tracked per Master S2 R13; not yet swept to
+  // config.DEFAULTS.translator.targetLang (the form F11.2 adopted at sweeper.js's
+  // two history-item sites).
   const locale = activeMode === 'default_en' ? 'en-US' : (config.translator?.targetLang || 'ar');
   let tmdbSeries = null;
   if (includePlot && series.tmdbId) {

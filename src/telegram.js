@@ -4,7 +4,7 @@ const config = require('./config');
 const { retryWithBackoff } = require('./utils/retry');
 
 // Per-request timeout for sendPhoto multipart uploads. Bounds the worst-case
-// "hung socket" failure mode (today there is no timeout — a dead connection
+// "hung socket" failure mode (prior to this constant's introduction there was no timeout — a dead connection
 // stalls the dispatch loop indefinitely). 30s comfortably covers slow uplinks.
 // Roadmap STEP 1.2 / O-3 (declared parity change).
 const SEND_TIMEOUT_MS = 30000;

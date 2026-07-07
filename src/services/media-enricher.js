@@ -101,6 +101,12 @@ function isPlotAlreadyInTarget(rawOv, targetLang, fromTmdb) {
 
 async function enrichSonarrMedia(rawSeries, rawTmdbSeries = null, rawOmdbData = null, activeMode = null, langOverride = null, plotEnabled = true) {
   const series = attachSeerr(rawSeries, 'tv');
+  // R13 note (FA-7, not code-fixed here): this fallback, and its byte-identical twin
+  // in enrichRadarrMedia() below, duplicate the DEFAULTS.translator.targetLang literal
+  // ('ar') that config.js already guarantees post-merge -- dead-but-harmless
+  // duplication, tracked per Master S2 R13; not yet swept to
+  // config.DEFAULTS.translator.targetLang (the form F11.2 adopted at sweeper.js's
+  // two history-item sites).
   const targetLang = langOverride || config.translator?.targetLang || 'ar';
   const rawGenres = (series.genres || []).slice(0, 2);
   series._genresAr = translateGenres(rawGenres).join(' • ') || null;

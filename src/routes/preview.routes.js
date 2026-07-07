@@ -36,6 +36,11 @@ function buildPreviewRadarrMovie() {
 // languages) or the live translator target as default, so the default preview matches
 // exactly what is dispatched live. ONE source of the language set (src/languages.js, R02).
 function resolveLang(raw) {
+  // R13 note (FA-7, not code-fixed here): duplicates the DEFAULTS.translator.targetLang
+  // literal ('ar') that config.js already guarantees post-merge -- dead-but-harmless
+  // duplication, tracked per Master S2 R13; not yet swept to
+  // config.DEFAULTS.translator.targetLang (the form F11.2 adopted at sweeper.js's
+  // two history-item sites).
   const fallback = config.translator?.targetLang || 'ar';
   return (typeof raw === 'string' && LANGUAGE_NAME[raw]) ? raw : fallback;
 }

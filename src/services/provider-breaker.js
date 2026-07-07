@@ -21,7 +21,7 @@ const EVENT_TYPES = require('../../shared/events.json');
 // OMDb rate limit: HTTP 429 (thrown).
 // OMDb quota exhausted: HTTP 200 with body Error matching /daily request limit reached/i
 //   (free-tier daily cap) - distinct from a bad key; also non-throwing.
-// Pure module: zero requires (no logger/config) - cannot form a require cycle.
+// Require count: ONE sanctioned require (events.js, DEC-BLR-21 -- see the note atop this file); no logger/config, so no cycle is possible.
 
 const TMDB_AUTH_STATUS_CODES = [7, 10, 3];
 
