@@ -26,7 +26,7 @@ router.post('/queue/flush', requireAuth, async (req, res) => {
   log.audit('Queue', 'Manual flush triggered via GUI.');
   events.emit(EVENT_TYPES.QUEUE_FLUSH, 'info', 'Queue', 'Queue flushed manually', {});
   res.json({ success: true });
-  setImmediate(() => runSweep());
+  setImmediate(() => runSweep().catch((err) => log.error('Sweeper', `Sweep Manual Flush → Error → ${err.message}`)));
 });
 
 // ── POST /api/queue/clear ────────────────────────────────────────────────────
