@@ -248,7 +248,18 @@ async function addSlot(slot) {
 async function updateSlot(id, patch) {
   const idx = store.slots.findIndex(s => s.id === id);
   if (idx === -1) throw new Error(`Slot not found: ${id}`);
-  const updated = { ...store.slots[idx], ...patch, id };
+  // FA-50: whitelist-pick known fields only -- previously `...patch` spread
+  // ANY key over the slot, and validateSlot never rejects an unlisted key, so
+  // junk fields persisted into templates.json indefinitely. Presence-checked
+  // ('x' in patch) so partial-update semantics are unchanged: an omitted
+  // field stays untouched, byte-identical to the prior spread's behavior.
+  const picked = {};
+  if (patch && typeof patch === 'object') {
+    if ('name' in patch) picked.name = patch.name;
+    if ('sonarr' in patch) picked.sonarr = patch.sonarr;
+    if ('radarr' in patch) picked.radarr = patch.radarr;
+  }
+  const updated = { ...store.slots[idx], ...picked, id };
   const errors  = validateSlot(updated);
   if (errors.length) throw new Error(errors.join('; '));
   store.slots[idx] = updated;
