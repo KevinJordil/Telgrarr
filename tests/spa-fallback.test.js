@@ -30,4 +30,19 @@ describe('shouldServeAppShell (SPA fallback decision)', () => {
     expect(shouldServeAppShell({ path: 123 })).toBe(false);
     expect(shouldServeAppShell(null)).toBe(false);
   });
+
+  it('404s an unmatched /api or /hooks request (FA-45)', () => {
+    expect(shouldServeAppShell({ path: '/api' })).toBe(false);
+    expect(shouldServeAppShell({ path: '/api/' })).toBe(false);
+    expect(shouldServeAppShell({ path: '/api/foo' })).toBe(false);
+    expect(shouldServeAppShell({ path: '/api/data.json' })).toBe(false);
+    expect(shouldServeAppShell({ path: '/hooks' })).toBe(false);
+    expect(shouldServeAppShell({ path: '/hooks/' })).toBe(false);
+    expect(shouldServeAppShell({ path: '/hooks/sonarr' })).toBe(false);
+  });
+
+  it('does not false-positive on a path merely starting with the letters "api"/"hooks" (FA-45 boundary)', () => {
+    expect(shouldServeAppShell({ path: '/apiary' })).toBe(true);
+    expect(shouldServeAppShell({ path: '/hooks-page' })).toBe(true);
+  });
 });
