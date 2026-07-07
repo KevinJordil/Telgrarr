@@ -132,6 +132,10 @@ async function translateText(text, { targetLang = 'ar', fallback = null } = {}) 
         events.emit(EVENT_TYPES.TRANSLATOR_TIER_FAILED, 'warn', 'Translator', `Tier 1 (AI) → Failed → Escalating | ${msg}`, { tier: 1, error: msg });
       }
     }
+  } else if (config.translator?.aiEnabled === false) {
+    log.warn('Translator', 'Tier 1 (AI) \u2192 Skipped \u2192 disabled');
+  } else {
+    log.warn('Translator', 'Tier 1 (AI) \u2192 Skipped \u2192 apiKey not configured');
   }
   // ── Tier 2: DeepL Free API ───────────────────────────────────────────────────
   const t2Key = config.translator?.deeplApiKey;
