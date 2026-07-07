@@ -220,6 +220,13 @@ async function setLayout(layout) {
 
 async function setActiveMode(mode) {
   if (typeof mode !== 'string') throw new Error('activeMode must be a string');
+  // FA-49: reject a mode that is neither a reserved default alias nor an
+  // existing slot id -- previously ANY string silently "succeeded" and
+  // resolveTemplate's fallthrough pinned rendering to DEFAULT_AR forever
+  // with no operator-visible signal.
+  if (!RESERVED_MODES.has(mode) && !store.slots.some((s) => s.id === mode)) {
+    throw new Error(`Unknown activeMode: ${mode}`);
+  }
   store.activeMode = mode;
   await persist();
   log.info('Templates', `Active mode set to: ${mode}`);

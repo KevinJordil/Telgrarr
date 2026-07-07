@@ -49,4 +49,24 @@ describe('P5b: canonical "default" activeMode', () => {
     await T.deleteSlot('s1');
     expect(T.getActiveMode()).toBe('default');
   });
+
+  it('FA-49: rejects an unknown activeMode (no matching slot, not reserved)', async () => {
+    await expect(T.setActiveMode('nonexistent-mode')).rejects.toThrow(/unknown activeMode/i);
+    expect(T.getActiveMode()).toBe('default');
+  });
+
+  it('FA-49: accepts a reserved default alias even with zero slots registered (parity)', async () => {
+    await T.setActiveMode('default_en');
+    expect(T.getActiveMode()).toBe('default_en');
+    await T.setActiveMode('default_ar');
+    expect(T.getActiveMode()).toBe('default_ar');
+  });
+
+  it('FA-49: accepts an existing slot id, rejects it again once the slot is deleted', async () => {
+    await T.addSlot({ id: 's2', name: 'Other', sonarr: 'Y' });
+    await T.setActiveMode('s2');
+    expect(T.getActiveMode()).toBe('s2');
+    await T.deleteSlot('s2');
+    await expect(T.setActiveMode('s2')).rejects.toThrow(/unknown activeMode/i);
+  });
 });
