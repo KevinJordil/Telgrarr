@@ -30,8 +30,34 @@ function loadEvents() {
     const raw    = fs.readFileSync(EVENTS_FILE, 'utf8');
     const loaded = JSON.parse(raw);
     if (Array.isArray(loaded) && loaded.length > 0) {
-      recentEvents.push(...loaded);
-      _seq = parseInt(recentEvents[recentEvents.length - 1].id.split('-')[1]) || 0;
+      // FA-5: recentEvents may already hold boot-time events mirrored in via
+      // logger.js (loadEvents() runs after index.js's early boot log lines --
+      // Master §7). Merge + sort by the sortable id prefix (timestamp, then
+      // seq) so persisted (older) events never land AFTER already-emitted
+      // (newer) boot events; trim to the same 50-slot cap flushEvents()
+      // itself enforces; rebase _seq to the true max across BOTH sets so no
+      // seq is ever reused or regressed. Built in a local array first and
+      // only swapped in on success -- a malformed entry can't leave
+      // recentEvents half-mutated.
+      const parseIdParts = (ev) => {
+        const m = ev && typeof ev.id === 'string' ? /^(\d+)-(\d+)$/.exec(ev.id) : null;
+        return m ? [Number(m[1]), Number(m[2])] : [0, 0];
+      };
+      const merged = recentEvents.concat(loaded);
+      merged.sort((a, b) => {
+        const [at, aq] = parseIdParts(a);
+        const [bt, bq] = parseIdParts(b);
+        return at - bt || aq - bq;
+      });
+      const trimmed = merged.length > 50 ? merged.slice(-50) : merged;
+      let maxSeq = 0;
+      for (const ev of trimmed) {
+        const [, seq] = parseIdParts(ev);
+        if (seq > maxSeq) maxSeq = seq;
+      }
+      recentEvents.length = 0;
+      recentEvents.push(...trimmed);
+      _seq = maxSeq;
     }
   } catch (err) {
     console.error('[Events] Ring Buffer Load → Error →', err.message);
