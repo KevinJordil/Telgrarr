@@ -77,6 +77,13 @@ const ELEMENT_CATALOG = [
 const CATALOG_BY_KEY = Object.fromEntries(ELEMENT_CATALOG.map((e) => [e.key, e]));
 
 // Default render order per kind — mirrors today's default-layouts.js sequence exactly.
+// DEPRECATED (FA-54): these two exports are the FULL per-kind element catalog, not the
+// renderer's orderable set, and have ZERO production consumers (git-grep verified) --
+// the composer's real render-order authority is layout-fragments.js's DEFAULT_ORDER
+// (orderable keys only; header/title are fixed-prefix Lock rows there, unlike their
+// inclusion here). Kept only because layout-schema.test.js pins their values; do NOT
+// wire these into any new render/order logic. Removal is deferred pending an explicit
+// order to also touch that test (FAR v1 Roadmap F11.7; Master Section 5 note queued Phase Z).
 const SONARR_DEFAULT_ORDER = [
   'header', 'title', 'year', 'status', 'genres', 'plot',
   'season', 'episode', 'runtime', 'imdbLink', 'seerrLink',
