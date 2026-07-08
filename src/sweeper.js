@@ -53,6 +53,15 @@ let pendingSweep  = false;           // BLR-1 / DEC-BLR-1: wake-after-finish
 let immediateArmed = false;          // BCS P1 / F8: depth-path setImmediate single-flight guard
 const SWEEP_NOW_THRESHOLD = 50;      // BLR-1 / DEC-BLR-3: depth trigger
 const METADATA_CONCURRENCY = 5;      // BLR-3 / DEC-BLR-11: ~25% of TMDb's ~40 req/sec ceiling
+// -- FA-2 / D-2a: cap on sweep-level dispatch retries for a RETRYABLE failure (429/5xx/
+// network, per telegram.js's isRetryable classifier surfaced via notifications.js's
+// failed[].retryable -- F8a). A non-retryable (permanent 4xx) failure is never retried,
+// regardless of this cap. _dispatchAttempts on the RAW item counts failed dispatch
+// attempts; an item survives up to MAX_DISPATCH_ATTEMPTS failures before being
+// abandoned (i.e. up to MAX_DISPATCH_ATTEMPTS + 1 total dispatch attempts). Rides in
+// media_queue.json for free -- no separate persistence needed for the cap to survive
+// a restart.
+const MAX_DISPATCH_ATTEMPTS = 3;
 // -- BLR Phase 4: sweep-cycle observability state (DEC-BLR-22) --------------
 // _sweepCycleId re-arms the once-per-cycle notifications (queue depth warn,
 // provider trips, translator cooldowns) at each sweep start; the stats fields
@@ -161,6 +170,13 @@ async function runSweep() {
   const metadataLimit = createLimit(METADATA_CONCURRENCY);
   let sentCount = 0;
   let terminallyProcessed = false;
+  // FA-2 / D-2a: true once every failed[] item this sweep has been definitively
+  // requeued-or-abandoned (never left silently orphaned); gates the crash-marker
+  // cleanup below (finally{}) alongside the existing sentCount/terminallyProcessed
+  // conditions -- this returns the marker to pure crash-only semantics for the case
+  // this fix targets, while a dispatchBatch call that itself THROWS (a separate,
+  // untouched code path above) still retains the marker exactly as it does today.
+  let dispatchFailureHandled = false;
   try {
     log.info('Sweeper', 'Sweep Execution → Started → Draining queue');
     let items;
@@ -306,7 +322,7 @@ async function runSweep() {
           tvdbId: series.tvdbId  || null,
         },
       };
-      __result.meta = { source: 'sonarr', identityKeys: episodes.map(identityKey).filter(Boolean) };
+      __result.meta = { source: 'sonarr', identityKeys: episodes.map(identityKey).filter(Boolean), rawItems: episodes };
       log.info('Sweeper', `Message Prep (Sonarr) → Success → "${series.title}" (${episodes.length} episode(s)) | Traces: [${tracesOf(episodes)}]`);
       events.emit(
         EVENT_TYPES.SWEEP_ITEM_READY,
@@ -400,7 +416,7 @@ async function runSweep() {
           tvdbId: null,
         },
       };
-      __result.meta = { source: 'radarr', identityKeys: radarrGroups[movieId].map(identityKey).filter(Boolean) };
+      __result.meta = { source: 'radarr', identityKeys: radarrGroups[movieId].map(identityKey).filter(Boolean), rawItems: radarrGroups[movieId] };
       log.info('Sweeper', `Message Prep (Radarr) → Success → "${movie.title}" | Pass: ${pass} | Length: ${length} | Traces: [${tracesOf(radarrGroups[movieId])}]`);
       events.emit(
         EVENT_TYPES.SWEEP_ITEM_READY,
@@ -449,6 +465,54 @@ async function runSweep() {
         `❌     Failed to send "${fail.item.title}": ${fail.error}`,
         { title: fail.item.title }
       );
+    }
+    // -- FA-2 / D-2a: retry-or-abandon failed dispatches (sweep-level) --------------
+    // A non-retryable (permanent 4xx) failure is abandoned immediately -- retrying it
+    // would loop forever (e.g. a bad photo URL). A retryable failure is re-enqueued
+    // through ONE enqueueMany call (DEC-BLR-4 precedent, never per-item), with the RAW
+    // item's own _dispatchAttempts incremented first. An item that has already
+    // exceeded MAX_DISPATCH_ATTEMPTS is abandoned instead of requeued again.
+    if (failed.length > 0) {
+      const toRequeue = [];
+      let abandonedCount = 0;
+      for (const fail of failed) {
+        const meta = metaByItem.get(fail.item);
+        const rawItems = (meta && Array.isArray(meta.rawItems)) ? meta.rawItems : [];
+        if (!fail.retryable) {
+          abandonedCount += rawItems.length;
+          continue;
+        }
+        for (const rawItem of rawItems) {
+          const attempts = (rawItem._dispatchAttempts || 0) + 1;
+          if (attempts > MAX_DISPATCH_ATTEMPTS) {
+            abandonedCount += 1;
+            continue;
+          }
+          rawItem._dispatchAttempts = attempts;
+          toRequeue.push(rawItem);
+        }
+      }
+      if (abandonedCount > 0) {
+        log.audit('Sweeper', `Dispatch Retry \u2192 Abandoned \u2192 ${abandonedCount} item(s) (permanent failure or attempt cap reached)`);
+        events.emit(
+          EVENT_TYPES.SWEEP_ITEM_ABANDONED,
+          'warn',
+          'Sweeper',
+          `${abandonedCount} item(s) permanently abandoned after dispatch failure`,
+          { count: abandonedCount }
+        );
+      }
+      try {
+        if (toRequeue.length > 0) {
+          await enqueueMany(toRequeue);
+          log.warn('Sweeper', `Dispatch Retry \u2192 Requeued \u2192 ${toRequeue.length} item(s) for the next sweep`);
+        }
+        dispatchFailureHandled = true;
+      } catch (err) {
+        log.error('Sweeper', `Dispatch Retry \u2192 Requeue Error \u2192 ${err.message}`);
+      }
+    } else {
+      dispatchFailureHandled = true;
     }
     if (sentCount > 0) {
       log.info('Sweeper', `Telegram Dispatch → Complete → Sent: ${sentCount} | Failed: ${errorCount} | Duration: ${ms}ms`);
@@ -518,7 +582,7 @@ async function runSweep() {
     } catch (_pruneErr) {
       log.error('History', `Prune → Error → ${_pruneErr.message}`);
     }
-    if ((sentCount > 0 || terminallyProcessed) && fs.existsSync(SWEEP_STATE_FILE)) {
+    if ((sentCount > 0 || terminallyProcessed || dispatchFailureHandled) && fs.existsSync(SWEEP_STATE_FILE)) {
       try {
         fs.unlinkSync(SWEEP_STATE_FILE);
       } catch (err) {

@@ -18,6 +18,10 @@ let emitCalls = [];
 let embyReturn = false;
 let enqueueManyCalls = [];
 let enqueueManyImpl = async (items) => items.length;
+// FA-2/D-2a: mutable indirection (same pattern as dispatchOverride/embyReturn below) so
+// individual tests can simulate a raw drained item that already carries a prior
+// _dispatchAttempts count.
+let drainQueueReturn = [{ source: 'radarr', movieId: '123', traceId: 't1' }];
 
 function stub(relPath, exports) {
   const resolved = require.resolve(relPath);
@@ -40,7 +44,7 @@ stub('../src/config.js', configStub);
 stub('../src/logger.js', { info() {}, warn() {}, error() {}, audit() {}, setLevel() {} });
 stub('../src/events.js', { emit: (type, ...rest) => { emitCalls.push({ type, rest }); } });
 stub('../src/queue.js', {
-  drainQueue: async () => [{ source: 'radarr', movieId: '123', traceId: 't1' }],
+  drainQueue: async () => drainQueueReturn,
   enqueueMany: async (items) => { enqueueManyCalls.push(items); return enqueueManyImpl(items); },
   markSweepCycle: () => {},
   // Mirrors src/queue.js identityKey (independently covered by queue-identity.test.js);
@@ -102,6 +106,7 @@ beforeEach(() => {
   dispatchOverride = null;
   enqueueManyCalls = [];
   enqueueManyImpl = async (items) => items.length;
+  drainQueueReturn = [{ source: 'radarr', movieId: '123', traceId: 't1' }];
   configStub.translator.targetLang = 'ar';
   delete require.cache[require.resolve('../src/sweeper.js')];
   sweeper = require('../src/sweeper.js');
@@ -134,13 +139,100 @@ describe('Sweeper reconcile ledger write-back (STEP 2.4 / WR-3 / C-LEDGER)', () 
     embyReturn = false;
     dispatchOverride = (messages, historyItems) => ({
       successful: [],
-      failed: historyItems.map((item) => ({ item, error: '429' })),
+      failed: historyItems.map((item) => ({ item, error: '429', retryable: true })),
     });
     await sweeper.runSweep();
     expect(recordSentCalls).toHaveLength(0);
+    // FA-2/D-2a: "stays eligible" now also means the sweeper itself requeues a
+    // retryable failure, in addition to the pre-existing reconciler safety net.
+    expect(enqueueManyCalls).toHaveLength(1);
+    expect(enqueueManyCalls[0]).toHaveLength(1);
+    expect(enqueueManyCalls[0][0]._dispatchAttempts).toBe(1);
   });
 });
 
+
+describe('Sweeper dispatch-failure retry/abandon (FA-2/D-2a, MAX_DISPATCH_ATTEMPTS)', () => {
+  it('a retryable failure under the cap is requeued via ONE enqueueMany call, attempts incremented from 0', async () => {
+    embyReturn = false;
+    dispatchOverride = (messages, historyItems) => ({
+      successful: [],
+      failed: historyItems.map((item) => ({ item, error: '429', retryable: true })),
+    });
+    await sweeper.runSweep();
+    expect(enqueueManyCalls).toHaveLength(1);
+    expect(enqueueManyCalls[0]).toHaveLength(1);
+    expect(enqueueManyCalls[0][0].movieId).toBe('123');
+    expect(enqueueManyCalls[0][0]._dispatchAttempts).toBe(1);
+  });
+
+  it('a non-retryable (permanent) failure is never requeued, and emits SWEEP_ITEM_ABANDONED', async () => {
+    embyReturn = false;
+    dispatchOverride = (messages, historyItems) => ({
+      successful: [],
+      failed: historyItems.map((item) => ({ item, error: 'Forbidden', retryable: false })),
+    });
+    await sweeper.runSweep();
+    expect(enqueueManyCalls).toHaveLength(0);
+    const abandonedEmits = emitCalls.filter((e) => e.type === EVENT_TYPES.SWEEP_ITEM_ABANDONED);
+    expect(abandonedEmits).toHaveLength(1);
+  });
+
+  it('a retryable failure already at MAX_DISPATCH_ATTEMPTS is abandoned instead of requeued again', async () => {
+    drainQueueReturn = [{ source: 'radarr', movieId: '123', traceId: 't1', _dispatchAttempts: 3 }];
+    embyReturn = false;
+    dispatchOverride = (messages, historyItems) => ({
+      successful: [],
+      failed: historyItems.map((item) => ({ item, error: '429', retryable: true })),
+    });
+    await sweeper.runSweep();
+    expect(enqueueManyCalls).toHaveLength(0);
+    const abandonedEmits = emitCalls.filter((e) => e.type === EVENT_TYPES.SWEEP_ITEM_ABANDONED);
+    expect(abandonedEmits).toHaveLength(1);
+  });
+});
+
+describe('Sweeper dispatch-failure marker cleanup (FA-2/D-2a, dispatchFailureHandled)', () => {
+  const ambientExistsSync = fs.existsSync;
+  let unlinkSyncOrig, unlinkCalls;
+  beforeEach(() => {
+    unlinkCalls = [];
+    unlinkSyncOrig = fs.unlinkSync;
+    fs.existsSync = (p) => (p === SWEEP_STATE_FILE ? true : ambientExistsSync(p));
+    fs.unlinkSync = (p) => { if (p === SWEEP_STATE_FILE) { unlinkCalls.push(p); return; } return unlinkSyncOrig(p); };
+  });
+  afterEach(() => {
+    fs.existsSync = ambientExistsSync;
+    fs.unlinkSync  = unlinkSyncOrig;
+  });
+
+  it('FA-2: a total-failure sweep (non-retryable) now cleans the crash marker (was: silently retained forever until the next sweep clobbered it)', async () => {
+    embyReturn = false;
+    dispatchOverride = (messages, historyItems) => ({
+      successful: [],
+      failed: historyItems.map((item) => ({ item, error: 'Forbidden', retryable: false })),
+    });
+    await sweeper.runSweep();
+    expect(unlinkCalls).toEqual([SWEEP_STATE_FILE]);
+  });
+
+  it('FA-2: a total-failure sweep (retryable) requeues the item AND cleans the crash marker', async () => {
+    embyReturn = false;
+    dispatchOverride = (messages, historyItems) => ({
+      successful: [],
+      failed: historyItems.map((item) => ({ item, error: '503', retryable: true })),
+    });
+    await sweeper.runSweep();
+    expect(unlinkCalls).toEqual([SWEEP_STATE_FILE]);
+    expect(enqueueManyCalls).toHaveLength(1);
+  });
+
+  it('a dispatchBatch THROW (distinct from a per-item failure) still retains the marker -- untouched path, parity', async () => {
+    dispatchOverride = () => { throw new Error('network down'); };
+    await sweeper.runSweep();
+    expect(unlinkCalls).toHaveLength(0);
+  });
+});
 
 describe('Sweeper crash recovery (FA-8 — recoverCrashedSweep via single enqueueMany)', () => {
   const ambientExistsSync = fs.existsSync;
