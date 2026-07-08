@@ -78,6 +78,7 @@ async function sendPhoto(photoUrl, caption) {
     if (lastRetryAfterMs !== undefined) out.retryAfterMs = lastRetryAfterMs;
     if (err && err.code) out.code = err.code;
     if (err && err.response && err.response.status) out.httpStatus = err.response.status;
+    out.retryable = isRetryable(err);
     throw out;
   }
 

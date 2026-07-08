@@ -79,6 +79,28 @@ describe('dispatchBatch adaptive 429 throttle (STEP 1.4 / WR-15 / O-4)', () => {
     expect(sendCalls).toHaveLength(3);
     expect(sleepCalls).toEqual([500, 500]);
   });
+  it('FA-2/D-2a: passes through err.retryable on a failed send', async () => {
+    install(500);
+    sendImpl = (i) => {
+      if (i === 0) { const e = new Error('Too Many Requests'); e.rateLimited = false; e.retryable = true; throw e; }
+      return { rateLimited: false };
+    };
+    const dispatchBatch = freshDispatch();
+    const r = await dispatchBatch(msgs(2), hist(2));
+    expect(r.failed).toHaveLength(1);
+    expect(r.failed[0].retryable).toBe(true);
+  });
+  it('FA-2/D-2a: defaults retryable to false when the thrown error omits it', async () => {
+    install(500);
+    sendImpl = (i) => {
+      if (i === 0) { const e = new Error('Forbidden'); e.rateLimited = false; throw e; }
+      return { rateLimited: false };
+    };
+    const dispatchBatch = freshDispatch();
+    const r = await dispatchBatch(msgs(2), hist(2));
+    expect(r.failed).toHaveLength(1);
+    expect(r.failed[0].retryable).toBe(false);
+  });
 
   it('persistent 429 that THROWS still paces the remainder (catch-path signal)', async () => {
     install(500);

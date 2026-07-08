@@ -76,7 +76,8 @@ async function dispatchBatch(messages, historyItems) {
     } catch (err) {
       failed.push({
         item: historyItems[i],
-        error: err.message
+        error: err.message,
+        retryable: !!(err && err.retryable)
       });
       if (err && err.rateLimited) {
         effectiveDelay = nextAdaptiveDelay(effectiveDelay, DELAY, err.retryAfterMs);

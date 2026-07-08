@@ -93,6 +93,12 @@ describe('telegram.sendPhoto — retry + timeout + signal (STEP 1.2 / WR-15)', (
     await expect(sendPhoto(PHOTO, CAPTION)).rejects.toThrow('Telegram API Error: Not Found');
     expect(postSpy).toHaveBeenCalledTimes(1);
   });
+  it('FA-2/D-2a: permanent 4xx errors are marked non-retryable', async () => {
+    postSpy.mockRejectedValue(apiError(400, { description: 'Bad Request' }));
+    const err = await sendPhoto(PHOTO, CAPTION).catch((e) => e);
+    expect(err.retryable).toBe(false);
+    expect(postSpy).toHaveBeenCalledTimes(1);
+  });
 
   it('persistent 429: exhausts retries; throws with augmented metadata', async () => {
     vi.useFakeTimers();
@@ -108,6 +114,7 @@ describe('telegram.sendPhoto — retry + timeout + signal (STEP 1.2 / WR-15)', (
     expect(err.rateLimited).toBe(true);
     expect(err.retryAfterMs).toBe(1000);
     expect(err.httpStatus).toBe(429);
+    expect(err.retryable).toBe(true);
     expect(postSpy).toHaveBeenCalledTimes(4);
   });
 
@@ -120,6 +127,7 @@ describe('telegram.sendPhoto — retry + timeout + signal (STEP 1.2 / WR-15)', (
     expect(err.message).toBe('network ECONNRESET');
     expect(err.rateLimited).toBe(false);
     expect(err.code).toBe('ECONNRESET');
+    expect(err.retryable).toBe(true);
     expect(postSpy).toHaveBeenCalledTimes(4);
   });
 });
