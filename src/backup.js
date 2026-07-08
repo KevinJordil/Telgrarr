@@ -25,7 +25,9 @@ const BACKUP_MANIFEST = [
   { name: 'config.json',         dir: DATA_DIR },
   { name: 'events-ring.json',    dir: DATA_DIR }, // F.9 (O4): SSE ring buffer
   { name: 'history.json',        dir: DATA_DIR },
-  { name: 'sessions.json',       dir: DATA_DIR },
+  // FA-31 / D-5: sessions.json is intentionally NOT in this manifest (Master
+  // Architecture Section 4 BACKUP MANIFEST SCOPE update queued at Phase Z). Live
+  // session bearer tokens must not travel inside a portable backup archive.
   { name: 'system-release.json', dir: DATA_DIR }, // F.9 (O4): release/version ledger
   { name: 'templates.json',      dir: DATA_DIR },
   { name: 'media_queue.json',    dir: ROOT_DIR }  // Critical Addition: Preserves pending webhooks

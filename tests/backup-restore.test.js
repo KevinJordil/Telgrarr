@@ -134,6 +134,25 @@ describe('backup.createBackup — manifest exclusions + integrity (G2/G3/F8)', (
   });
 });
 
+describe('backup manifest - sessions.json exclusion (FA-31/D-5, declared behavior change)', () => {
+  it('createBackup no longer includes sessions.json even when the live file exists', () => {
+    fs.writeFileSync(path.join(DATA, 'config.json'), '{"x":1}');
+    fs.writeFileSync(path.join(DATA, 'sessions.json'), '{"sid":"live-token"}');
+    const r = backup.createBackup();
+    expect(r.success).toBe(true);
+    const names = new AdmZip(path.join(BK, r.filename)).getEntries().map(e => e.entryName);
+    expect(names).not.toContain('sessions.json');
+    expect(names).toContain('config.json');
+  });
+
+  it('restoreBackup ignores a sessions.json entry from an OLD-format archive (old zips become inert)', () => {
+    makeZip('legacy.zip', { 'auth.json': '{"a":1}', 'sessions.json': '{"sid":"leaked-token"}' });
+    const r = backup.restoreBackup('legacy.zip');
+    expect(r.success).toBe(true);
+    expect(fs.existsSync(path.join(DATA, 'sessions.json'))).toBe(false);
+  });
+});
+
 describe('backup.restoreBackup — version skew proceeds (G4)', () => {
   it('restores despite a backup-meta version mismatch (warn, not block)', () => {
     makeZip('skew.zip', {
