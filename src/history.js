@@ -12,27 +12,28 @@ const historyFile = path.join(config.DATA_DIR, 'history.json');
 let _history = [];
 
 // ── Boot: ensure file exists and load into memory ─────────────────────────────
-(function _boot() {
+function _loadFromDisk(phase) {
   if (!fs.existsSync(historyFile)) {
     try {
       writeAtomic.sync(historyFile, JSON.stringify([], null, 2));
     } catch (err) {
-      log.error('History', `Boot → Failed to create history.json → ${err.message}`);
+      log.error('History', `${phase} → Failed to create history.json → ${err.message}`);
     }
-    return; // _history stays []
+    return []; // _history stays []
   }
   try {
-    _history = JSON.parse(fs.readFileSync(historyFile, 'utf8'));
+    return JSON.parse(fs.readFileSync(historyFile, 'utf8'));
   } catch (err) {
-    log.error('History', `Boot → Failed to read history.json → ${err.message}`);
-    _history = [];
+    log.error('History', `${phase} → Failed to read history.json → ${err.message}`);
+    return [];
   }
-}());
+}
+_history = _loadFromDisk('Boot');
 
 // ── Migration-on-read: one-time id assignment for legacy entries ──────────────
 // Entries written before the HIST mission lacked an id field. Assign one now,
 // re-save atomically (sync: boot is single-thread; no lockfile needed here).
-(function _migrateIds() {
+function _migrateIds() {
   if (!_history.some(e => !e.id)) return;
   const ts = Date.now();
   _history = _history.map((e, i) =>
@@ -46,7 +47,20 @@ let _history = [];
   } catch (err) {
     log.error('History', `Migration → Failed to persist id assignment → ${err.message}`);
   }
-}());
+}
+_migrateIds();
+
+// ── reload ────────────────────────────────────────────────────────────────────
+// Re-syncs in-memory _history from disk. Used by the non-capable-restore path
+// (backups.routes.js) so a restored history.json is not immediately clobbered
+// by the next addHistory/pruneByAge flush of stale pre-restore memory (FA-25).
+// Sync call shape matches config.reload(); DATA_DIR is LAUNCH-ONLY (never
+// stale post-boot). Re-runs the migration pass in case the restored backup
+// predates the HIST id-assignment mission.
+function reload() {
+  _history = _loadFromDisk('Reload');
+  _migrateIds();
+}
 
 // ── Internal: lockfile-guarded atomic flush ───────────────────────────────────
 async function _flush() {
@@ -196,5 +210,5 @@ module.exports = {
   addHistory, getHistory,
   getById, getAll,
   removeById, clear, pruneByAge,
-  stats,
+  stats, reload,
 };

@@ -25,6 +25,7 @@ const AdmZip       = require('adm-zip');
 const config       = require('../src/config.js');
 const authRouter   = require('../src/routes/auth.routes.js');
 const backupsRouter = require('../src/routes/backups.routes.js');
+const history       = require('../src/history.js');
 
 let server, base, cookie;
 
@@ -79,5 +80,37 @@ describe('F2 — non-capable restore hot-reloads and cannot be clobbered', () =>
     const onDisk = JSON.parse(fs.readFileSync(path.join(DATA, 'config.json'), 'utf8'));
     expect(onDisk.__restoreMarker).toBe('RESTORED'); // survived — would be lost pre-fix
     expect(onDisk.logging.level).toBe('warn');        // the new patch applied
+  });
+});
+
+describe('F13d — non-capable restore hot-reloads history.json (FA-25)', () => {
+  it('restores history.json to disk and syncs live _history from it', async () => {
+    writeBackupZip('telgrarr-backup-1.0.0-20260102000000.zip', {
+      'config.json': JSON.stringify({ logging: { level: 'info' } }),
+      'history.json': JSON.stringify([
+        { id: 'restored-1', type: 'movie', title: 'Restored Movie', timestamp: '2026-01-02T00:00:00.000Z' },
+      ]),
+    });
+    const res = await fetch(`${base}/backups/restore/telgrarr-backup-1.0.0-20260102000000.zip`, {
+      method: 'POST',
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({ success: true, needsRestart: true, restartCapable: false });
+    // Live _history now reflects the restored disk (route hot-reloaded it) —
+    // would still show the pre-restore empty array pre-fix.
+    const live = history.getHistory();
+    expect(live).toHaveLength(1);
+    expect(live[0].id).toBe('restored-1');
+  });
+
+  it('a subsequent addHistory() merges onto restored truth (no clobber)', async () => {
+    await history.addHistory([
+      { id: 'new-1', type: 'show', title: 'New Show', timestamp: '2026-01-02T01:00:00.000Z' },
+    ]);
+    const onDisk = JSON.parse(fs.readFileSync(path.join(DATA, 'history.json'), 'utf8'));
+    expect(onDisk.some((e) => e.id === 'restored-1')).toBe(true); // survived — would be lost pre-fix
+    expect(onDisk.some((e) => e.id === 'new-1')).toBe(true); // the new item prepended
   });
 });

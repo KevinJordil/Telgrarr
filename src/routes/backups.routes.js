@@ -8,6 +8,7 @@ const { requestRestart, isRestartCapable } = require('../services/restart');
 const path = require('path');
 const fs = require('fs');
 const config = require('../config');
+const history = require('../history');
 const UPLOAD_LIMIT = '25mb';
 
 router.get('/backups', requireAuth, (req, res) => {
@@ -67,12 +68,15 @@ router.post('/backups/restore/:filename', requireAuth, (req, res) => {
         log.audit('Backup', `Backup Restore → Complete → Triggering Restart`);
         res.on('finish', () => requestRestart('backup-restore'));
       } else {
-        // No respawn is coming on this deployment: hot-reload live config from the
-        // just-restored config.json NOW, so a later config.save() merges onto restored
-        // truth (never stale pre-restore memory) and GET /settings serves restored
-        // values. Restart-tier values still need a manual restart, so needsRestart
-        // stays true. (F2 — closes the restore-clobber window.)
+        // No respawn is coming on this deployment: hot-reload live config AND
+        // history from the just-restored disk state NOW, so a later config.save()
+        // or addHistory() merges onto restored truth (never stale pre-restore
+        // memory) and GET /settings + GET /history serve restored values.
+        // Restart-tier config values still need a manual restart, so needsRestart
+        // stays true. (F2 — closes the restore-clobber window; F13d —
+        // closes the FA-25 history residual on the same non-capable path.)
         config.reload();
+        history.reload();
         log.audit('Backup', `Backup Restore → Complete → Hot-reloaded (manual restart required)`);
       }
       res.json({ success: true, needsRestart: true, restartCapable: capable });
