@@ -3,6 +3,14 @@ const fs        = require('fs');
 const path      = require('path');
 const crypto    = require('crypto');
 const lockfile  = require('proper-lockfile');
+const writeAtomic = require('write-file-atomic');
+// F16/D-3 (Architect-ratified): the 4 in-lock queue writes below disable the
+// per-write disk fsync -- a DECLARED divergence from blacklist.js's 2-arg call
+// shape. Atomicity is fully preserved (temp-file + rename; a torn/partial write
+// can never become visible); only the fsync durability step is skipped.
+// media_queue.json is regenerable operational state (the reconciler re-seeds
+// from *arr history at boot), and write-file-atomic's unconditional default
+// fsync measured ~26ms/write here -- eroding the BCS P5/F6 burst-latency margin.
 const config    = require('./config');
 const log       = require('./logger');
 const events    = require('./events');
@@ -93,7 +101,7 @@ function readQueueSafe() {
   } catch (renameErr) {
     log.error('Queue', `Queue Quarantine → Rename Error → ${renameErr.message}`);
   }
-  fs.writeFileSync(QUEUE_FILE, '[]', 'utf8');
+  writeAtomic.sync(QUEUE_FILE, '[]', { fsync: false });
   log.error('Queue', `Queue Read → Corrupt → Quarantined and reset → ${quarantineName}`);
   events.emit(
     EVENT_TYPES.QUEUE_CORRUPT_RESET, 'error', 'Queue',
@@ -161,7 +169,7 @@ async function enqueue(item) {
       emitOverflowEvent(1, maxItems);
     }
     data.push(item);
-    fs.writeFileSync(QUEUE_FILE, JSON.stringify(data, null, 2), 'utf8');
+    writeAtomic.sync(QUEUE_FILE, JSON.stringify(data, null, 2), { fsync: false });
     log.info('Queue', `Queue Append → Success → Source: [${source}] | Trace: [${trace}] | Queue Length: ${data.length}`);
     checkDepthWarning(data.length, maxItems);
     return true;
@@ -181,7 +189,7 @@ async function drainQueue() {
   try {
     release = await lockfile.lock(QUEUE_FILE, { retries: { retries: 10, minTimeout: 50 } });
     const items = readQueueSafe();
-    fs.writeFileSync(QUEUE_FILE, '[]', 'utf8');
+    writeAtomic.sync(QUEUE_FILE, '[]', { fsync: false });
     log.info('Queue', `Queue Drain → Success → Drained [${items.length}] item(s)`);
     return items;
   } catch (err) {
@@ -235,7 +243,7 @@ async function enqueueMany(items) {
       log.audit('Queue', `Queue Overflow \u2192 Dropped oldest \u2192 Source: [${droppedSource}] | Trace: [${droppedTrace}] \u2192 Queue Length capped at ${maxItems}`);
     }
     if (overflowDropped > 0) emitOverflowEvent(overflowDropped, maxItems);
-    fs.writeFileSync(QUEUE_FILE, JSON.stringify(data, null, 2), 'utf8');
+    writeAtomic.sync(QUEUE_FILE, JSON.stringify(data, null, 2), { fsync: false });
     const firstSource = additions[0].source || 'unknown';
     const firstTrace  = additions[0].traceId || '-';
     log.info('Queue', `Queue Append (Batch) → Success → Source: [${firstSource}] | Trace: [${firstTrace}] | Added: ${additions.length} | Queue Length: ${data.length}`);
