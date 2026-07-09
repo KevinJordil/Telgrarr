@@ -27,8 +27,11 @@ export default function useRestartPoll(fetchSettings) {
 
   useEffect(() => stop, [stop]);
 
-  const startRestartPoll = useCallback(() => {
-    const capable = useSettingsStore.getState().systemInfo?.restartCapable;
+  const startRestartPoll = useCallback((capableOverride) => {
+    stop();
+    const capable = capableOverride !== undefined
+      ? capableOverride
+      : useSettingsStore.getState().systemInfo?.restartCapable;
     if (!capable) {
       setManualRestart(true);
       return;

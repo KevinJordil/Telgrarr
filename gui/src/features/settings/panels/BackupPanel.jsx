@@ -137,11 +137,11 @@ export default function BackupPanel({ openConfirm, startRestartPoll }) {
           if (res.data.success) {
             if (res.data.restartCapable) {
               setBackupStatus({ success: true, msg: 'Restore complete. Rebooting backend...' });
-              startRestartPoll();
+              startRestartPoll(res.data.restartCapable);
             } else {
               setBackupStatus({ success: true, msg: 'Restore complete. Restart to finish applying restored settings.' });
               fetchSettings();
-              startRestartPoll();
+              startRestartPoll(res.data.restartCapable);
             }
           } else {
             setBackupStatus({ success: false, msg: res.data.error || 'Restore failed' });

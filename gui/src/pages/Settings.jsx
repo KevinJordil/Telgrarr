@@ -232,7 +232,7 @@ export default function Settings() {
       </div>
 
       {restarting && (
-        <div className="fixed inset-0 z-50 bg-telgrarr-black/80 backdrop-blur-xs flex flex-col items-center justify-center gap-4">
+        <div role="status" aria-live="polite" className="fixed inset-0 z-50 bg-telgrarr-black/80 backdrop-blur-xs flex flex-col items-center justify-center gap-4">
           <RefreshCw className="w-10 h-10 text-telgrarr-purple animate-spin" />
           <p className="text-telgrarr-text font-semibold">Backend restarting…</p>
           <p className="text-telgrarr-muted text-sm">Do not refresh your browser.</p>
@@ -241,7 +241,7 @@ export default function Settings() {
 
       {manualRestart && (
         <div className="fixed bottom-24 inset-x-4 z-50 mx-auto max-w-lg">
-          <div className="flex items-start gap-3 rounded-xl border border-telgrarr-warning/40 bg-telgrarr-warning/10 px-4 py-3 backdrop-blur-xs">
+          <div role="alert" className="flex items-start gap-3 rounded-xl border border-telgrarr-warning/40 bg-telgrarr-warning/10 px-4 py-3 backdrop-blur-xs">
             <AlertTriangle className="w-5 h-5 text-telgrarr-warning shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-telgrarr-text text-sm font-semibold">Manual restart required</p>
