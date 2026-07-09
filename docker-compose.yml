@@ -28,6 +28,13 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # FA-57/SA-8: default this ON for compose - the service below already ships
+      # an unconditional restart policy (restart: unless-stopped), so the app can
+      # self-restart after actions like a backup restore (D-4'/SA-4). Interpolated,
+      # not hardcoded: an explicit RESTART_CAPABLE in .env still wins (D-B 12-factor
+      # precedence) - this is only the compose-shipped default; see .env.example.
+      RESTART_CAPABLE: "${RESTART_CAPABLE:-1}"
     ports:
       - "${PORT:-3400}:${PORT:-3400}"
     volumes:

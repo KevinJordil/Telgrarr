@@ -2,6 +2,7 @@
 # TELGRARR — production image (multi-stage). One persistent volume = DATA_DIR (/data).
 # Build:  docker build -t telgrarr:dev .
 # Run:    docker run -d --name telgrarr -p 3400:3400 -v telgrarr-data:/data \
+#                    --restart unless-stopped -e RESTART_CAPABLE=1 \
 #                    --env-file .env telgrarr:dev
 # Init:   docker exec -it telgrarr node setup-auth.js   (first run, hidden prompt)
 # Reverse-proxy / TLS is the operator's responsibility (Cloudflare tunnel, Caddy, …).
