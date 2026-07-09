@@ -28,7 +28,15 @@ module.exports = {
         // TRUST_PROXY:    '',                         // default: '' (off); 'true' behind one proxy
         // WEBHOOK_SECRET: '',                         // consumed in Phase C (webhook auth)
         // COOKIE_SECURE:  'auto',                     // consumed in Phase C (cookie Secure)
-        // RESTART_CAPABLE: '1',  // GUI self-restart capability. Unset = auto-detect PM2; '1'/'true'/'yes'/'on' forces on (systemd, Docker); '0'/'false'/'no'/'off' forces off.
+        // GUI self-restart capability. Explicit + REQUIRED for a working
+        // auto-restart-after-restore (FA-56 / D-9): PM2 does NOT reliably
+        // inject PM2_HOME into a managed process's own environment (verified
+        // against PM2's own docs -- it is not one of PM2's auto-injected vars,
+        // unlike e.g. NODE_APP_INSTANCE), so auto-detection cannot be trusted
+        // for strangers deploying from this template. This file already runs
+        // PM2 fork mode with autorestart:true, so a graceful self-restart
+        // (SIGTERM -> PM2 respawn) always works here.
+        RESTART_CAPABLE: '1',
       },
     },
   ],
