@@ -99,6 +99,16 @@ const useTemplatesStore = create((set, get) => ({
       set({ catalogLoading: false, catalogError: err.response?.data?.error || err.message });
     }
   },
+  fetchComposed: async (kind, lang) => {
+    try {
+      const params = { kind };
+      if (lang) params.lang = lang;
+      const res = await api.get('/templates/composed', { params });
+      return { success: true, template: res.data.template };
+    } catch (err) {
+      return { success: false, error: err.response?.data?.error || err.message };
+    }
+  },
 }));
 
 export default useTemplatesStore;
