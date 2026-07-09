@@ -90,7 +90,7 @@ router.post('/login', async (req, res) => {
     log.audit('Auth', `Authentication → Success → [${username}]`);
     events.emit(EVENT_TYPES.AUTH_LOGIN_SUCCESS, 'info', 'Auth', `Authentication successful for [${username}]`, { username });
     res.cookie(COOKIE_NAME, token, cookieOptions(req, config.COOKIE_SECURE, thirtyDays));
-    res.json({ success: true, token });
+    res.json({ success: true });
     
   } catch (err) {
     log.error('Auth', `Authentication → Error → ${err.message}`);
@@ -199,9 +199,7 @@ router.post('/auth/recover', (req, res) => {
 // -- POST /api/logout ---------------------------------------------------------
 router.post('/logout', (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    const bearer = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.split(' ')[1] : undefined;
-    const token = bearer || readCookie(req, COOKIE_NAME);
+    const token = readCookie(req, COOKIE_NAME);
     if (token && activeSessions.delete(token)) persistNow();
     res.clearCookie(COOKIE_NAME, cookieOptions(req, config.COOKIE_SECURE));
     log.audit('Auth', 'Logout → Success → Session cleared');
