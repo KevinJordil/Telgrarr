@@ -7,6 +7,8 @@ const events     = require('../events');
 const EVENT_TYPES = require('../../shared/events.json');
 const { requireAuth } = require('../middlewares/auth');
 const { buildCatalog } = require('../templates/composer-catalog');
+const { resolveComposed } = require('../templates/layout-fragments');
+const { resolveLang } = require('./preview.routes');
 
 // ── GET /api/templates ────────────────────────────────────────────────────────
 router.get('/templates', requireAuth, (req, res) => {
@@ -89,6 +91,21 @@ router.put('/templates/layout', requireAuth, async (req, res) => {
 // layout-schema + layout-fragments (orderable/prefix elements, icon choices, languages). ---
 router.get('/templates/catalog', requireAuth, (req, res) => {
   res.json(buildCatalog());
+});
+
+// --- GET /api/templates/composed (SLOT DEC-SLOT-6): read-only exposure of the
+// composed Default (Locked) styling template for a given kind + language ---
+// the backing endpoint for the GUI's "Load Default styling" action and honest
+// new-slot seeding (DEC-SLOT-7). Pure read: zero writes, zero new logic beyond
+// resolveComposed (already the sole formatter behind preview.routes.js). ---
+router.get('/templates/composed', requireAuth, (req, res) => {
+  const { kind, lang } = req.query;
+  if (kind !== 'sonarr' && kind !== 'radarr') {
+    return res.status(400).json({ error: 'kind must be "sonarr" or "radarr"' });
+  }
+  const resolvedLang = resolveLang(lang);
+  const { template } = resolveComposed(kind, 'DEFAULT_AR', resolvedLang, templates.getLayout()[kind]);
+  res.json({ kind, lang: resolvedLang, template });
 });
 
 module.exports = router;
