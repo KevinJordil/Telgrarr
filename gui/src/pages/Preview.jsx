@@ -49,6 +49,7 @@ export default function Preview() {
   const [sendState, setSendState] = useState('idle'); // idle | sending | sent | error
   const [slotError, setSlotError] = useState(null);
   const initializedRef = useRef(false);
+  const hydratedKeyRef = useRef(null);
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
   useEffect(() => {
     if (!slotError) return;
@@ -68,22 +69,31 @@ export default function Preview() {
     }
   }, [config]);
   useEffect(() => {
+    if (!config || currentView === 'default') return;
+    if (hydratedKeyRef.current !== `${currentView}_${type}`) return;
+    const key = `telgrarr_draft_${currentView}_${type}`;
+    const slot = config.slots.find(s => s.id === currentView);
+    const savedValue = slot?.[type] || '';
+    if (draft === savedValue) localStorage.removeItem(key);
+    else localStorage.setItem(key, draft);
+  }, [draft, currentView, type, config]);
+  useEffect(() => {
     if (!config) return;
     setSyntaxError(null);
     if (currentView === 'default') {
       setDraft('');
-    } else {
-      const slot = config.slots.find(s => s.id === currentView);
-      const backup = localStorage.getItem(`telgrarr_draft_${currentView}_${type}`);
-      if (backup !== null) setDraft(backup);
-      else if (slot) setDraft(slot[type] || '');
+      hydratedKeyRef.current = null;
+      return;
     }
+    const slot = config.slots.find(s => s.id === currentView);
+    const savedValue = slot?.[type] || '';
+    const key = `telgrarr_draft_${currentView}_${type}`;
+    const backup = localStorage.getItem(key);
+    if (backup === null) setDraft(savedValue);
+    else if (backup === savedValue) { localStorage.removeItem(key); setDraft(savedValue); }
+    else setDraft(backup);
+    hydratedKeyRef.current = `${currentView}_${type}`;
   }, [currentView, type, config]);
-  useEffect(() => {
-    if (currentView !== 'default' && draft !== '') {
-      localStorage.setItem(`telgrarr_draft_${currentView}_${type}`, draft);
-    }
-  }, [draft, currentView, type]);
   useEffect(() => {
     if (!config) return;
     const timer = setTimeout(async () => {
@@ -130,7 +140,8 @@ export default function Preview() {
   };
   const saveDraftToSlot = async () => {
     const res = await updateSlot(currentView, { [type]: draft });
-    if (!res.success) setSlotError(res.error);
+    if (res.success) localStorage.removeItem(`telgrarr_draft_${currentView}_${type}`);
+    else setSlotError(res.error);
   };
   const sendTest = async () => {
     setSendState('sending');
