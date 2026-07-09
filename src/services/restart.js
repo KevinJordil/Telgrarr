@@ -6,9 +6,14 @@
 // override wins; otherwise auto-detect PM2 (the reference supervisor).
 //   RESTART_CAPABLE=1|true|yes|on  -> force ON  (systemd Restart=always, Docker)
 //   RESTART_CAPABLE=0|false|no|off -> force OFF (PM2 with autorestart disabled)
-//   unset -> capable iff PM2-managed (PM2 injects PM2_HOME and, autorestart on by
-//   default, respawns on exit). The GUI poll has a recovery timeout, so an
-//   over-optimistic "capable" degrades to manual guidance rather than hanging.
+//   unset -> best-effort fallback: Boolean(process.env.PM2_HOME). WEAK, not
+//   authoritative: PM2 does NOT reliably inject PM2_HOME into a managed
+//   process's env (verified against PM2's own docs; it appears only if the
+//   operator's own shell exported it). Fails safe: a false NEGATIVE here just
+//   degrades to manual-restart guidance (the GUI poll also has its own
+//   recovery timeout) rather than a hang. The RELIABLE signal is the explicit
+//   RESTART_CAPABLE set by the shipped deployment templates (FA-56/F13a);
+//   a template-based deploy should never depend on this fallback firing.
 const log = require('../logger');
 
 function isRestartCapable() {
