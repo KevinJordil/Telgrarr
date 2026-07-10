@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Film, Tv, Send, Save, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { Film, Tv, Send, Save, RefreshCw, CheckCircle, XCircle, Undo2 } from 'lucide-react';
 import api from '../api';
 import useTemplatesStore from '../store/templatesStore';
 import TelegramMock from '../components/preview/TelegramMock';
@@ -39,6 +39,7 @@ export default function Preview() {
   const [slotError, setSlotError] = useState(null);
   const initializedRef = useRef(false);
   const hydratedKeyRef = useRef(null);
+  const draftKey = (kind) => `telgrarr_draft_${currentView}_${kind}`;
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
   useEffect(() => {
     if (!slotError) return;
@@ -60,7 +61,7 @@ export default function Preview() {
   useEffect(() => {
     if (!config || currentView === 'default') return;
     if (hydratedKeyRef.current !== `${currentView}_${type}`) return;
-    const key = `telgrarr_draft_${currentView}_${type}`;
+    const key = draftKey(type);
     const slot = config.slots.find(s => s.id === currentView);
     const savedValue = slot?.[type] || '';
     if (draft === savedValue) localStorage.removeItem(key);
@@ -76,7 +77,7 @@ export default function Preview() {
     }
     const slot = config.slots.find(s => s.id === currentView);
     const savedValue = slot?.[type] || '';
-    const key = `telgrarr_draft_${currentView}_${type}`;
+    const key = draftKey(type);
     const backup = localStorage.getItem(key);
     if (backup === null) setDraft(savedValue);
     else if (backup === savedValue) { localStorage.removeItem(key); setDraft(savedValue); }
@@ -90,7 +91,7 @@ export default function Preview() {
       try {
         const body = currentView === 'default'
           ? { type, scenario, lang: targetLang, ...(draftLayout ? { layout: draftLayout } : {}) }
-          : { type, scenario, template: draft === '' ? '&#8203;' : draft };
+          : { type, scenario, template: draft || null };
         const res = await api.post('/preview/render', body);
         if (res.data.success === false) setSyntaxError(res.data.error);
         else { setSyntaxError(null); setHtml(res.data.html); }
@@ -125,8 +126,8 @@ export default function Preview() {
     setModal(null);
     const res = await deleteSlot(currentView);
     if (res.success) {
-      localStorage.removeItem(`telgrarr_draft_${currentView}_sonarr`);
-      localStorage.removeItem(`telgrarr_draft_${currentView}_radarr`);
+      localStorage.removeItem(draftKey('sonarr'));
+      localStorage.removeItem(draftKey('radarr'));
       setCurrentView('default');
     }
     else setSlotError(res.error);
@@ -160,7 +161,10 @@ export default function Preview() {
         : { type, scenario, template: draft || null };
       await api.post('/preview/send', body);
       setSendState('sent');
-    } catch (error) { setSendState('error'); }
+    } catch (error) {
+      setSendState('error');
+      setSlotError(error?.response?.data?.error || error?.message || 'Send failed. Check backend logs.');
+    }
   };
   if (!config && error) {
     return (
@@ -177,6 +181,27 @@ export default function Preview() {
   if (loading || !config) return <div className="flex justify-center items-center py-32"><RefreshCw className="w-8 h-8 animate-spin text-telgrarr-purple" /></div>;
   const isCustom = currentView !== 'default';
   const currentSlot = config.slots.find(s => s.id === currentView);
+  const siblingType = type === 'sonarr' ? 'radarr' : 'sonarr';
+  const savedValue = isCustom ? (currentSlot?.[type] || '') : '';
+  const isDirty = isCustom && draft !== savedValue;
+  const draftDotFor = (kind) => isCustom && type !== kind && localStorage.getItem(draftKey(kind)) !== null;
+  const discardDraft = () => {
+    setModal(null);
+    setDraft(savedValue);
+  };
+  const requestDiscard = () => {
+    if (isDirty) setModal({ kind: 'discard' });
+  };
+  const copyFromOtherType = () => {
+    setModal(null);
+    const backup = localStorage.getItem(draftKey(siblingType));
+    const siblingSaved = currentSlot?.[siblingType] || '';
+    setDraft(backup !== null ? backup : siblingSaved);
+  };
+  const requestCopyFromOther = () => {
+    if (isDirty) setModal({ kind: 'copyOther' });
+    else copyFromOtherType();
+  };
   return (
     <div className="text-telgrarr-text px-4 pt-6 overflow-x-hidden relative">
       <div className="max-w-5xl mx-auto md:grid md:grid-cols-12 md:gap-8 relative z-10">
@@ -190,8 +215,8 @@ export default function Preview() {
             </p>
           )}
           <div className="flex space-x-2 bg-telgrarr-surface p-1 rounded-xl border border-telgrarr-border shadow-card">
-            <button onClick={() => { setType('sonarr'); setScenario('single'); }} className={`focus-ring flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-sm font-medium transition-colors ${type === 'sonarr' ? 'bg-telgrarr-purple text-telgrarr-on-accent shadow-md' : 'text-telgrarr-muted hover:bg-telgrarr-border/50'}`}><Tv className="w-4 h-4" /><span>Sonarr</span></button>
-            <button onClick={() => { setType('radarr'); setScenario('single'); }} className={`focus-ring flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-sm font-medium transition-colors ${type === 'radarr' ? 'bg-telgrarr-purple text-telgrarr-on-accent shadow-md' : 'text-telgrarr-muted hover:bg-telgrarr-border/50'}`}><Film className="w-4 h-4" /><span>Radarr</span></button>
+            <button onClick={() => { setType('sonarr'); setScenario('single'); }} className={`focus-ring flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-sm font-medium transition-colors ${type === 'sonarr' ? 'bg-telgrarr-purple text-telgrarr-on-accent shadow-md' : 'text-telgrarr-muted hover:bg-telgrarr-border/50'}`}><Tv className="w-4 h-4" /><span>Sonarr</span>{draftDotFor('sonarr') && <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-telgrarr-purple" />}</button>
+            <button onClick={() => { setType('radarr'); setScenario('single'); }} className={`focus-ring flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-sm font-medium transition-colors ${type === 'radarr' ? 'bg-telgrarr-purple text-telgrarr-on-accent shadow-md' : 'text-telgrarr-muted hover:bg-telgrarr-border/50'}`}><Film className="w-4 h-4" /><span>Radarr</span>{draftDotFor('radarr') && <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-telgrarr-purple" />}</button>
           </div>
           {type === 'sonarr' && (
             <div className="flex space-x-2">
@@ -204,14 +229,33 @@ export default function Preview() {
           )}
           {isCustom ? (
             <>
+              {draft === '' && (
+                <p role="status" aria-live="polite" className="text-xs text-telgrarr-muted px-1">
+                  This slot is empty. Until you add content, Telgrarr renders and sends the Default (Locked) styling, translated to your configured language.
+                </p>
+              )}
               <TemplateEditor value={draft} onChange={setDraft} tokens={TOKENS[type]} readOnly={false} syntaxError={syntaxError} />
-              <button onClick={saveDraftToSlot} disabled={storeSaving} className="focus-ring w-full py-3 bg-telgrarr-success hover:bg-telgrarr-success/90 disabled:opacity-50 text-telgrarr-on-accent font-medium rounded-xl flex items-center justify-center space-x-2 shadow-card active:scale-[0.98] transition-all">
+              <button onClick={saveDraftToSlot} disabled={storeSaving || !isDirty} className="focus-ring w-full py-3 bg-telgrarr-success hover:bg-telgrarr-success/90 disabled:opacity-50 text-telgrarr-on-accent font-medium rounded-xl flex items-center justify-center space-x-2 shadow-card active:scale-[0.98] transition-all">
                 {storeSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 <span>Save Code to Slot</span>
               </button>
+              {isDirty && (
+                <p role="status" aria-live="polite" className="text-xs text-telgrarr-purple font-medium px-1 flex items-center gap-1.5">
+                  <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-telgrarr-purple" />
+                  Unsaved changes
+                </p>
+              )}
               <button onClick={requestLoadDefault} disabled={storeSaving} className="focus-ring w-full py-2.5 bg-transparent hover:bg-telgrarr-border/50 border border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-text text-sm font-medium rounded-xl flex items-center justify-center space-x-2 transition-colors">
                 <RefreshCw className="w-4 h-4" />
                 <span>Load Default styling</span>
+              </button>
+              <button onClick={requestDiscard} disabled={storeSaving || !isDirty} className="focus-ring w-full py-2.5 bg-transparent hover:bg-telgrarr-danger/10 border border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-danger text-sm font-medium rounded-xl flex items-center justify-center space-x-2 transition-colors">
+                <Undo2 className="w-4 h-4" />
+                <span>Discard Changes</span>
+              </button>
+              <button onClick={requestCopyFromOther} disabled={storeSaving} className="focus-ring w-full py-2.5 bg-transparent hover:bg-telgrarr-border/50 border border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-text text-sm font-medium rounded-xl flex items-center justify-center space-x-2 transition-colors">
+                <RefreshCw className="w-4 h-4" />
+                <span>Copy from {siblingType === 'sonarr' ? 'Sonarr' : 'Radarr'}</span>
               </button>
             </>
           ) : (
@@ -285,6 +329,24 @@ export default function Preview() {
         confirmLabel="Load"
         danger
         onConfirm={loadDefaultStyling}
+        onCancel={() => setModal(null)}
+      />
+      <ConfirmModal
+        isOpen={modal?.kind === 'discard'}
+        title="Discard Changes"
+        message="This reverts your unsaved changes back to the last saved version of this slot."
+        confirmLabel="Discard"
+        danger
+        onConfirm={discardDraft}
+        onCancel={() => setModal(null)}
+      />
+      <ConfirmModal
+        isOpen={modal?.kind === 'copyOther'}
+        title="Copy from Other Type"
+        message={`This replaces your unsaved changes in this editor with the ${siblingType} content from this slot. Nothing is saved until you press Save.`}
+        confirmLabel="Copy"
+        danger
+        onConfirm={copyFromOtherType}
         onCancel={() => setModal(null)}
       />
     </div>
