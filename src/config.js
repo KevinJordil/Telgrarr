@@ -105,7 +105,7 @@ function getMissingCredentials(cfg) {
 function validateRequiredCredentials(cfg, context) {
   const missing = getMissingCredentials(cfg);
   if (missing.length === 0) return;
-  missing.forEach(label => log.error('Config', `Missing required credential: ${label}`));
+  missing.forEach(label => log.warn('Config', `Missing required credential: ${label}`));
   if (context === 'boot') {
     log.warn('Config', 'App is booting with missing credentials. Please use the GUI to configure them.');
   } else {
