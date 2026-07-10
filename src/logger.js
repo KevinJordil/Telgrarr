@@ -16,9 +16,9 @@ const appDest   = pino.destination({ dest: path.join(logsDir, 'app.log'), mode: 
 const errDest   = pino.destination({ dest: path.join(logsDir, 'error.log'), mode: 0o600, sync: true });
 const auditDest = pino.destination({ dest: path.join(logsDir, 'audit.log'), mode: 0o600, sync: true });
 
-const fileLogger  = pino(appDest);
-const errorLogger = pino(errDest);
-const auditLogger = pino(auditDest);
+const fileLogger  = pino({ timestamp: false }, appDest);
+const errorLogger = pino({ timestamp: false }, errDest);
+const auditLogger = pino({ timestamp: false }, auditDest);
 
 const LOG_BUFFER_SIZE = 500;
 const logBuffer = [];
