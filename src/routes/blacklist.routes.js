@@ -8,6 +8,9 @@ const events     = require('../events');
 const EVENT_TYPES = require('../../shared/events.json');
 const blacklist  = require('../blacklist');
 const { requireAuth } = require('../middlewares/auth');
+const { createLimit } = require('../utils/p-limit.js');
+
+const BLACKLIST_TITLES_CONCURRENCY = 5;
 
 // ── GET /api/blacklist ───────────────────────────────────────────────────────
 router.get('/blacklist', requireAuth, (req, res) => {
@@ -141,6 +144,48 @@ router.get('/blacklist/rootfolders', requireAuth, async (req, res) => {
     })));
   } catch (err) {
     log.error('Blacklist', `Blacklist Rootfolders → Error → Type: [${req.query.type}] | ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/blacklist/titles ────────────────────────────────────────────────
+// Reverse-enrichment only: blacklist.json stores bare IDs (no title/poster).
+// Resolves each blacklisted id against the source *arr's own single-resource
+// endpoint so the GUI can render a real list. Bounded via p-limit — never
+// unbounded fan-out against the operator's own *arr instance. Each id is
+// isolated: one dead/deleted id degrades to available:false, never fails
+// the whole response (same read-only-enrichment class as tmdb.js/omdb.js).
+router.get('/blacklist/titles', requireAuth, async (req, res) => {
+  try {
+    const { type } = req.query;
+    if (!type || !['sonarr', 'radarr'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+    const ids      = blacklist.getAll()[type].ids;
+    const baseUrl  = type === 'sonarr' ? config.sonarr.baseUrl : config.radarr.baseUrl;
+    const apiKey   = type === 'sonarr' ? config.sonarr.apiKey  : config.radarr.apiKey;
+    const resource = type === 'sonarr' ? '/api/v3/series/' : '/api/v3/movie/';
+    const limit = createLimit(BLACKLIST_TITLES_CONCURRENCY);
+    const items = await Promise.all(ids.map(id => limit(async () => {
+      try {
+        const response = await axios.get(`${baseUrl}${resource}${id}`, {
+          headers: { 'X-Api-Key': apiKey },
+          timeout: 10000,
+        });
+        const d = response.data || {};
+        return {
+          id,
+          title:     d.title,
+          year:      d.year || null,
+          posterUrl: (type === 'radarr' ? d.remotePoster : null) || (d.images || []).find(i => i.coverType === 'poster')?.remoteUrl || null,
+          available: true,
+        };
+      } catch (err) {
+        log.error('Blacklist', `Blacklist Titles → Lookup failed → Type: [${type}] | ID: [${id}] | ${err.message}`);
+        return { id, title: null, year: null, posterUrl: null, available: false };
+      }
+    })));
+    res.json(items);
+  } catch (err) {
+    log.error('Blacklist', `Blacklist Titles → Error → Type: [${req.query.type}] | ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
