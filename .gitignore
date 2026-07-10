@@ -16,6 +16,7 @@ gui/dist/
 test-results/
 playwright-report/
 playwright/.cache/
+.vitest-tmp/
 
 # Runtime backup archives (contain secrets)
 backups/
