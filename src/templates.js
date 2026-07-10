@@ -5,7 +5,7 @@ const path            = require('path');
 const writeFileAtomic = require('write-file-atomic');
 const log             = require('./logger');
 const config          = require('./config');
-const { DEFAULT_ORDER } = require('./templates/layout-fragments');
+const { DEFAULT_ORDER, resolveComposed } = require('./templates/layout-fragments');
 const { isValidIcon, normalizeLabel } = require('./templates/layout-schema');
 
 const TEMPLATES_FILE = path.join(config.DATA_DIR, 'templates.json');
@@ -310,4 +310,15 @@ function resolveTemplate(activeMode, kind) {
   return 'DEFAULT_AR';
 }
 
-module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, getLayout, setActiveMode, addSlot, updateSlot, deleteSlot, setLayout, resolveTemplate, normalizeLayout, defaultLayout, isElementEnabled, migrateLegacyPlot };
+// Convenience wrapper (R02/DRY): the resolveTemplate -> resolveComposed chain was
+// duplicated identically in formatter.js and radarr-formatter.js. Single source now;
+// callers pass (kind, activeMode?) and get the {template, lang} shape resolveComposed
+// already returns. activeMode omitted -> getActiveMode() (byte-identical to radarr-
+// formatter.js's original always-current-mode call); formatter.js passes its own
+// already-defaulted `mode` through unchanged.
+function resolveRenderTemplate(kind, activeMode) {
+  const mode = activeMode || getActiveMode();
+  const resolved = resolveTemplate(mode, kind);
+  return resolveComposed(kind, resolved, config.translator?.targetLang, getLayout()[kind]);
+}
+module.exports = { getTemplates, getActiveMode, getSlots, getSlotById, getLayout, setActiveMode, addSlot, updateSlot, deleteSlot, setLayout, resolveTemplate, resolveRenderTemplate, normalizeLayout, defaultLayout, isElementEnabled, migrateLegacyPlot };
