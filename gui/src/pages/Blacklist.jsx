@@ -3,8 +3,9 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Ban, Search, Folder, Tv, Film, X, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import api from '../api';
+import useBlacklistStore from '../store/blacklistStore';
 
-const TABS   = ['titles', 'folders'];
+const TABS   = ['blacklisted', 'titles', 'folders'];
 const TYPES  = ['sonarr', 'radarr'];
 
 function useDebounce(value, delay) {
@@ -18,7 +19,7 @@ function useDebounce(value, delay) {
 
 export default function Blacklist() {
   const reduceMotion = useReducedMotion();
-  const [tab,     setTab]     = useState('titles');
+  const [tab,     setTab]     = useState('blacklisted');
   const [type,    setType]    = useState('sonarr');
   const [query,   setQuery]   = useState('');
   const [results, setResults] = useState([]);
@@ -26,6 +27,13 @@ export default function Blacklist() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
   const [confirm, setConfirm] = useState(null); // { item, action }
+  const {
+    titles:  blacklistedTitles,
+    loading: blacklistLoading,
+    error:   blacklistError,
+    fetchTitles,
+    removeTitle,
+  } = useBlacklistStore();
   const debounced = useDebounce(query, 450);
   const tabRefs = useRef({});
   const onTabKey = (e) => {
@@ -51,6 +59,11 @@ export default function Blacklist() {
     return () => { cancelled = true; };
   }, [debounced, type, tab]);
 
+  // ── Load blacklisted titles ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (tab !== 'blacklisted') return;
+    fetchTitles(type);
+  }, [tab, type, fetchTitles]);
   // ── Load folders ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (tab !== 'folders') return;
@@ -79,13 +92,19 @@ export default function Blacklist() {
     const action = folder.blacklisted ? 'remove' : 'add';
     setConfirm({ item: folder, action, isPath: true });
   }, []);
+  const removeBlacklisted = useCallback((item) => {
+    setConfirm({ item, action: 'remove', isBlacklisted: true });
+  }, []);
   const executeToggle = async () => {
-    const { item, action, isPath } = confirm;
+    const { item, action, isPath, isBlacklisted } = confirm;
     setConfirm(null);
     try {
       if (isPath) {
         await api.post(`/blacklist/paths/${action}`, { type, path: item.path });
         setFolders(prev => prev.map(f => f.path === item.path ? { ...f, blacklisted: action === 'add' } : f));
+      } else if (isBlacklisted) {
+        const result = await removeTitle(type, item.id);
+        if (!result.success) setError(result.error || 'Action failed');
       } else {
         await api.post(`/blacklist/ids/${action}`, { type, id: item.id });
         setResults(prev => prev.map(r => r.id === item.id ? { ...r, blacklisted: action === 'add' } : r));
@@ -119,7 +138,7 @@ export default function Blacklist() {
                 tab === t ? 'bg-telgrarr-purple text-telgrarr-on-accent' : 'text-telgrarr-muted hover:text-telgrarr-text'
               }`}
             >
-              {t === 'titles' ? <Film className="w-3.5 h-3.5" /> : <Folder className="w-3.5 h-3.5" />}
+              {t === 'blacklisted' ? <Ban className="w-3.5 h-3.5" /> : t === 'titles' ? <Film className="w-3.5 h-3.5" /> : <Folder className="w-3.5 h-3.5" />}
               {t}
             </button>
           ))}
@@ -164,18 +183,64 @@ export default function Blacklist() {
           </div>
         )}
         {/* Error */}
-        {error && (
+        {(error || blacklistError) && (
           <div className="mb-4 px-4 py-3 rounded-xl bg-telgrarr-danger/10 border border-telgrarr-danger/30 text-telgrarr-danger text-sm" role="alert">
-            {error}
+            {error || blacklistError}
           </div>
         )}
         {/* Loading */}
-        {loading && (
+        {(loading || blacklistLoading) && (
           <div className="flex justify-center py-12">
             <Loader2 className="w-6 h-6 text-telgrarr-purple animate-spin" />
           </div>
         )}
+        {/* Blacklisted titles */}
+        {!blacklistLoading && tab === 'blacklisted' && (
+          <AnimatePresence mode="popLayout">
+            {blacklistedTitles.length === 0 && !blacklistError && (
+              <motion.p
+                key="empty-blacklisted"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="text-center text-telgrarr-muted text-sm py-12"
+              >
+                Nothing blacklisted yet — block a title from the Titles tab to see it here.
+              </motion.p>
+            )}
+            {blacklistedTitles.map((item, i) => (
+              <motion.div
+                key={type + '-' + item.id}
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                transition={{ delay: reduceMotion ? 0 : i * 0.03 }}
+                className="glass-panel rounded-xl mb-2 flex items-center gap-3 p-3"
+              >
+                {item.posterUrl
+                  ? <img src={item.posterUrl} alt={item.title || `ID ${item.id}`} className="w-10 h-14 object-cover rounded-lg shrink-0" />
+                  : <div className="w-10 h-14 bg-telgrarr-elevated rounded-lg shrink-0 flex items-center justify-center">
+                      {type === 'sonarr' ? <Tv className="w-4 h-4 text-telgrarr-muted" /> : <Film className="w-4 h-4 text-telgrarr-muted" />}
+                    </div>
+                }
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{item.title || `ID ${item.id}`}</p>
+                  <p className="text-xs text-telgrarr-muted">{item.year || '—'}</p>
+                  {!item.available && (
+                    <p className="text-[10px] text-telgrarr-warning mt-0.5">Unavailable in Sonarr/Radarr</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => removeBlacklisted(item)}
+                  className="focus-ring shrink-0 p-2 rounded-lg transition-colors bg-telgrarr-danger/20 text-telgrarr-danger hover:bg-telgrarr-danger/30"
+                  aria-label="Remove from blacklist"
+                >
+                  <ShieldOff className="w-4 h-4" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
         {/* Title results */}
+
         {!loading && tab === 'titles' && (
           <AnimatePresence mode="popLayout">
             {results.length === 0 && query.trim() && !error && (
@@ -291,7 +356,7 @@ export default function Blacklist() {
         message={
           confirm?.action === 'add'
             ? `Block "${confirm?.item?.title || confirm?.item?.label}" from triggering notifications?`
-            : `Allow "${confirm?.item?.title || confirm?.item?.label}" to trigger notifications again?`
+            : `Allow "${confirm?.item?.title || confirm?.item?.label || (confirm?.item?.id != null ? 'ID ' + confirm.item.id : 'this item')}" to trigger notifications again?`
         }
         confirmLabel={confirm?.action === 'add' ? 'Block' : 'Unblock'}
         danger={confirm?.action === 'add'}
