@@ -11,17 +11,6 @@ import LayoutComposer from '../components/preview/LayoutComposer';
 import LanguagePicker from '../components/preview/LanguagePicker';
 import useSettingsStore from '../store/settingsStore';
 
-const STARTER_AR = `<b>{{headerEmoji}} {{headerText}}</b>
-{{separator}}
-📺 <b>{{title}}</b>{{#if genres}}
-🎭 {{genres}}{{/if}}{{#if year}}
-📆 {{year}}{{status}}{{/if}}
-{{separator}}
-<b>الموسم:</b> {{seasonRange}}
-<b>{{epLabel}}</b> {{epValue}}{{#if runtime}}
-⏳     <b>مدة الحلقة:</b> {{runtime}}{{/if}}
-&#8203;`;
-
 const TOKENS = {
   sonarr: ['{{title}}', '{{year}}', '{{genres}}', '{{status}}', '{{status_en}}', '{{seasonRange}}', '{{epLabel}}', '{{epValue}}', '{{epLabel_en}}', '{{epValue_en}}', '{{runtime}}', '{{runtime_en}}', '{{imdbUrl}}', '{{seerrUrl}}'],
   radarr: ['{{title}}', '{{year}}', '{{genres}}', '{{overview}}', '{{runtime}}', '{{runtime_en}}', '{{rating.value}}', '{{rating.label}}', '{{ratings.imdb}}', '{{ratings.tmdb}}', '{{ratings.rottenTomatoes}}', '{{ratings.metacritic}}', '{{imdbUrl}}', '{{seerrUrl}}']
@@ -34,7 +23,7 @@ const TOKENS = {
 const isDefaultMode = (m) => !m || m === 'default' || m === 'default_ar' || m === 'default_en';
 
 export default function Preview() {
-  const { templates: config, loading, error, saving: storeSaving, fetchTemplates, setActiveMode, addSlot, updateSlot, deleteSlot, catalog, layout } = useTemplatesStore();
+  const { templates: config, loading, error, saving: storeSaving, fetchTemplates, setActiveMode, addSlot, updateSlot, deleteSlot, fetchComposed, catalog, layout } = useTemplatesStore();
   const { settings } = useSettingsStore();
   const targetLang = settings?.translator?.targetLang || 'ar';
   const [type, setType]                     = useState('sonarr');
@@ -112,7 +101,15 @@ export default function Preview() {
   }, [type, scenario, currentView, draft, config, targetLang, layout, draftLayout]); // +layout: re-render on saved-layout change (B2)
   const confirmAddSlot = async (name) => {
     setModal(null);
-    const newSlot = { id: `slot_${Date.now()}`, name, sonarr: STARTER_AR, radarr: STARTER_AR };
+    const [sonarrRes, radarrRes] = await Promise.all([
+      fetchComposed('sonarr', targetLang),
+      fetchComposed('radarr', targetLang),
+    ]);
+    if (!sonarrRes.success || !radarrRes.success) {
+      setSlotError(`Slot not created. Could not load default styling: ${sonarrRes.error || radarrRes.error}`);
+      return;
+    }
+    const newSlot = { id: `slot_${Date.now()}`, name, sonarr: sonarrRes.template, radarr: radarrRes.template };
     const res = await addSlot(newSlot);
     if (res.success) setCurrentView(newSlot.id);
     else setSlotError(res.error);
@@ -142,6 +139,18 @@ export default function Preview() {
     const res = await updateSlot(currentView, { [type]: draft });
     if (res.success) localStorage.removeItem(`telgrarr_draft_${currentView}_${type}`);
     else setSlotError(res.error);
+  };
+  const loadDefaultStyling = async () => {
+    setModal(null);
+    const res = await fetchComposed(type, targetLang);
+    if (res.success) setDraft(res.template);
+    else setSlotError(`Could not load default styling: ${res.error}`);
+  };
+  const requestLoadDefault = () => {
+    const slot = config.slots.find(s => s.id === currentView);
+    const savedValue = slot?.[type] || '';
+    if (draft !== savedValue) setModal({ kind: 'loadDefault' });
+    else loadDefaultStyling();
   };
   const sendTest = async () => {
     setSendState('sending');
@@ -199,6 +208,10 @@ export default function Preview() {
               <button onClick={saveDraftToSlot} disabled={storeSaving} className="focus-ring w-full py-3 bg-telgrarr-success hover:bg-telgrarr-success/90 disabled:opacity-50 text-telgrarr-on-accent font-medium rounded-xl flex items-center justify-center space-x-2 shadow-card active:scale-[0.98] transition-all">
                 {storeSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 <span>Save Code to Slot</span>
+              </button>
+              <button onClick={requestLoadDefault} disabled={storeSaving} className="focus-ring w-full py-2.5 bg-transparent hover:bg-telgrarr-border/50 border border-telgrarr-border text-telgrarr-muted hover:text-telgrarr-text text-sm font-medium rounded-xl flex items-center justify-center space-x-2 transition-colors">
+                <RefreshCw className="w-4 h-4" />
+                <span>Load Default styling</span>
               </button>
             </>
           ) : (
@@ -263,6 +276,15 @@ export default function Preview() {
         confirmLabel="Delete"
         danger
         onConfirm={confirmDeleteSlot}
+        onCancel={() => setModal(null)}
+      />
+      <ConfirmModal
+        isOpen={modal?.kind === 'loadDefault'}
+        title="Load Default Styling"
+        message="This replaces your unsaved changes in this editor with the composed Default styling. Nothing is saved to the slot until you press Save."
+        confirmLabel="Load"
+        danger
+        onConfirm={loadDefaultStyling}
         onCancel={() => setModal(null)}
       />
     </div>
