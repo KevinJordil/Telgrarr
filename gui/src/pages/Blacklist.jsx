@@ -22,7 +22,6 @@ export default function Blacklist() {
   const [tab,     setTab]     = useState('blacklisted');
   const [type,    setType]    = useState('sonarr');
   const [query,   setQuery]   = useState('');
-  const [results, setResults] = useState([]);
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
@@ -33,6 +32,11 @@ export default function Blacklist() {
     error:   blacklistError,
     fetchTitles,
     removeTitle,
+    results,
+    searchLoading,
+    searchError,
+    searchTitles,
+    toggleSearchResult,
   } = useBlacklistStore();
   const debounced = useDebounce(query, 450);
   const tabRefs = useRef({});
@@ -48,16 +52,8 @@ export default function Blacklist() {
   // ── Search titles ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (tab !== 'titles') return;
-    if (!debounced.trim()) { setResults([]); return; }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    api.get('/blacklist/search', { params: { type, q: debounced.trim() } })
-      .then(r => { if (!cancelled) setResults(r.data); })
-      .catch(e => { if (!cancelled) setError(e.response?.data?.error || 'Search failed'); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [debounced, type, tab]);
+    searchTitles(type, debounced);
+  }, [tab, type, debounced, searchTitles]);
 
   // ── Load blacklisted titles ──────────────────────────────────────────────────
   useEffect(() => {
@@ -77,7 +73,7 @@ export default function Blacklist() {
 
   // ── Reset state on tab/type switch ───────────────────────────────────────────
   useEffect(() => {
-    setResults([]);
+    useBlacklistStore.setState({ results: [] });
     setFolders([]);
     setQuery('');
     setError(null);
@@ -106,8 +102,8 @@ export default function Blacklist() {
         const result = await removeTitle(type, item.id);
         if (!result.success) setError(result.error || 'Action failed');
       } else {
-        await api.post(`/blacklist/ids/${action}`, { type, id: item.id });
-        setResults(prev => prev.map(r => r.id === item.id ? { ...r, blacklisted: action === 'add' } : r));
+        const result = await toggleSearchResult(type, item);
+        if (!result.success) setError(result.error || 'Action failed');
       }
     } catch (e) {
       setError(e.response?.data?.error || 'Action failed');
@@ -183,13 +179,13 @@ export default function Blacklist() {
           </div>
         )}
         {/* Error */}
-        {(error || blacklistError) && (
+        {(error || blacklistError || searchError) && (
           <div className="mb-4 px-4 py-3 rounded-xl bg-telgrarr-danger/10 border border-telgrarr-danger/30 text-telgrarr-danger text-sm" role="alert">
-            {error || blacklistError}
+            {error || blacklistError || searchError}
           </div>
         )}
         {/* Loading */}
-        {(loading || blacklistLoading) && (
+        {(loading || blacklistLoading || searchLoading) && (
           <div className="flex justify-center py-12">
             <Loader2 className="w-6 h-6 text-telgrarr-purple animate-spin" />
           </div>
@@ -243,7 +239,7 @@ export default function Blacklist() {
 
         {!loading && tab === 'titles' && (
           <AnimatePresence mode="popLayout">
-            {results.length === 0 && query.trim() && !error && (
+            {results.length === 0 && query.trim() && !searchError && (
               <motion.p
                 key="empty"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
