@@ -12,10 +12,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -48,9 +48,95 @@ jobs:
         run: npm run test:e2e
 
       - name: Upload Playwright Report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+  docker-validate:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Build Docker Image (no cache, proves clean-environment portability)
+        run: docker build --no-cache -t telgrarr:ci .
+
+      - name: Boot Container (bare docker run, no compose)
+        run: |
+          docker run -d --name telgrarr-smoke \
+            -p 3400:3400 \
+            -e RESTART_CAPABLE=0 \
+            telgrarr:ci
+
+      - name: Wait for Healthy Status (bare run)
+        run: |
+          for i in $(seq 1 20); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' telgrarr-smoke 2>/dev/null)
+            echo "poll[$i]=$STATUS"
+            if [ "$STATUS" = "healthy" ]; then exit 0; fi
+            sleep 2
+          done
+          echo "Container never became healthy"
+          docker logs telgrarr-smoke
+          exit 1
+
+      - name: External Health Check (bare run)
+        run: curl -fsS http://127.0.0.1:3400/health
+
+      - name: Confirm Non-Root Execution (Dockerfile UID 1000)
+        run: |
+          RUNTIME_UID=$(docker exec telgrarr-smoke id -u)
+          echo "uid=$RUNTIME_UID"
+          [ "$RUNTIME_UID" = "1000" ] || { echo "Expected UID 1000, got $RUNTIME_UID"; exit 1; }
+
+      - name: Graceful Shutdown Check (SIGTERM, node as PID 1)
+        run: |
+          docker stop -t 10 telgrarr-smoke
+          docker logs telgrarr-smoke | tail -30
+
+      - name: Teardown Bare Container
+        if: always()
+        run: docker rm -f telgrarr-smoke || true
+
+      - name: Prepare .env for Compose (documented first-run default, unmodified)
+        run: cp .env.example .env
+
+      - name: Compose Up (full stack, volume, network, RESTART_CAPABLE default)
+        run: docker compose up -d --build
+
+      - name: Wait for Healthy Status (compose)
+        run: |
+          for i in $(seq 1 20); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' telgrarr 2>/dev/null)
+            echo "poll[$i]=$STATUS"
+            if [ "$STATUS" = "healthy" ]; then exit 0; fi
+            sleep 2
+          done
+          echo "Compose service never became healthy"
+          docker compose logs
+          exit 1
+
+      - name: External Health Check (compose)
+        run: curl -fsS http://127.0.0.1:3400/health
+
+      - name: Confirm RESTART_CAPABLE Default-On (Master Architecture Section 7, F13g/FA-57)
+        run: |
+          VAL=$(docker compose exec -T telgrarr printenv RESTART_CAPABLE)
+          echo "RESTART_CAPABLE=$VAL"
+          [ "$VAL" = "1" ] || { echo "Expected RESTART_CAPABLE=1 by default"; exit 1; }
+
+      - name: Confirm Named Volume Materialized
+        run: docker volume inspect telgrarr-data
+
+      - name: Confirm Named Network Materialized
+        run: docker network inspect telgrarr-net
+
+      - name: Teardown Compose Stack
+        if: always()
+        run: docker compose down -v
+
