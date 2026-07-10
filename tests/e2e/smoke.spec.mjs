@@ -3,12 +3,13 @@ import { createRequire } from 'module';
 
 const requireCjs = createRequire(import.meta.url);
 const { SETTINGS_SCHEMA } = requireCjs('../../src/settings-schema.js');
+const { SECRET_MASK } = requireCjs('../../src/settings/secrets.js');
 
 const baselineSettings = {
   listenerPort: 3400,
   listenerHost: '0.0.0.0',
   batchWindowMs: 180000,
-  sonarr: { baseUrl: 'http://127.0.0.1:8989', apiKey: 'son••••••••_key' },
+  sonarr: { baseUrl: 'http://127.0.0.1:8989', apiKey: SECRET_MASK },
   radarr: { baseUrl: 'http://127.0.0.1:7878', apiKey: 'rad••••••••_key' },
   telegram: { botToken: '123••••••••Exxx', chatId: '-100123456', delayMs: 3000 },
   emby: { refreshUrl: '', apiKey: '' },
@@ -32,11 +33,12 @@ test('Settings save flow (Hermetic Mock)', async ({ page }) => {
   let postPayload = null;
 
   await page.addInitScript(() => {
-    localStorage.setItem('telgrarr_token', 'fake-hermetic-token');
+    localStorage.setItem('telgrarr_authed', '1');
   });
 
   await page.route('**/api/auth/verify', route => route.fulfill({ status: 200, json: { success: true, user: { username: 'admin' } } }));
   await page.route('**/api/health', route => route.fulfill({ status: 200, json: { status: 'ok' } }));
+  await page.route('**/api/auth/setup-status', route => route.fulfill({ status: 200, json: { configured: true } }));
   await page.route('**/api/stream*', route => route.abort());
 
   await page.route('**/api/settings/schema', async route => {
@@ -59,7 +61,7 @@ test('Settings save flow (Hermetic Mock)', async ({ page }) => {
 
   await page.goto('/settings');
 
-  const urlInput = page.getByDisplayValue('http://127.0.0.1:8989');
+  const urlInput = page.locator('#settings-sonarr-body').getByLabel('Base URL');
   await expect(urlInput).toBeVisible();
   await urlInput.fill('http://10.0.0.5:8989');
 
@@ -74,7 +76,7 @@ test('Settings save flow (Hermetic Mock)', async ({ page }) => {
   expect(postPayload).not.toBeNull();
   expect(postPayload.sonarr).toBeDefined();
   expect(postPayload.sonarr.baseUrl).toBe('http://10.0.0.5:8989');
-  expect(postPayload.sonarr.apiKey).toBeUndefined();
+  expect(postPayload.sonarr.apiKey).toBe(SECRET_MASK);
   expect(postPayload.radarr).toBeUndefined();
   expect(postPayload.telegram).toBeUndefined();
 });
