@@ -128,6 +128,13 @@ app.get('/health', async (req, res) => {
   });
 });
 
+// -- Liveness (container/orchestrator probe) ----------------------------------
+// OSR-3: process-serving signal ONLY -- no config/readiness checks, no async
+// I/O, one enum value (D-E). Deep readiness stays /health (S3/G.1 unchanged).
+app.get('/health/live', (req, res) => {
+  res.status(200).json({ status: 'alive' });
+});
+
 // -- Static GUI (Production) --------------------------------------------------
 const distPath = path.join(__dirname, '../gui/dist');
 app.use(express.static(distPath, {
