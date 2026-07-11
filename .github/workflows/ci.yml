@@ -71,6 +71,11 @@ jobs:
           docker run -d --name telgrarr-smoke \
             -p 3400:3400 \
             -e RESTART_CAPABLE=0 \
+            --health-cmd="wget -q -O /dev/null http://127.0.0.1:3400/health || exit 1" \
+            --health-interval=5s \
+            --health-timeout=5s \
+            --health-retries=3 \
+            --health-start-period=20s \
             telgrarr:ci
 
       - name: Wait for Healthy Status (bare run)
@@ -111,7 +116,7 @@ jobs:
 
       - name: Wait for Healthy Status (compose)
         run: |
-          for i in $(seq 1 20); do
+          for i in $(seq 1 50); do
             STATUS=$(docker inspect --format='{{.State.Health.Status}}' telgrarr 2>/dev/null)
             echo "poll[$i]=$STATUS"
             if [ "$STATUS" = "healthy" ]; then exit 0; fi
