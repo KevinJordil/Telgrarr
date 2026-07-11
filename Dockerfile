@@ -34,31 +34,32 @@ RUN npm ci --omit=dev --no-audit --no-fund \
 # ── Stage 3: runtime ─────────────────────────────────────────────────────
 FROM node:22-alpine AS runtime
 
-# Non-root user (1000:1000; host-mount friendly).
-RUN addgroup -g 1000 -S telgrarr \
- && adduser  -u 1000 -S -G telgrarr -h /app -s /sbin/nologin telgrarr
+# Non-root user: reuse the base image's built-in 'node' user (UID:GID 1000:1000,
+# host-mount friendly) instead of creating a redundant one - node:22-alpine already
+# ships this user (official nodejs/docker-node convention); creating a second
+# user/group at the same numeric IDs collides and fails the build.
 
 WORKDIR /app
 
 # Production node_modules (no devDeps, no build toolchain).
-COPY --from=prod-deps --chown=telgrarr:telgrarr /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 
 # Backend sources required at runtime.
 # setup-auth.js: first-run auth bootstrap; DATA_DIR-aware (reads process.env.DATA_DIR).
 # release-manager.js + fetch-official-genres.js: host-only dev/ops utilities;
 #   both hardcode __dirname/data (DATA_DIR-blind) — excluded via .dockerignore.
 #   E.4 fixes release-manager; neither belongs in the container image.
-COPY --chown=telgrarr:telgrarr package.json    ./
-COPY --chown=telgrarr:telgrarr src/            ./src/
-COPY --chown=telgrarr:telgrarr scripts/        ./scripts/
-COPY --chown=telgrarr:telgrarr shared/         ./shared/
-COPY --chown=telgrarr:telgrarr setup-auth.js   ./
+COPY --chown=node:node package.json    ./
+COPY --chown=node:node src/            ./src/
+COPY --chown=node:node scripts/        ./scripts/
+COPY --chown=node:node shared/         ./shared/
+COPY --chown=node:node setup-auth.js   ./
 
 # Built SPA, served same-origin by Express.
-COPY --from=gui-build --chown=telgrarr:telgrarr /build/gui/dist ./gui/dist
+COPY --from=gui-build --chown=node:node /build/gui/dist ./gui/dist
 
 # The ONE persistent volume.
-RUN mkdir -p /data && chown telgrarr:telgrarr /data
+RUN mkdir -p /data && chown node:node /data
 
 # Container defaults; operator overrides via -e / --env-file.
 ENV NODE_ENV=production \
@@ -69,7 +70,7 @@ ENV NODE_ENV=production \
 VOLUME ["/data"]
 EXPOSE 3400
 
-USER telgrarr
+USER node
 
 # /health is shallow today (F.8 deepens it). start-period covers lock acquire
 # + initial event load before health is first judged.
