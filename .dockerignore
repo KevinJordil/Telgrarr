@@ -27,7 +27,7 @@ media_queue.json
 
 # ── Test infra (runs in CI, not in the image) ───────────────────
 tests
-playwright.config.js
+playwright.config.mjs
 vitest.config.js
 
 # ── Process-manager configs (irrelevant inside the container) ───
