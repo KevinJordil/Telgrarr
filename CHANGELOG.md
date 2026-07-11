@@ -7,27 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.1] - 2026-07-11
+First public release. `0.1.0` below was an internal development milestone only: it was never tagged or published, and this is the true first release.
+
 ### Added
-- Queue saturation test simulating a 400+ concurrent webhook burst (408
-  simultaneous lock acquisitions across single and batch enqueue calls) —
-  verifies zero throws, exact overflow-eviction arithmetic, and clean
-  lockfile release under peak contention (BCS Phase 5 / F6).
+- Multi-language captions: 6 target languages (Arabic, English, Spanish,
+  French, German, Portuguese), each with correct RTL handling, translated
+  status/labels, and a per-language machine-translation watermark
+- Visual layout composer ("Default styling"): reorder, toggle, and relabel
+  caption elements from the GUI, with a live preview that updates as you edit
+- Movie plot enrichment for Radarr (TMDb -> OMDb -> own fallback chain),
+  toggleable, with an AI-only mode and an adjustable summary length
+- Independent enable/disable toggles per translation provider (AI, DeepL,
+  Google); official Google Translate API path with a keyless fallback
+- History page: searchable, filterable, paginated log of everything sent,
+  with poster/compact/table views, per-entry detail (ratings, artwork,
+  episode info), and configurable retention (max items / max age)
+- First-run setup wizard in the GUI: create the first admin account with
+  no terminal required
+- Webhook secret auto-generated on first boot; regenerate anytime from the
+  Settings GUI
+- Backup import/export via the GUI: upload, download, restore, or delete
+  backups entirely from Settings
+- `/health/live` liveness endpoint: a lightweight, always-200 probe for
+  container/orchestrator health checks, independent of configuration state
+- `RESTART_CAPABLE` deployment flag: an explicit signal (pre-set in the
+  Docker/PM2 templates) that safely enables self-restart after a settings
+  change that requires one
+- Four selectable GUI themes (dark / light / neon / Telegram-native)
+- Jellyfin documented as a supported library-refresh target alongside Emby
+
+### Changed
+- `media_queue.json` now lives under `DATA_DIR` (previously the project
+  root); a one-time automatic migration moves it on first boot after
+  upgrade; no operator action needed, and nothing is ever deleted
+- Queue capacity is now bounded with oldest-item eviction, and Telegram
+  dispatch enforces a pacing floor, protecting against overload during
+  large notification bursts
+- TMDb/OMDb failures now short-circuit for the rest of a sweep once an
+  auth, rate-limit, or quota error is seen, instead of retrying every item
+- Translator tiers back off individually after a rate-limit or quota
+  response and escalate to the next provider rather than retrying the
+  same one
+- Metadata fetches run with bounded concurrency; Telegram dispatch remains
+  strictly sequential
+- Settings page reorganized into grouped sections (Services / Notifications
+  / Metadata / Processing / System)
+- Full accessibility pass across the GUI: keyboard focus rings, ARIA
+  roles/labels, and reduced-motion support throughout
 
 ### Fixed
-- **Queue lock contention under burst (BCS Phase 5 / F6):** a large
-  simultaneous webhook burst (~50+ near-concurrent Sonarr/Radarr deliveries)
-  could exhaust the queue file's lock-retry budget, causing the majority of
-  import notifications to be silently dropped (Sonarr/Radarr do not retry
-  failed deliveries). Fixed by serializing this process's own queue
-  reads/writes ahead of the file lock, eliminating the self-contention;
-  verified via a reproduction harness confirming both the drop and its
-  elimination.
+- Queue lock contention under a large simultaneous webhook burst could
+  silently drop notifications (Sonarr/Radarr do not retry failed
+  deliveries); fixed by having this process serialize its own queue
+  access ahead of the file lock
+- A corrupted queue snapshot could halt processing; it is now quarantined
+  and reset automatically
+- Sweep crashes are now recovered without losing in-flight items or
+  duplicating already-dispatched ones
+- `/health` reported an unconditionally unhealthy container on a normal,
+  unconfigured first-run instance; split into a liveness check (always
+  200) and a separate deep readiness check (503 with the specific
+  missing-credential list)
+
+### Security
+- All secret-bearing files (auth credentials, backups, logs) now write
+  with explicit `0600` permissions
+- The webhook secret can only be changed via its dedicated regenerate
+  endpoint; submitting it through the general settings save is rejected
+- Backups no longer include live session tokens or the one-time
+  password-recovery token
+- Backup restore validates every archived file as parseable JSON before
+  touching anything on disk, and only extracts filenames it manifested
+  itself (no zip-slip)
+- Login no longer returns a raw session token in the response body; the
+  httpOnly cookie is the only credential
 
 ### Documentation
-- README: documented burst-dispatch timing and the queue/pacing tuning
-  levers available for large notification bursts (BCS Phase 5 / T2).
+- README overhaul: Jellyfin support, all 6 languages, import/upgrade
+  behavior, and a new resilience section
+- Docker/Compose quick-start documents the liveness vs. readiness
+  distinction
+## 0.1.0 - 2026-06-04
+_Internal development milestone; not tagged or publicly released. See
+1.0.0-beta.1 above for the first public version._
 
-## [0.1.0] - 2026-06-04
 
 Initial public release. Telgrarr is a webhook-driven notification bridge
 between Sonarr / Radarr and Telegram, with optional Emby library refresh
@@ -96,5 +160,5 @@ and multi-tier translation for Arabic captions.
 - `release-manager.js` and `about.routes.js` now honor `DATA_DIR` for
   the ledger path (previously hardcoded to `<project-root>/data/`)
 
-[Unreleased]: https://github.com/Fahad-Beta/telgrarr/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/Fahad-Beta/telgrarr/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Fahad-Beta/telgrarr/compare/v1.0.0-beta.1...HEAD
+[1.0.0-beta.1]: https://github.com/Fahad-Beta/telgrarr/releases/tag/v1.0.0-beta.1
