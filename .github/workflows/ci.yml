@@ -122,6 +122,11 @@ jobs:
       - name: Compose Up (full stack, volume, network, RESTART_CAPABLE default)
         run: docker compose up -d --build
 
+      - name: Show Effective Healthcheck (compose, permanent diagnostic)
+        run: |
+          docker version --format 'engine={{.Server.Version}}'
+          docker inspect --format='{{json .Config.Healthcheck}}' telgrarr
+
       - name: Wait for Healthy Status (compose)
         run: |
           for i in $(seq 1 50); do
