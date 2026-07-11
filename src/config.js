@@ -23,7 +23,7 @@ const DEFAULTS = {
   trustProxy:    '',
   cookieSecure:  'auto',
   batchWindowMs: 180000,
-  queueFile:     path.join(__dirname, '../media_queue.json'),
+  queueFile:     path.join(DATA_DIR, 'media_queue.json'),
     queue:         { maxItems: 1000 },
   sonarr:     { baseUrl: '', apiKey: '' },
   telegram:   { botToken: '', chatId: '', delayMs: 6000 },
@@ -173,7 +173,7 @@ function loadFromDisk(context = 'boot') {
 /** Strip volatile, never-persisted keys before an atomic write (shared by save()
  *  and the first-boot secret bootstrap so both emit an identical on-disk shape). */
 function stripVolatile(obj) {
-  // FA-1: queueFile is PROJECT-ROOT / __dirname-resolved per Master Section 4 -- never persisted.
+  // FA-1 (amended OSR-3): queueFile is DATA_DIR-derived at boot -- still never persisted.
   const { DEFAULTS: _d, reload: _r, save: _s, templates: _t, queueFile: _q, ...rest } = obj;
   return rest;
 }

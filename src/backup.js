@@ -14,7 +14,6 @@ const RESTORE_STAGE_PREFIX = '.telgrarr-restore-';
 const RESTORE_BAK_PREFIX   = '.telgrarr-restorebak-';
 
 
-const ROOT_DIR   = path.join(__dirname, '..');
 const DATA_DIR   = config.DATA_DIR;
 const BACKUP_DIR = config.BACKUP_DIR;
 
@@ -30,7 +29,7 @@ const BACKUP_MANIFEST = [
   // session bearer tokens must not travel inside a portable backup archive.
   { name: 'system-release.json', dir: DATA_DIR }, // F.9 (O4): release/version ledger
   { name: 'templates.json',      dir: DATA_DIR },
-  { name: 'media_queue.json',    dir: ROOT_DIR }  // Critical Addition: Preserves pending webhooks
+  { name: 'media_queue.json',    dir: DATA_DIR }  // Preserves pending webhooks (DATA_DIR-relocated, OSR-3)
 ];
 
 function createBackup() {

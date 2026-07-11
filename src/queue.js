@@ -68,6 +68,33 @@ function checkDepthWarning(depth, maxItems) {
   );
 }
 
+// -- OSR-3 (Finding 1): one-time legacy relocation -----------------------------
+// Master Section 4 AMENDMENT (FHD-authorized): media_queue.json now resolves
+// under DATA_DIR (config.queueFile), so container volumes cover it. Older
+// installs have it at PROJECT ROOT; boot invokes this once (index.js, post-
+// lock, pre-listener). Params are TEST SEAMS only -- production passes none.
+const LEGACY_QUEUE_FILE = path.join(__dirname, '../media_queue.json');
+function migrateLegacyQueueFile(legacyPath = LEGACY_QUEUE_FILE, _rename = fs.renameSync) {
+  if (path.resolve(legacyPath) === path.resolve(QUEUE_FILE)) return false;
+  if (!fs.existsSync(legacyPath)) return false;
+  if (fs.existsSync(QUEUE_FILE)) {
+    log.warn('Queue', 'Queue Migration \u2192 Skipped \u2192 legacy and current queue files both exist; keeping current');
+    return false;
+  }
+  try {
+    _rename(legacyPath, QUEUE_FILE);
+  } catch (err) {
+    if (err && err.code === 'EXDEV') {
+      fs.copyFileSync(legacyPath, QUEUE_FILE);
+      fs.unlinkSync(legacyPath);
+    } else {
+      log.error('Queue', 'Queue Migration \u2192 Error \u2192 ' + err.message + ' \u2192 legacy file left in place');
+      return false;
+    }
+  }
+  log.audit('Queue', 'Queue Migration \u2192 Success \u2192 ' + legacyPath + ' \u2192 ' + QUEUE_FILE);
+  return true;
+}
 function ensureQueueFile() {
   if (!fs.existsSync(QUEUE_FILE)) {
     fs.writeFileSync(QUEUE_FILE, '[]', 'utf8');
@@ -275,4 +302,4 @@ async function peekLength() {
   }
 }
 
-module.exports = { enqueue, enqueueMany, peekLength, drainQueue, getQueue, identityKey, markSweepCycle };
+module.exports = { enqueue, enqueueMany, peekLength, drainQueue, getQueue, identityKey, markSweepCycle, migrateLegacyQueueFile };

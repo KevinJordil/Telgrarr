@@ -6,8 +6,8 @@ import fs from 'fs';
 const require = createRequire(import.meta.url);
 
 // FA-1 / F4b — queueFile must never be SOURCED from disk (loadFromDisk ignores a
-// persisted value; the boot-resolved DEFAULTS.queueFile, __dirname-anchored under
-// PROJECT ROOT per Master Section 4, always wins) and must never be WRITTEN back to
+// persisted value; the boot-resolved DEFAULTS.queueFile, DATA_DIR-anchored per
+// Master Section 4 as amended OSR-3, always wins) and must never be WRITTEN back to
 // disk (stripVolatile excludes it from every atomic write, shared by save() and the
 // first-boot ensureWebhookSecret() persist). Without this, a backup/restore or a
 // hand-edited config.json carrying another host's absolute queueFile path would
@@ -42,9 +42,9 @@ describe('config.queueFile is volatile — never disk-sourced, never disk-persis
     expect(config.queueFile).toBe(config.DEFAULTS.queueFile);
   });
 
-  it('DEFAULTS.queueFile resolves via __dirname under PROJECT ROOT, never the isolated DATA_DIR (Master Section 4 law)', () => {
+  it('DEFAULTS.queueFile resolves under DATA_DIR (Master Section 4 law, amended OSR-3)', () => {
     expect(config.DEFAULTS.queueFile.endsWith('media_queue.json')).toBe(true);
-    expect(config.DEFAULTS.queueFile).not.toContain(tmpDir);
+    expect(config.DEFAULTS.queueFile).toBe(path.join(tmpDir, 'media_queue.json'));
   });
 
   it('never writes queueFile back to config.json on save() (save-direction fix)', async () => {

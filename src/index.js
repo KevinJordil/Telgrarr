@@ -9,7 +9,7 @@ const backup                            = require('./backup');
 const { startListener }                 = require('./listener');
 const blacklist                         = require('./blacklist');
 const { checkAndRotateLogs }            = require('./log-rotator');
-const { getQueue }                      = require('./queue');
+const { getQueue, migrateLegacyQueueFile } = require('./queue');
 const { runSweep, recoverCrashedSweep, scheduleSweep } = require('./sweeper');
 const { reconcile, INTERVAL_MS }        = require('./services/reconciler');
 const { flushSessions }                 = require('./middlewares/auth');
@@ -42,6 +42,7 @@ let releaseLock = null;
   loadEvents();
   blacklist.load();
   await templates.migrateLegacyPlot({ sonarr: config.sonarr && config.sonarr.includePlot, radarr: config.radarr && config.radarr.includePlot });
+  migrateLegacyQueueFile();
   startListener();
 })();
 
