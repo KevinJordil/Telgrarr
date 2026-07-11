@@ -59,11 +59,13 @@ COPY --chown=node:node setup-auth.js   ./
 COPY --from=gui-build --chown=node:node /build/gui/dist ./gui/dist
 
 # The ONE persistent volume.
-RUN mkdir -p /data && chown node:node /data
+RUN mkdir -p /data && chown node:node /data /app
 
 # Container defaults; operator overrides via -e / --env-file.
 ENV NODE_ENV=production \
     DATA_DIR=/data \
+    LOGS_DIR=/data/logs \
+    BACKUP_DIR=/data/backups \
     HOST=0.0.0.0 \
     PORT=3400
 
