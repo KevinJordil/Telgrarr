@@ -74,10 +74,12 @@ EXPOSE 3400
 
 USER node
 
-# /health is shallow today (F.8 deepens it). start-period covers lock acquire
-# + initial event load before health is first judged.
+# Liveness probe: /health/live answers 200 whenever the process is serving --
+# no config/readiness checks (OSR-3 BUG #4). Deep readiness stays GET /health
+# (503 while required credentials are missing; S3/G.1 unchanged). start-period
+# covers lock acquire + initial event load before health is first judged.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD wget -q -O /dev/null "http://127.0.0.1:${PORT}/health" || exit 1
+    CMD wget -q -O /dev/null "http://127.0.0.1:${PORT}/health/live" || exit 1
 
 # Exec form → node is PID 1; SIGTERM reaches gracefulShutdown in src/index.js
 # (releaseLock + flushSessions + flushEvents).
