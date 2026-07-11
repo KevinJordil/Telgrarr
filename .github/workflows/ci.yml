@@ -71,12 +71,15 @@ jobs:
           docker run -d --name telgrarr-smoke \
             -p 3400:3400 \
             -e RESTART_CAPABLE=0 \
-            --health-cmd="wget -q -O /dev/null http://127.0.0.1:3400/health || exit 1" \
+            --health-cmd="wget -q -O /dev/null http://127.0.0.1:3400/health/live || exit 1" \
             --health-interval=5s \
             --health-timeout=5s \
             --health-retries=3 \
             --health-start-period=20s \
             telgrarr:ci
+
+      - name: Show Effective Healthcheck (permanent diagnostic)
+        run: docker inspect --format='{{json .Config.Healthcheck}}' telgrarr-smoke
 
       - name: Wait for Healthy Status (bare run)
         run: |
@@ -91,7 +94,12 @@ jobs:
           exit 1
 
       - name: External Health Check (bare run)
-        run: curl -fsS http://127.0.0.1:3400/health
+        run: |
+          curl -fsS http://127.0.0.1:3400/health/live
+          HTTP=$(curl -s -o /tmp/health.json -w '%{http_code}' http://127.0.0.1:3400/health)
+          cat /tmp/health.json; echo
+          [ "$HTTP" = "503" ] || { echo "Expected deep /health HTTP 503 (unconfigured); got $HTTP"; exit 1; }
+          grep -q '"status":"degraded"' /tmp/health.json || { echo "Expected degraded status in deep /health body"; exit 1; }
 
       - name: Confirm Non-Root Execution (Dockerfile UID 1000)
         run: |
@@ -127,7 +135,12 @@ jobs:
           exit 1
 
       - name: External Health Check (compose)
-        run: curl -fsS http://127.0.0.1:3400/health
+        run: |
+          curl -fsS http://127.0.0.1:3400/health/live
+          HTTP=$(curl -s -o /tmp/health.json -w '%{http_code}' http://127.0.0.1:3400/health)
+          cat /tmp/health.json; echo
+          [ "$HTTP" = "503" ] || { echo "Expected deep /health HTTP 503 (unconfigured); got $HTTP"; exit 1; }
+          grep -q '"status":"degraded"' /tmp/health.json || { echo "Expected degraded status in deep /health body"; exit 1; }
 
       - name: Confirm RESTART_CAPABLE Default-On (Master Architecture Section 7, F13g/FA-57)
         run: |
