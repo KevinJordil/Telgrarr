@@ -1,0 +1,57 @@
+name: Bug Report
+description: Something is not working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much of this
+        as you can; see CONTRIBUTING.md for the full guidelines.
+  - type: input
+    id: version
+    attributes:
+      label: Telgrarr version
+      description: "From the About page, GET /api/about, or: node -e \"console.log(require('./package.json').version)\""
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: Output of `node --version` (only relevant for a manual/non-Docker install)
+  - type: dropdown
+    id: process-manager
+    attributes:
+      label: Process manager
+      options:
+        - Docker / Docker Compose
+        - PM2
+        - systemd
+        - Bare node (no supervisor)
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: reverse-proxy
+    attributes:
+      label: Reverse proxy
+      options:
+        - None (direct access)
+        - Cloudflare Tunnel
+        - Caddy
+        - nginx
+        - Traefik
+        - Other
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do, and what did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log excerpts
+      description: From logs/error.log or logs/app.log. Please redact any API keys, tokens, or chat IDs.
+      render: shell
