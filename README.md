@@ -98,6 +98,7 @@ a restart.
 | `TRUST_PROXY` | *(off)* | Express `trust proxy`. `true` / `1` = trust one proxy hop. Numeric N = N hops. IP / CIDR also accepted. Required behind a reverse proxy for correct IP attribution and secure cookies. |
 | `WEBHOOK_SECRET` | *(auto-generated)* | Webhook authentication secret, similar to a Sonarr / Radarr API key. Auto-generated on first boot and managed in the GUI (**Settings → Server**: reveal, copy, regenerate). A set env value only seeds the first boot; the saved value is authoritative thereafter. |
 | `COOKIE_SECURE` | `auto` | Session-cookie `Secure` flag. `auto` enables it on HTTPS requests (direct or via `X-Forwarded-Proto`). `true` / `false` to force on or off. |
+| `RESTART_CAPABLE` | *(unset)* | Declares whether the process may safely restart itself after a settings or backup-restore change that requires one. Pre-set in the Docker Compose and PM2 templates; set explicitly for systemd or a bare `docker run`. Left unset, Telgrarr still works — it just shows a "restart required" prompt in the GUI instead. |
 | `NODE_ENV` | `production` | Standard Node.js convention. Use `production` for any real deployment. |
 
 Integration settings (Sonarr / Radarr / Emby / Telegram / TMDB / OMDb
@@ -232,8 +233,13 @@ docker compose logs -f telgrarr
 ```
 
 The container runs as a non-root user (UID/GID 1000), drops all Linux
-capabilities, and sets `no-new-privileges`. A built-in `HEALTHCHECK` polls
-`/health` every 30 seconds.
+capabilities, and sets `no-new-privileges`. A built-in `HEALTHCHECK` polls the lightweight `/health/live` endpoint
+every 30 seconds. It always returns 200 once the process is up,
+regardless of configuration state, so a normal first-run (pre-setup)
+container is never marked unhealthy. The deeper `/health` endpoint
+additionally reports readiness (missing credentials, degraded providers)
+for operator or monitoring use; the container health check does not poll
+it.
 
 ## Reverse Proxy + TLS
 
@@ -263,10 +269,13 @@ HTTP with `X-Forwarded-Proto: https`.
 - **Backups:** enabled by default, runs every 7 days, retains the last 5
   archives under `<BACKUP_DIR>` (default `<project>/backups/`). In a Docker
   deployment, mount that path explicitly if you need offsite copies. The
-  manifest covers config, templates, auth, sessions, blacklist, history,
-  the pending media queue, the event ring buffer, and the version ledger.
-  The regenerable media cache, the transient sweep-state marker, and the
-  ephemeral password-reset token are excluded.
+  manifest covers config, templates, auth, blacklist, history, the pending
+  media queue, the event ring buffer, and the version ledger. Your live
+  login session is deliberately NOT included; restoring a backup never
+  clobbers an active session on the machine you restore to. The
+  regenerable media cache, the transient sweep-state marker, the
+  reconciliation cursor (which safely re-seeds itself), and the ephemeral
+  password-reset token are excluded.
 
 - **Migrating to a new host:** on the old instance open **Settings →
   Backup & Restore**, click **Create Now**, then **Download** the archive.

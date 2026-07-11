@@ -1,7 +1,7 @@
 {
   "name": "telgrarr",
   "version": "1.0.0-beta.1",
-  "description": "Sonarr/Radarr webhook queue with Arabic Telegram notifications and Emby refresh",
+  "description": "Webhook-driven notification bridge between Sonarr/Radarr and Telegram, with optional Emby/Jellyfin refresh and multi-language captions",
   "keywords": [
     "sonarr",
     "radarr",

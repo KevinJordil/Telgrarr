@@ -2,14 +2,9 @@
 
 ## Supported Versions
 
-Telgrarr is a personal-scale self-hosted project. Only the latest released
-minor version receives security fixes.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
-| < 0.1   | :x:                |
-
+Telgrarr is a personal-scale self-hosted project maintained by a single
+developer. Only the most recently published release receives security
+fixes; please upgrade to the latest release before reporting an issue.
 ## Reporting a Vulnerability
 
 **Please do not open a public GitHub issue for security vulnerabilities.**

@@ -41,9 +41,10 @@ npm run test:run                   # full vitest run (must stay green)
 npm run test:e2e                   # Playwright e2e
 ~~~
 
-**All pull requests must keep the full vitest suite green.** Test count is
-currently 75; new functionality should add coverage where it materially
-reduces regression risk. Tests live under `tests/`.
+**All pull requests must keep the full vitest suite green.** The suite is
+large and growing (`npx vitest run` prints the current suite/test counts);
+new functionality should add coverage where it materially reduces
+regression risk. Tests live under `tests/`.
 
 ## Code Conventions
 
