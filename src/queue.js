@@ -69,7 +69,7 @@ function checkDepthWarning(depth, maxItems) {
 }
 
 // -- OSR-3 (Finding 1): one-time legacy relocation -----------------------------
-// Master Section 4 AMENDMENT (FHD-authorized): media_queue.json now resolves
+// Master Section 4 AMENDMENT (Architect-authorized): media_queue.json now resolves
 // under DATA_DIR (config.queueFile), so container volumes cover it. Older
 // installs have it at PROJECT ROOT; boot invokes this once (index.js, post-
 // lock, pre-listener). Params are TEST SEAMS only -- production passes none.
