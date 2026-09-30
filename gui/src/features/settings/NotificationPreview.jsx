@@ -9,7 +9,7 @@ const EXAMPLES = {
 
 function messagePreview(caption) {
   const document = new DOMParser().parseFromString(caption, 'text/html');
-  const tags = { B: 'strong', STRONG: 'strong', I: 'em', EM: 'em', U: 'u', S: 's', DEL: 's', CODE: 'code', PRE: 'pre', P: 'p', BLOCKQUOTE: 'blockquote', H1: 'h1', H2: 'h2', H3: 'h3', H4: 'h4', H5: 'h5', H6: 'h6' };
+  const tags = { B: 'strong', STRONG: 'strong', I: 'em', EM: 'em', U: 'u', S: 's', DEL: 's', MARK: 'mark', CODE: 'code', PRE: 'pre', P: 'p', BLOCKQUOTE: 'blockquote', H1: 'h1', H2: 'h2', H3: 'h3', H4: 'h4', H5: 'h5', H6: 'h6' };
   function nodeView(node, key) {
     if (node.nodeType === 3) return node.textContent;
     const children = Array.from(node.childNodes).map((child, i) => nodeView(child, `${key}-${i}`));
@@ -22,7 +22,7 @@ function messagePreview(caption) {
     }
     if (tags[node.nodeName]) {
       const sizes = { H1: 'text-3xl', H2: 'text-2xl', H3: 'text-xl', H4: 'text-lg', H5: 'text-base', H6: 'text-sm' };
-      const className = /^H[1-6]$/.test(node.nodeName) ? `font-bold my-2 ${sizes[node.nodeName]}` : node.nodeName === 'P' ? 'my-2' : node.nodeName === 'BLOCKQUOTE' ? 'my-3 pl-3 border-l-2 border-telgrarr-purple italic' : undefined;
+      const className = /^H[1-6]$/.test(node.nodeName) ? `font-bold my-2 ${sizes[node.nodeName]}` : node.nodeName === 'MARK' ? 'bg-[#f5c518] text-black px-1 rounded' : node.nodeName === 'P' ? 'my-2' : node.nodeName === 'BLOCKQUOTE' ? 'my-3 pl-3 border-l-2 border-telgrarr-purple italic' : undefined;
       return React.createElement(tags[node.nodeName], { key, className }, children);
     }
     if (node.nodeName === 'A') {

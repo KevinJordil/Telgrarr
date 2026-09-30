@@ -234,8 +234,16 @@ Les liens de navigation sont ceux de Plex et des bandes-annonces YouTube.
 
 Une saison complète affiche « Saison complète disponible sur Plex », son numéro
 et son nombre total d’épisodes. Un lot partiel affiche « Saison partielle disponible
-sur Plex », les numéros ajoutés (par exemple « 1 à 3, 5 »), le nombre ajouté et le
-nombre total de la saison connu dans Sonarr. Un épisode absent d’un lot discontinu
+sur Plex », les numéros ajoutés (par exemple « 1 à 3, 5 ») et le nombre total de la saison connu dans Sonarr. Un épisode absent d’un lot discontinu
 n’est pas inclus dans une plage continue. Le nombre total reste « Non renseigné »
 si Sonarr ne fournit pas la liste. Les variables correspondantes sont `seasonLabel`,
 `seasonTotal`, `addedEpisodeCount`, `episodeRangeLabel` et `seasonNotification`.
+
+Les modèles affichent l’utilisateur sous « Demandé par » et les listes sous
+« Liste Radarr probable », pour conserver le caractère incertain de cette origine.
+La qualité est présentée sur une ligne sans police de code, avec résolution lisible
+(4K, Full HD, HD), source, codec et plage dynamique. Les valeurs brutes `origin` et
+`quality` restent disponibles pour les modèles personnalisés ; `originLabel`,
+`originDetail` et `qualityDisplay` donnent la présentation compacte.
+Le mode enrichi utilise un libellé IMDb surligné ; les images distantes Telegram
+sont des blocs de média, pas des petites icônes insérables dans le texte.

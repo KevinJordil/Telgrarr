@@ -2,9 +2,9 @@
 const Handlebars = require('handlebars');
 
 const REQUEST_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>Nouvelle demande de {{kind}}</i>\n━━━━━━━━━━━━━━━━━━{{#if imdbRating}}\n\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if seasons}}\n<b>Saison(s) :</b> {{seasons}}{{/if}}\n\n<b>Demandé par :</b>\n{{requester}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
-const AVAILABLE_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>{{kind}} disponible sur Plex</i>{{#if episode}}\n\n<b>{{episode}}</b>{{/if}}{{#if imdbRating}}\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if overview}}\n\n━━━━━━━━━━━━━━━━━━\n<i>{{overview}}</i>{{/if}}\n\n━━━━━━━━━━━━━━━━━━\n<b>Origine :</b>\n{{origin}}\n\n<b>Qualité :</b>\n<code>{{quality}}</code>{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
-const REQUEST_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>Nouvelle demande de {{kind}}</i></p>{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if seasons}}<p><b>Saison(s) :</b> {{seasons}}</p>{{/if}}<hr/><p><b>Demandé par :</b> {{requester}}</p><p>{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
-const AVAILABLE_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>{{kind}} disponible sur Plex</i></p>{{#if seasonNotification}}<h4>{{seasonLabel}}</h4>{{#if seasonComplete}}<p><b>Nombre total d’épisodes :</b> {{seasonTotal}}</p>{{else}}<p>{{#if episodeRangeLabel}}<b>Épisodes ajoutés :</b> {{episodeRangeLabel}}<br/>{{/if}}{{#if addedEpisodeCount}}<b>Nombre ajouté :</b> {{addedEpisodeCount}}<br/>{{/if}}<b>Nombre total d’épisodes :</b> {{#if seasonTotal}}{{seasonTotal}}{{else}}Non renseigné{{/if}}</p>{{/if}}{{else}}{{#if episode}}<h4>{{episode}}</h4>{{/if}}{{/if}}{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if overview}}<blockquote>{{overview}}</blockquote>{{/if}}<hr/><p><b>Origine :</b><br/>{{origin}}</p><p><b>Qualité :</b><br/><code>{{quality}}</code></p><hr/><p>{{#if plexUrl}}<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
+const AVAILABLE_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>{{kind}} disponible sur Plex</i>{{#if episode}}\n\n<b>{{episode}}</b>{{/if}}{{#if imdbRating}}\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if overview}}\n\n━━━━━━━━━━━━━━━━━━\n<i>{{overview}}</i>{{/if}}\n\n━━━━━━━━━━━━━━━━━━\n<b>{{originLabel}} :</b> {{originDetail}}\n<b>Qualité :</b> {{qualityDisplay}}{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
+const REQUEST_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>Nouvelle demande de {{kind}}</i></p>{{#if imdbRating}}<p><mark><b>IMDb</b></mark> <b>{{imdbRating}}/10</b></p>{{/if}}{{#if seasons}}<p><b>Saison(s) :</b> {{seasons}}</p>{{/if}}<hr/><p><b>Demandé par :</b> {{requester}}</p><p>{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
+const AVAILABLE_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>{{kind}} disponible sur Plex</i></p>{{#if seasonNotification}}<h4>{{seasonLabel}}</h4>{{#if seasonComplete}}<p><b>Nombre total d’épisodes :</b> {{seasonTotal}}</p>{{else}}<p>{{#if episodeRangeLabel}}<b>Épisodes ajoutés :</b> {{episodeRangeLabel}}<br/>{{/if}}<b>Nombre total d’épisodes :</b> {{#if seasonTotal}}{{seasonTotal}}{{else}}Non renseigné{{/if}}</p>{{/if}}{{else}}{{#if episode}}<h4>{{episode}}</h4>{{/if}}{{/if}}{{#if imdbRating}}<p><mark><b>IMDb</b></mark> <b>{{imdbRating}}/10</b></p>{{/if}}{{#if overview}}<blockquote>{{overview}}</blockquote>{{/if}}<hr/><p><b>{{originLabel}} :</b> {{originDetail}}<br/><b>Qualité :</b> {{qualityDisplay}}</p><hr/><p>{{#if plexUrl}}<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
 const TYPES = new Set(['movie', 'show', 'season', 'episode']);
 const REQUEST_EVENTS = new Set(['MEDIA_PENDING', 'MEDIA_APPROVED', 'MEDIA_AUTO_APPROVED']);
 function id(value) { return /^\d+$/.test(String(value ?? '')) ? String(value) : ''; }
@@ -70,6 +70,23 @@ function summary(value, limit) {
   const lastSpace = cut.lastIndexOf(' ');
   return (lastSpace > limit / 2 ? cut.slice(0, lastSpace) : cut).replace(/[ ,;:-]+$/, '') + '…';
 }
+function originPresentation(origin) {
+  if (origin?.startsWith('Demande Seerr — ')) return { originLabel: 'Demandé par', originDetail: origin.slice('Demande Seerr — '.length) };
+  if (origin === 'Demande Seerr') return { originLabel: 'Origine', originDetail: 'Demande via Seerr' };
+  if (origin?.startsWith('Liste Radarr probable — ')) return { originLabel: 'Liste Radarr probable', originDetail: origin.slice('Liste Radarr probable — '.length) };
+  return { originLabel: 'Origine', originDetail: origin || 'Non identifiée' };
+}
+function qualityPresentation(quality) {
+  return (quality || 'Non renseignée')
+    .replace(/\b(?:WEBDL|WEB-DL)[- ]?/gi, 'WEB-DL · ')
+    .replace(/\bWEBRip[- ]?/gi, 'WEBRip · ')
+    .replace(/\bBluRay[- ]?/gi, 'Blu-ray · ')
+    .replace(/\b2160p\b/g, '4K (2160p)')
+    .replace(/\b1080p\b/g, 'Full HD (1080p)')
+    .replace(/\b720p\b/g, 'HD (720p)')
+    .replace(/\b(?:HEVC|H[.]?265)\b/gi, 'H.265')
+    .replace(/\bH[.]?264\b/gi, 'H.264');
+}
 function viewData(event, settings) {
   const movie = event.mediaType === 'movie';
   let kind = event.event === 'request' ? (movie ? 'film' : 'série') : ({ movie: 'Film', show: 'Série', season: 'Saison', episode: 'Épisode' }[event.mediaType]);
@@ -85,7 +102,7 @@ function viewData(event, settings) {
   if (seasonNotification) {
     episode = event.seasonComplete
       ? `${seasonLabel} — ${seasonTotal || 'Nombre non renseigné'} épisodes`
-      : `${seasonLabel}${episodeRangeLabel ? `\nÉpisodes ajoutés : ${episodeRangeLabel}` : ''}${addedEpisodeCount ? `\nNombre ajouté : ${addedEpisodeCount}` : ''}\nNombre total d’épisodes : ${seasonTotal || 'Non renseigné'}`;
+      : `${seasonLabel}${episodeRangeLabel ? `\nÉpisodes ajoutés : ${episodeRangeLabel}` : ''}\nNombre total d’épisodes : ${seasonTotal || 'Non renseigné'}`;
   }
   const plexUrl = safeUrl(event.plexUrl) || (event.ratingKey && event.serverId
     ? `https://app.plex.tv/desktop/#!/server/${encodeURIComponent(event.serverId)}/details?key=${encodeURIComponent('/library/metadata/' + event.ratingKey)}` : '');
@@ -93,6 +110,7 @@ function viewData(event, settings) {
     ...event, posterUrl: safeUrl(event.posterUrl), trailers: (event.trailers || []).map(trailer => ({ ...trailer, url: safeUrl(trailer.url) })).filter(trailer => trailer.url), kind, seasonNotification, seasonLabel, seasonTotal, addedEpisodeCount, episodeRangeLabel, title: (!movie && event.seriesTitle) || event.title || 'Titre inconnu', episode,
     overview: summary(event.overview, settings.notifications.summaryLength),
     origin: event.origin || 'Inconnue', quality: event.quality || 'Non renseignée',
+    ...originPresentation(event.origin), qualityDisplay: qualityPresentation(event.quality),
     plexUrl, seerrUrl: '',
   };
 }

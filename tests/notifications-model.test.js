@@ -39,8 +39,8 @@ describe('French notification messages', () => {
     expect(caption).toContain('Épisode disponible sur Plex');
     expect(caption).toContain('S02E03 — Le retour');
     expect(caption).toContain('<b>Une série</b>');
-    expect(caption).toContain('<b>Origine :</b>\nInconnue');
-    expect(caption).toContain('<b>Qualité :</b>\n<code>Non renseignée</code>');
+    expect(caption).toContain('<b>Origine :</b> Non identifiée');
+    expect(caption).toContain('<b>Qualité :</b> Non renseignée');
   });
   it('marks test messages and keeps them outside the production deduplication ledger', () => {
     const event = model.normalizeTautulli({ ...plex, test: true, test_id: 'preview-1' });
@@ -76,7 +76,7 @@ it('distinguishes season batches and only labels verified complete seasons as co
   const caption = model.render({ ...season, seasonEpisodeCount: '10' }, settings);
   expect(caption).toContain('Saison partielle disponible sur Plex');
   expect(caption).toContain('Épisodes ajoutés : 1 à 8');
-  expect(caption).toContain('Nombre ajouté : 8');
+  expect(caption).not.toContain('Nombre ajouté');
   expect(caption).toContain('Nombre total d’épisodes : 10');
   expect(model.render({ ...season, seasonComplete: true }, settings)).toContain('Saison complète disponible sur Plex');
   expect(model.eventKey({ ...season, episodeRange: '9-12' })).not.toBe(model.eventKey(season));
@@ -98,10 +98,20 @@ it('makes partial and complete season counts clear in rich messages', () => {
   const partial = model.renderRich(event, settings);
   expect(partial).toContain('Saison partielle disponible sur Plex');
   expect(partial).toContain('Épisodes ajoutés :</b> 1 à 3, 5');
-  expect(partial).toContain('Nombre ajouté :</b> 4');
+  expect(partial).not.toContain('Nombre ajouté');
   expect(partial).toContain('Nombre total d’épisodes :</b> 8');
   const complete = model.renderRich({ ...event, seasonComplete: true }, settings);
   expect(complete).toContain('Saison complète disponible sur Plex');
   expect(complete).toContain('Nombre total d’épisodes :</b> 8');
   expect(complete).not.toContain('Épisodes ajoutés');
 });
+
+ it('presents requester and quality compactly without losing probable origin information', () => {
+  const event = { ...model.normalizeTautulli(plex), origin: 'Demande Seerr — Camille <test>', quality: 'WEBDL-2160p · HEVC · Dolby Vision', imdbRating: '8,1' };
+  const html = model.renderRich(event, settings);
+  expect(html).toContain('<b>Demandé par :</b> Camille &lt;test&gt;');
+  expect(html).toContain('<b>Qualité :</b> WEB-DL · 4K (2160p) · H.265 · Dolby Vision');
+  expect(html).toContain('<mark><b>IMDb</b></mark> <b>8,1/10</b>');
+  expect(model.renderRich({ ...event, origin: 'Liste Radarr probable — Films récents' }, settings)).toContain('<b>Liste Radarr probable :</b> Films récents');
+  expect(model.viewData({ ...event, quality: 'Bluray-1080p · H264 · SDR' }, settings).qualityDisplay).toBe('Blu-ray · Full HD (1080p) · H.264 · SDR');
+ });
