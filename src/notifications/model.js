@@ -49,12 +49,15 @@ function normalizeTautulli(payload) {
     overview: text(payload.summary, 1500), quality: text(payload.quality),
     resolution: text(payload.video_resolution, 30), codec: text(payload.video_codec, 30),
     dynamicRange: text(payload.video_dynamic_range, 30),
+    episodeRange: /^[0-9, -]+$/.test(String(payload.episode_num || '')) ? text(String(payload.episode_num), 300).replace(/ /g, '') : '',
+    episodeCount: id(payload.episode_count),
     addedAt: id(payload.added_at), plexUrl: safeUrl(payload.plex_url),
   };
 }
 function eventKey(event) {
   // Upgrades of the same Plex item do not repeat its original availability announcement.
-  const key = event.event === 'request' ? `request:${event.requestId}` : `plex:${event.serverId}:${event.ratingKey}`;
+  const suffix = event.mediaType === 'season' && event.episodeRange ? `:episodes:${event.episodeRange}` : '';
+  const key = event.event === 'request' ? `request:${event.requestId}` : `plex:${event.serverId}:${event.ratingKey}${suffix}`;
   return event.isTest ? `test:${event.testId}:${key}` : key;
 }
 function seerrLink(baseUrl, mediaType, tmdbId) {
@@ -71,10 +74,12 @@ function summary(value, limit) {
 }
 function viewData(event, settings) {
   const movie = event.mediaType === 'movie';
-  const kind = event.event === 'request' ? (movie ? 'film' : 'série') : ({ movie: 'Film', show: 'Série', season: 'Saison', episode: 'Épisode' }[event.mediaType]);
+  let kind = event.event === 'request' ? (movie ? 'film' : 'série') : ({ movie: 'Film', show: 'Série', season: 'Saison', episode: 'Épisode' }[event.mediaType]);
+  if (event.mediaType === 'season' && event.seasonComplete) kind = 'Saison complète';
+  if (event.mediaType === 'season' && event.episodeRange && !event.seasonComplete) kind = 'Épisodes';
   let episode = '';
   if (event.mediaType === 'episode') episode = `S${String(event.season || '0').padStart(2, '0')}E${String(event.episodeNumber || '0').padStart(2, '0')}${event.title ? ' — ' + event.title : ''}`;
-  if (event.mediaType === 'season' && event.season) episode = `Saison ${event.season}`;
+  if (event.mediaType === 'season' && event.season) episode = `Saison ${event.season}${event.episodeRange ? ` — épisodes ${event.episodeRange.replace(/-/g, '–').replace(/,/g, ', ')}` : ''}${event.episodeCount ? ` (${event.episodeCount} épisodes)` : ''}`;
   const plexUrl = safeUrl(event.plexUrl) || (event.ratingKey && event.serverId
     ? `https://app.plex.tv/desktop/#!/server/${encodeURIComponent(event.serverId)}/details?key=${encodeURIComponent('/library/metadata/' + event.ratingKey)}` : '');
   return {
@@ -89,7 +94,7 @@ function render(event, settings, maxLength = 4000) {
   const template = event.event === 'request' ? settings.notifications.requestTemplate : settings.notifications.availableTemplate;
   // Values are escaped by Handlebars. Triple braces would bypass escaping for external metadata.
   if (/\{\{\{|\{\{&/.test(template)) throw new Error('Use escaped template variables only');
-  const compile = Handlebars.compile(template, { strict: false });
+  const compile = Handlebars.compile(event.mediaType === 'season' && data.kind === 'Épisodes' ? template.replace('{{kind}} disponible sur Plex', '{{kind}} disponibles sur Plex') : template, { strict: false });
   let caption = compile(data);
   const prefix = event.isTest ? '[TEST Telgrarr]\n\n' : '';
   if (caption.length + prefix.length > maxLength) {

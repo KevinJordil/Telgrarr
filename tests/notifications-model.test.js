@@ -70,3 +70,12 @@ it('fits photo captions including the test label and preserves the IMDb line and
   expect(caption).toContain('Voir sur Plex');
   expect(model.render(model.normalizeSeerr(request), settings)).not.toContain('IMDb :');
 });
+
+it('distinguishes season batches and only labels verified complete seasons as complete', () => {
+  const season = model.normalizeTautulli({ ...plex, media_type: 'season', season_num: '2', episode_num: '1-8', episode_count: '8' });
+  const caption = model.render(season, settings);
+  expect(caption).toContain('Épisodes disponibles sur Plex');
+  expect(caption).toContain('Saison 2 — épisodes 1–8 (8 épisodes)');
+  expect(model.render({ ...season, seasonComplete: true }, settings)).toContain('Saison complète disponible sur Plex');
+  expect(model.eventKey({ ...season, episodeRange: '9-12' })).not.toBe(model.eventKey(season));
+});

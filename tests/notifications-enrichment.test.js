@@ -91,3 +91,29 @@ describe('Poster and IMDb enrichment', () => {
     expect(result.imdbRating).toBe('');
   });
 });
+
+describe('Season batches', () => {
+  it.each([
+    ['1-3', true, [true, true, true]],
+    ['1-2', false, [true, true, true]],
+    ['1-3', false, [true, true, false]],
+  ])('verifies the batch %s against known episodes and files', async (range, complete, hasFiles) => {
+    config.sonarr = { baseUrl: 'http://sonarr.test', apiKey: 'test-key' };
+    get.mockImplementation(async url => {
+      if (url.includes('/series')) return { data: [{ id: 1, tmdbId: 42 }] };
+      if (url.includes('/episodefile')) return { data: [1,2,3].map(id => ({ id, quality: { quality: { name: id === 3 ? 'Bluray-1080p' : 'WEBDL-1080p' } } })) };
+      if (url.includes('/episode')) return { data: [1,2,3].map((n,i) => ({ seasonNumber: 2, episodeNumber: n, episodeFileId: n, hasFile: hasFiles[i] })) };
+      return { data: {} };
+    });
+    const result = await enrich({ ...event, mediaType: 'season', season: '2', episodeRange: range });
+    expect(result.seasonComplete).toBe(complete);
+    expect(result.quality).toContain('WEBDL-1080p');
+    if (range === '1-3') expect(result.quality).toContain('Bluray-1080p');
+  });
+  it('rejects malformed or unbounded episode ranges', () => {
+    const { rangeNumbers } = require('../src/notifications/enrichment');
+    expect(rangeNumbers('1-3,5')).toEqual([1,2,3,5]);
+    expect(rangeNumbers('1-999999')).toEqual([]);
+    expect(rangeNumbers('3-1')).toEqual([]);
+  });
+});

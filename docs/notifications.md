@@ -162,3 +162,20 @@ Les légendes des affiches sont limitées à 1024 caractères : le résumé est
 raccourci si nécessaire. Un modèle personnalisé trop long est envoyé en texte.
 Une image explicitement rejetée par Telegram entraîne un envoi textuel ; les
 erreurs réseau ambiguës suivent la file de reprise habituelle.
+
+### Saisons et lots d’épisodes
+
+Activer dans Tautulli le regroupement des ajouts par parent (saison), et laisser
+le regroupement par grand-parent (série) désactivé. Après le délai configuré dans
+Tautulli, plusieurs épisodes arrivés ensemble donnent un message de saison ;
+un épisode isolé garde son message individuel.
+
+Le webhook doit transmettre aussi `season_num`, `episode_num` et `episode_count`.
+Telgrarr affiche la saison, les numéros et le nombre d’épisodes du lot. Il annonce
+« Saison complète » uniquement si ce lot couvre tous les épisodes connus de la
+saison dans Sonarr et si tous ont un fichier. Sinon, il indique « Épisodes
+disponibles ». Les qualités différentes sont affichées ensemble.
+
+Deux lots distincts d’une même saison ont des clés de déduplication distinctes :
+la sortie d’une seconde partie ne sera pas masquée par l’annonce de la première.
+La vérification de complétude dépend des métadonnées actuelles de Sonarr.

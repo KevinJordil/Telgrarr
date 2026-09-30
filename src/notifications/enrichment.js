@@ -78,19 +78,45 @@ async function listOrigin(movie) {
   const names = [...new Set(matches.map(list => text(list.name) || (tags || []).find(t => (list.tags || []).includes(t.id))?.label).filter(Boolean))];
   return names.length ? `Liste Radarr probable — ${names.join(', ')}` : null;
 }
+function rangeNumbers(range) {
+  const values = new Set();
+  for (const part of String(range || '').split(',')) {
+    if (!/^\d+(?:-\d+)?$/.test(part)) return [];
+    const [first, last = first] = part.split('-').map(Number);
+    if (first < 0 || last < first || last > 1000) return [];
+    for (let n = first; n <= last; n++) values.add(n);
+  }
+  return [...values].sort((a, b) => a - b);
+}
 async function quality(event, arr) {
   let name = arr?.movieFile?.quality?.quality?.name;
-  if (event.mediaType === 'episode' && arr) {
+  if (['episode', 'season'].includes(event.mediaType) && arr) {
     const episodes = await api('sonarr', 'api/v3/episode', { seriesId: arr.id });
-    const episode = episodes?.find(e => String(e.seasonNumber) === event.season && String(e.episodeNumber) === event.episodeNumber);
-    if (episode?.episodeFileId) {
-      const file = await api('sonarr', `api/v3/episodefile/${episode.episodeFileId}`);
-      name = file?.quality?.quality?.name;
+    if (event.mediaType === 'episode') {
+      const episode = episodes?.find(e => String(e.seasonNumber) === event.season && String(e.episodeNumber) === event.episodeNumber);
+      if (episode?.episodeFileId) {
+        const file = await api('sonarr', `api/v3/episodefile/${episode.episodeFileId}`);
+        name = file?.quality?.quality?.name;
+      }
+    } else {
+      const numbers = rangeNumbers(event.episodeRange);
+      const season = (episodes || []).filter(e => String(e.seasonNumber) === event.season);
+      // A batch must cover every known episode, all with files, before claiming
+      // completeness. Several episodes arriving together alone is insufficient.
+      event.seasonComplete = season.length > 0 && numbers.length === season.length
+        && season.every(e => numbers.includes(e.episodeNumber) && e.hasFile);
+      const selected = season.filter(e => numbers.includes(e.episodeNumber));
+      if (selected.length) {
+        const files = await api('sonarr', 'api/v3/episodefile', { seriesId: arr.id });
+        const fileIds = new Set(selected.map(e => e.episodeFileId).filter(Boolean));
+        const names = [...new Set((files || []).filter(f => fileIds.has(f.id)).map(f => f.quality?.quality?.name).filter(Boolean))];
+        if (names.length) name = names.join(' / ');
+      }
     }
   }
-  // Show/season events can contain mixed qualities: never infer one from an arbitrary episode.
   return [...new Set([name || event.quality || (/^(480|576|720|1080|2160)$/.test(event.resolution || '') ? `${event.resolution}p` : event.resolution), event.codec?.toUpperCase(), event.dynamicRange].filter(Boolean))].join(' · ');
 }
+
 async function enrich(input) {
   let event = input.event === 'available' ? await plexMetadata({ ...input }) : { ...input };
   const notes = [];
@@ -141,4 +167,4 @@ async function enrich(input) {
   }
   return { ...event, enrichmentNotes: notes };
 }
-module.exports = { enrich, guidId };
+module.exports = { enrich, guidId, rangeNumbers };
