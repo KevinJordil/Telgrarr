@@ -312,6 +312,8 @@ router.get('/settings/webhook', requireAuth, (req, res) => {
     paths: {
       sonarr: secretSet ? `/hooks/${masked}/sonarr` : '',
       radarr: secretSet ? `/hooks/${masked}/radarr` : '',
+      seerr: secretSet ? `/hooks/${masked}/seerr` : '',
+      tautulli: secretSet ? `/hooks/${masked}/tautulli` : '',
     },
     secretSet,
   });

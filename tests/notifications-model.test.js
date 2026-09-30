@@ -1,0 +1,53 @@
+import { describe, it, expect } from 'vitest';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const model = require('../src/notifications/model');
+const settings = {
+  seerr: { baseUrl: 'https://requests.example.test' },
+  notifications: { summaryLength: 350, requestTemplate: model.REQUEST_TEMPLATE, availableTemplate: model.AVAILABLE_TEMPLATE },
+};
+const request = { notification_type: 'MEDIA_PENDING', subject: '<Un film> & amis', media: { media_type: 'movie', tmdbId: '42' }, request: { request_id: '12', requestedBy_username: 'Camille' } };
+const plex = { action: 'created', media_type: 'episode', rating_key: '56', server_machine_id: 'server', grandparent_title: 'Une série', title: 'Le retour', season_num: '2', episode_num: '3' };
+describe('French notification messages', () => {
+  it('escapes external titles and includes a coherent request link', () => {
+    const event = model.normalizeSeerr(request);
+    expect(model.render(event, settings)).toContain('&lt;Un film&gt; &amp; amis');
+    expect(model.render(event, settings)).toContain('Demandé par : Camille');
+    expect(model.render(event, settings)).toContain('https://requests.example.test/movie/42');
+  });
+  it('deduplicates pending and later approval for the same request', () => {
+    const approved = model.normalizeSeerr({ ...request, notification_type: 'MEDIA_APPROVED' });
+    expect(model.eventKey(approved)).toBe(model.eventKey(model.normalizeSeerr(request)));
+  });
+  it('rejects unidentified events and ignores application tests and Seerr availability', () => {
+    expect(() => model.normalizeTautulli({ ...plex, rating_key: '' })).toThrow();
+    expect(() => model.normalizeSeerr({ ...request, request: {} })).toThrow();
+    expect(model.normalizeSeerr({ notification_type: 'TEST_NOTIFICATION' })).toBeNull();
+    expect(model.normalizeSeerr({ notification_type: 'MEDIA_AVAILABLE' })).toBeNull();
+    expect(model.normalizeTautulli({ action: 'test' })).toBeNull();
+  });
+  it('keeps episodes distinct and does not repeat an upgrade', () => {
+    const event = model.normalizeTautulli(plex);
+    expect(model.eventKey({ ...event, quality: '2160p' })).toBe(model.eventKey(event));
+    expect(model.eventKey({ ...event, ratingKey: '57' })).not.toBe(model.eventKey(event));
+    const caption = model.render(event, settings);
+    expect(caption).toContain('Épisode disponible sur Plex');
+    expect(caption).toContain('S02E03 — Le retour');
+    expect(caption).toContain('<b>Une série</b>');
+    expect(caption).toContain('Origine : Inconnue');
+    expect(caption).toContain('Qualité : Non renseignée');
+  });
+  it('never forwards token-bearing or unsafe URLs', () => {
+    expect(model.safeUrl('https://plex.example.test/?X-Plex-Token=secret')).toBe('');
+    expect(model.safeUrl('javascript:alert(1)')).toBe('');
+    expect(model.safeUrl('https://user:password@plex.example.test/')).toBe('');
+    const event = { ...model.normalizeTautulli(plex), plexUrl: 'https://plex.example.test/?token=secret' };
+    expect(model.render(event, settings)).not.toContain('secret');
+    expect(model.render(event, settings)).toContain('https://app.plex.tv/desktop/');
+  });
+  it('limits the synopsis and refuses unescaped template variables', () => {
+    const event = { ...model.normalizeTautulli(plex), overview: 'A'.repeat(1500) };
+    expect(model.viewData(event, settings).overview).toHaveLength(350);
+    expect(() => model.render(event, { ...settings, notifications: { ...settings.notifications, availableTemplate: '{{{title}}}' } })).toThrow();
+  });
+});

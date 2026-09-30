@@ -15,6 +15,8 @@ const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 // DATA_DIR consumer never ENOENT. recursive:true is idempotent (no-op if present).
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
+const { REQUEST_TEMPLATE, AVAILABLE_TEMPLATE } = require('./notifications/model');
+
 const DEFAULTS = {
   listenerPort:  3400,
   listenerHost:  '0.0.0.0',
@@ -30,7 +32,9 @@ const DEFAULTS = {
   emby:       { refreshUrl: '', apiKey: '' },
   radarr:     { baseUrl: '', apiKey: '' },
   tmdb:       { apiKey: '' },
-  seerr:      { baseUrl: '' },
+  seerr:      { baseUrl: '', apiKey: '' },
+  tautulli:   { baseUrl: '', apiKey: '' },
+  notifications: { enabled: false, summaryLength: 350, requestTemplate: REQUEST_TEMPLATE, availableTemplate: AVAILABLE_TEMPLATE },
   omdb:       { apiKey: '' },
   translator: {
     endpoint:    'https://models.inference.ai.azure.com/chat/completions',
@@ -90,7 +94,10 @@ const REQUIRED_CREDENTIALS = SETTINGS_SCHEMA.flatMap(section =>
 function getMissingCredentials(cfg) {
   if (!cfg) cfg = config;
   const missing = [];
-  for (const [section, key, label] of REQUIRED_CREDENTIALS) {
+  const required = cfg.notifications?.enabled
+    ? [...REQUIRED_CREDENTIALS.filter(([section]) => section === 'telegram'), ['tautulli', 'baseUrl', 'Tautulli base URL'], ['tautulli', 'apiKey', 'Tautulli API key']]
+    : REQUIRED_CREDENTIALS;
+  for (const [section, key, label] of required) {
     const val = cfg[section]?.[key];
     if (!val || String(val).trim() === '') missing.push(label);
   }

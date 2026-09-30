@@ -87,6 +87,19 @@ function validateSettings(body) {
     }
   }
 
+  if (body.notifications) {
+    for (const name of ['requestTemplate', 'availableTemplate']) {
+      const value = body.notifications[name];
+      if (value === undefined) continue;
+      if (typeof value !== 'string' || !value.trim() || value.length > 3000 || /\{\{\{|\{\{&/.test(value)) {
+        errors.push({ field: `notifications.${name}`, message: 'Use an escaped Handlebars template of 1 to 3000 characters' });
+      } else {
+        try { require('handlebars').precompile(value); }
+        catch { errors.push({ field: `notifications.${name}`, message: 'Invalid Handlebars template' }); }
+      }
+    }
+  }
+
   // 2. SCHEMA-DRIVEN BLOCK
   for (const section of SETTINGS_SCHEMA) {
     for (const field of /** @type {any[]} */ (section.fields)) {

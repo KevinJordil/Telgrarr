@@ -19,6 +19,7 @@ const BACKUP_DIR = config.BACKUP_DIR;
 
 // Architecture: Strict Manifest Mapping handles files across different directories
 const BACKUP_MANIFEST = [
+  { name: 'notifications.json', dir: DATA_DIR },
   { name: 'auth.json',           dir: DATA_DIR },
   { name: 'blacklist.json',      dir: DATA_DIR },
   { name: 'config.json',         dir: DATA_DIR },

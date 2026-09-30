@@ -22,6 +22,7 @@ function webhookAuth(req, res, next) {
 
 router.post('/:token/sonarr', webhookAuth, async (req, res) => {
   res.sendStatus(200);
+  if (config.notifications?.enabled) return;
   const payload = req.body;
   const traceId = crypto.randomBytes(4).toString('hex');
 
@@ -84,6 +85,7 @@ router.post('/:token/sonarr', webhookAuth, async (req, res) => {
 // ── POST /radarr ─────────────────────────────────────────────────────────────
 router.post('/:token/radarr', webhookAuth, async (req, res) => {
   res.sendStatus(200);
+  if (config.notifications?.enabled) return;
   const payload = req.body;
   const traceId = crypto.randomBytes(4).toString('hex');
 

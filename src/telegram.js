@@ -87,4 +87,25 @@ async function sendPhoto(photoUrl, caption) {
     : { rateLimited };
 }
 
-module.exports = { sendPhoto, sleep };
+async function sendMessage(text) {
+  try {
+    const response = await retryWithBackoff(() => axios.post(
+      `https://api.telegram.org/bot${config.telegram.botToken}/sendMessage`,
+      { chat_id: config.telegram.chatId, text, parse_mode: 'HTML', disable_web_page_preview: true },
+      { timeout: SEND_TIMEOUT_MS }
+    ), { shouldRetry: isRetryable, getRetryAfterMs, maxAttempts: 4, baseDelayMs: 500, maxDelayMs: 10000, jitter: true });
+    if (response.data?.ok === false) {
+      const error = new Error('Telegram rejected notification');
+      error.retryable = false;
+      throw error;
+    }
+    return response.data?.result;
+  } catch (cause) {
+    const error = new Error('Telegram delivery failed');
+    error.retryable = cause.retryable ?? isRetryable(cause);
+    error.retryAfterMs = getRetryAfterMs(cause);
+    throw error;
+  }
+}
+
+module.exports = { sendPhoto, sendMessage, sleep };

@@ -103,7 +103,24 @@ const SETTINGS_SCHEMA = [
     id: 'seerr', title: 'Seerr', icon: 'Search',
     testEndpoint: '/api/settings/test/seerr', testLabel: 'Test Connection',
     fields: [
+      { key: 'seerr.apiKey', label: 'API Key', type: 'secret', required: false, note: 'Used to identify the requester when a title becomes available.' },
       { key: 'seerr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'https://your-seerr-instance', required: false, rule: 'url' },
+    ],
+  },
+  {
+    id: 'tautulli', title: 'Tautulli / Plex', icon: 'Play',
+    fields: [
+      { key: 'tautulli.baseUrl', label: 'Base URL', type: 'url', required: false, rule: 'url', placeholder: 'http://tautulli:8181', note: 'Tautulli 2.18 or newer. Its Recently Added webhook confirms availability in Plex.' },
+      { key: 'tautulli.apiKey', label: 'API Key', type: 'secret', required: false, note: 'Used to fetch the synopsis, series identifiers and media information.' },
+    ],
+  },
+  {
+    id: 'notifications', title: 'Notifications Plex et Seerr', icon: 'Send',
+    fields: [
+      { key: 'notifications.enabled', label: 'Activer les notifications unifiées', type: 'toggle', note: 'Seerr annonce les demandes ; Tautulli confirme la disponibilité sur Plex. Les notifications des imports Radarr/Sonarr sont suspendues dans ce mode. Configurer les webhooks avant activation.' },
+      { key: 'notifications.summaryLength', label: 'Longueur maximale du résumé', type: 'number', integer: true, min: 0, max: 1500 },
+      { key: 'notifications.requestTemplate', label: 'Modèle des demandes', type: 'textarea', required: true, mustBeString: true, note: 'Variables : {{kind}}, {{title}}, {{year}}, {{requester}}, {{seasons}}, {{seerrUrl}}. HTML Telegram et conditions Handlebars autorisés.' },
+      { key: 'notifications.availableTemplate', label: 'Modèle des disponibilités', type: 'textarea', required: true, mustBeString: true, note: 'Variables : {{kind}}, {{title}}, {{year}}, {{episode}}, {{overview}}, {{origin}}, {{quality}}, {{plexUrl}}, {{seerrUrl}}. Aucun emoji par défaut.' },
     ],
   },
   {

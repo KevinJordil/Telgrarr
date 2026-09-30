@@ -66,6 +66,8 @@ app.use('/api', require('./routes/system.routes'));
 app.use('/api', require('./routes/history.routes'));
 app.use('/api/preview', require('./routes/preview.routes'));
 app.use('/hooks', require('./routes/webhooks.routes'));
+app.use('/hooks', require('./routes/notifications.routes').hooks);
+app.use('/api', require('./routes/notifications.routes').api);
 
 // -- Health -------------------------------------------------------------------
 // F.8 (O3): deep health probe — queue writability + required-credential check.

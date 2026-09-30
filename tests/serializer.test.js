@@ -28,7 +28,9 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       emby: { refreshUrl: '', apiKey: '' },
       radarr: { baseUrl: 'http://radarr', apiKey: 'radarr_secret_key' },
       tmdb: { apiKey: 'short' },
-      seerr: { baseUrl: '' },
+      seerr: { baseUrl: '', apiKey: 'seerr_secret' },
+      tautulli: { baseUrl: 'http://tautulli', apiKey: 'tautulli_secret' },
+      notifications: { enabled: false, summaryLength: 350, requestTemplate: '{{title}}', availableTemplate: '{{title}}' },
       omdb: { apiKey: 'omdb_secret' },
       translator: { endpoint: 'url', model: 'gpt', apiKey: 'ai_secret', deeplApiKey: 'deepl_secret', googleApiKey: 'google_secret', googleEndpoint: 'https://translation.googleapis.com/language/translate/v2', targetLang: 'ar', aiEnabled: true, deeplEnabled: true, googleEnabled: true, shortPlot: false, aiOnlyPlot: false },
       mediaCache: { ttlDays: 30, maxEntries: 500 },
@@ -81,6 +83,8 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       'backup',
       'logging',
       'queue',
+      'tautulli',
+      'notifications',
       'history',
       'publicBaseUrl',
       'corsOrigin',
@@ -95,6 +99,8 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
     expect(result.tmdb.apiKey).toBe(SECRET_MASK);
     expect(result.telegram.botToken).toBe(SECRET_MASK);
     expect(result.emby.apiKey).toBe('');
+    expect(result.seerr.apiKey).toBe(SECRET_MASK);
+    expect(result.tautulli.apiKey).toBe(SECRET_MASK);
 
     // --- ASSERTION 3: FULL RECURSIVE SHAPE MATCH ---
     expect(result).toEqual({
@@ -106,7 +112,9 @@ describe('Serializer Parity Harness (Phase A.3)', () => {
       emby: { refreshUrl: '', apiKey: '' },
       radarr: { baseUrl: 'http://radarr', apiKey: SECRET_MASK },
       tmdb: { apiKey: SECRET_MASK },
-      seerr: { baseUrl: '' },
+      seerr: { baseUrl: '', apiKey: SECRET_MASK },
+      tautulli: { baseUrl: 'http://tautulli', apiKey: SECRET_MASK },
+      notifications: { enabled: false, summaryLength: 350, requestTemplate: '{{title}}', availableTemplate: '{{title}}' },
       omdb: { apiKey: SECRET_MASK },
       publicBaseUrl: '',
       corsOrigin: '',

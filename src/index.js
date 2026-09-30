@@ -44,6 +44,7 @@ let releaseLock = null;
   await templates.migrateLegacyPlot({ sonarr: config.sonarr && config.sonarr.includePlot, radarr: config.radarr && config.radarr.includePlot });
   migrateLegacyQueueFile();
   startListener();
+  require('./notifications/worker').start();
 })();
 
 // ── GAP-1 & GAP-6: Startup Recovery Sweep ────────────────────────────────────
@@ -114,6 +115,8 @@ async function gracefulShutdown(signal, code = 0) {
   isShuttingDown = true;
 
   log.info('App', `System Shutdown → Initiated → Signal: ${signal}`);
+
+  await require('./notifications/worker').stop();
 
   try {
     await flushSessions();

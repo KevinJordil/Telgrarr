@@ -142,6 +142,7 @@ async function recoverCrashedSweep() {
   }
 }
 async function runSweep() {
+  if (config.notifications?.enabled) return;
   if (isSweeping) {
     log.info('Sweeper', 'Sweep Execution → Rejected → Sweep already in progress');
     pendingSweep = true;

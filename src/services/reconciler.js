@@ -253,6 +253,7 @@ async function reconcileSource(source, nowMs) {
 // (STEP 3.1) can decide whether to scheduleSweep(). Per-source fail-soft
 // (WR-13 / C-FAILSOFT): one *arr down never aborts the other or boot.
 async function reconcile(opts = {}) {
+  if (config.notifications?.enabled) return { enqueued: 0 };
   const nowMs = (opts && typeof opts.now === 'number') ? opts.now : Date.now();
   log.info('Reconcile', 'Reconcile → Starting');
   let total = 0;
