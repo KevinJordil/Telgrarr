@@ -106,6 +106,8 @@ async function quality(event, arr) {
       const season = (episodes || []).filter(e => String(e.seasonNumber) === event.season);
       // A batch must cover every known episode, all with files, before claiming
       // completeness. Several episodes arriving together alone is insufficient.
+      event.seasonEpisodeCount = season.length ? String(season.length) : '';
+      event.addedEpisodeCount = numbers.length ? String(numbers.length) : event.episodeCount;
       event.seasonComplete = season.length > 0 && numbers.length === season.length
         && season.every(e => numbers.includes(e.episodeNumber) && e.hasFile);
       const selected = season.filter(e => numbers.includes(e.episodeNumber));

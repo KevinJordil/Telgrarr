@@ -229,3 +229,13 @@ Variables supplémentaires : `posterUrl`, `imdbRating`, `trailers` (liste de `ur
 Les notifications Telegram ne contiennent aucun lien vers Seerr, y compris pour
 les demandes. `seerrUrl` reste vide pour les anciens modèles personnalisés.
 Les liens de navigation sont ceux de Plex et des bandes-annonces YouTube.
+
+### Présentation des saisons
+
+Une saison complète affiche « Saison complète disponible sur Plex », son numéro
+et son nombre total d’épisodes. Un lot partiel affiche « Saison partielle disponible
+sur Plex », les numéros ajoutés (par exemple « 1 à 3, 5 »), le nombre ajouté et le
+nombre total de la saison connu dans Sonarr. Un épisode absent d’un lot discontinu
+n’est pas inclus dans une plage continue. Le nombre total reste « Non renseigné »
+si Sonarr ne fournit pas la liste. Les variables correspondantes sont `seasonLabel`,
+`seasonTotal`, `addedEpisodeCount`, `episodeRangeLabel` et `seasonNotification`.

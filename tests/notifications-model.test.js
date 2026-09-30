@@ -73,9 +73,11 @@ it('fits photo captions including the test label and preserves the IMDb line and
 
 it('distinguishes season batches and only labels verified complete seasons as complete', () => {
   const season = model.normalizeTautulli({ ...plex, media_type: 'season', season_num: '2', episode_num: '1-8', episode_count: '8' });
-  const caption = model.render(season, settings);
-  expect(caption).toContain('Épisodes disponibles sur Plex');
-  expect(caption).toContain('Saison 2 — épisodes 1–8 (8 épisodes)');
+  const caption = model.render({ ...season, seasonEpisodeCount: '10' }, settings);
+  expect(caption).toContain('Saison partielle disponible sur Plex');
+  expect(caption).toContain('Épisodes ajoutés : 1 à 8');
+  expect(caption).toContain('Nombre ajouté : 8');
+  expect(caption).toContain('Nombre total d’épisodes : 10');
   expect(model.render({ ...season, seasonComplete: true }, settings)).toContain('Saison complète disponible sur Plex');
   expect(model.eventKey({ ...season, episodeRange: '9-12' })).not.toBe(model.eventKey(season));
 });
@@ -89,4 +91,17 @@ it('renders rich headings, media, separators and trailers while escaping externa
   expect(html).toContain('Bande-annonce FR — saison 2');
   expect(html).toContain('<h2>[TEST Telgrarr] —');
   expect(model.renderRich({ ...event, posterUrl: 'https://images.example.test/?token=secret' }, settings)).not.toContain('secret');
+});
+
+it('makes partial and complete season counts clear in rich messages', () => {
+  const event = { event: 'available', mediaType: 'season', title: 'Saison 2', seriesTitle: 'Une série', season: '2', episodeRange: '1-3,5', episodeCount: '4', addedEpisodeCount: '4', seasonEpisodeCount: '8', seasonComplete: false };
+  const partial = model.renderRich(event, settings);
+  expect(partial).toContain('Saison partielle disponible sur Plex');
+  expect(partial).toContain('Épisodes ajoutés :</b> 1 à 3, 5');
+  expect(partial).toContain('Nombre ajouté :</b> 4');
+  expect(partial).toContain('Nombre total d’épisodes :</b> 8');
+  const complete = model.renderRich({ ...event, seasonComplete: true }, settings);
+  expect(complete).toContain('Saison complète disponible sur Plex');
+  expect(complete).toContain('Nombre total d’épisodes :</b> 8');
+  expect(complete).not.toContain('Épisodes ajoutés');
 });

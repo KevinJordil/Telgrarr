@@ -107,6 +107,8 @@ describe('Season batches', () => {
     });
     const result = await enrich({ ...event, mediaType: 'season', season: '2', episodeRange: range });
     expect(result.seasonComplete).toBe(complete);
+    expect(result.seasonEpisodeCount).toBe('3');
+    expect(result.addedEpisodeCount).toBe(range === '1-3' ? '3' : '2');
     expect(result.quality).toContain('WEBDL-1080p');
     if (range === '1-3') expect(result.quality).toContain('Bluray-1080p');
   });

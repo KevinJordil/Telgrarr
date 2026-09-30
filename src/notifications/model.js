@@ -4,7 +4,7 @@ const Handlebars = require('handlebars');
 const REQUEST_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>Nouvelle demande de {{kind}}</i>\n━━━━━━━━━━━━━━━━━━{{#if imdbRating}}\n\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if seasons}}\n<b>Saison(s) :</b> {{seasons}}{{/if}}\n\n<b>Demandé par :</b>\n{{requester}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
 const AVAILABLE_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>{{kind}} disponible sur Plex</i>{{#if episode}}\n\n<b>{{episode}}</b>{{/if}}{{#if imdbRating}}\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if overview}}\n\n━━━━━━━━━━━━━━━━━━\n<i>{{overview}}</i>{{/if}}\n\n━━━━━━━━━━━━━━━━━━\n<b>Origine :</b>\n{{origin}}\n\n<b>Qualité :</b>\n<code>{{quality}}</code>{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
 const REQUEST_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>Nouvelle demande de {{kind}}</i></p>{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if seasons}}<p><b>Saison(s) :</b> {{seasons}}</p>{{/if}}<hr/><p><b>Demandé par :</b> {{requester}}</p><p>{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
-const AVAILABLE_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>{{kind}} disponible sur Plex</i></p>{{#if episode}}<h4>{{episode}}</h4>{{/if}}{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if overview}}<blockquote>{{overview}}</blockquote>{{/if}}<hr/><p><b>Origine :</b><br/>{{origin}}</p><p><b>Qualité :</b><br/><code>{{quality}}</code></p><hr/><p>{{#if plexUrl}}<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
+const AVAILABLE_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>{{kind}} disponible sur Plex</i></p>{{#if seasonNotification}}<h4>{{seasonLabel}}</h4>{{#if seasonComplete}}<p><b>Nombre total d’épisodes :</b> {{seasonTotal}}</p>{{else}}<p>{{#if episodeRangeLabel}}<b>Épisodes ajoutés :</b> {{episodeRangeLabel}}<br/>{{/if}}{{#if addedEpisodeCount}}<b>Nombre ajouté :</b> {{addedEpisodeCount}}<br/>{{/if}}<b>Nombre total d’épisodes :</b> {{#if seasonTotal}}{{seasonTotal}}{{else}}Non renseigné{{/if}}</p>{{/if}}{{else}}{{#if episode}}<h4>{{episode}}</h4>{{/if}}{{/if}}{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if overview}}<blockquote>{{overview}}</blockquote>{{/if}}<hr/><p><b>Origine :</b><br/>{{origin}}</p><p><b>Qualité :</b><br/><code>{{quality}}</code></p><hr/><p>{{#if plexUrl}}<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
 const TYPES = new Set(['movie', 'show', 'season', 'episode']);
 const REQUEST_EVENTS = new Set(['MEDIA_PENDING', 'MEDIA_APPROVED', 'MEDIA_AUTO_APPROVED']);
 function id(value) { return /^\d+$/.test(String(value ?? '')) ? String(value) : ''; }
@@ -62,10 +62,6 @@ function eventKey(event) {
   const key = event.event === 'request' ? `request:${event.requestId}` : `plex:${event.serverId}:${event.ratingKey}${suffix}`;
   return event.isTest ? `test:${event.testId}:${key}` : key;
 }
-function seerrLink(baseUrl, mediaType, tmdbId) {
-  const base = safeUrl(baseUrl);
-  return base && tmdbId ? `${base.replace(/\/+$/, '')}/${mediaType === 'movie' ? 'movie' : 'tv'}/${tmdbId}` : '';
-}
 function summary(value, limit) {
   const full = text(value, 1500).replace(/\s+/g, ' ');
   if (!limit) return '';
@@ -78,14 +74,23 @@ function viewData(event, settings) {
   const movie = event.mediaType === 'movie';
   let kind = event.event === 'request' ? (movie ? 'film' : 'série') : ({ movie: 'Film', show: 'Série', season: 'Saison', episode: 'Épisode' }[event.mediaType]);
   if (event.mediaType === 'season' && event.seasonComplete) kind = 'Saison complète';
-  if (event.mediaType === 'season' && event.episodeRange && !event.seasonComplete) kind = 'Épisodes';
+  if (event.mediaType === 'season' && !event.seasonComplete) kind = 'Saison partielle';
+  const seasonNotification = event.mediaType === 'season';
+  const seasonLabel = event.season ? `Saison ${event.season}` : 'Saison';
+  const seasonTotal = id(event.seasonEpisodeCount) || (event.seasonComplete ? id(event.episodeCount) : '');
+  const addedEpisodeCount = id(event.addedEpisodeCount) || id(event.episodeCount);
+  const episodeRangeLabel = (event.episodeRange || '').replace(/-/g, ' à ').replace(/,/g, ', ');
   let episode = '';
   if (event.mediaType === 'episode') episode = `S${String(event.season || '0').padStart(2, '0')}E${String(event.episodeNumber || '0').padStart(2, '0')}${event.title ? ' — ' + event.title : ''}`;
-  if (event.mediaType === 'season' && event.season) episode = `Saison ${event.season}${event.episodeRange ? ` — épisodes ${event.episodeRange.replace(/-/g, '–').replace(/,/g, ', ')}` : ''}${event.episodeCount ? ` (${event.episodeCount} épisodes)` : ''}`;
+  if (seasonNotification) {
+    episode = event.seasonComplete
+      ? `${seasonLabel} — ${seasonTotal || 'Nombre non renseigné'} épisodes`
+      : `${seasonLabel}${episodeRangeLabel ? `\nÉpisodes ajoutés : ${episodeRangeLabel}` : ''}${addedEpisodeCount ? `\nNombre ajouté : ${addedEpisodeCount}` : ''}\nNombre total d’épisodes : ${seasonTotal || 'Non renseigné'}`;
+  }
   const plexUrl = safeUrl(event.plexUrl) || (event.ratingKey && event.serverId
     ? `https://app.plex.tv/desktop/#!/server/${encodeURIComponent(event.serverId)}/details?key=${encodeURIComponent('/library/metadata/' + event.ratingKey)}` : '');
   return {
-    ...event, posterUrl: safeUrl(event.posterUrl), trailers: (event.trailers || []).map(trailer => ({ ...trailer, url: safeUrl(trailer.url) })).filter(trailer => trailer.url), kind, title: (!movie && event.seriesTitle) || event.title || 'Titre inconnu', episode,
+    ...event, posterUrl: safeUrl(event.posterUrl), trailers: (event.trailers || []).map(trailer => ({ ...trailer, url: safeUrl(trailer.url) })).filter(trailer => trailer.url), kind, seasonNotification, seasonLabel, seasonTotal, addedEpisodeCount, episodeRangeLabel, title: (!movie && event.seriesTitle) || event.title || 'Titre inconnu', episode,
     overview: summary(event.overview, settings.notifications.summaryLength),
     origin: event.origin || 'Inconnue', quality: event.quality || 'Non renseignée',
     plexUrl, seerrUrl: '',
@@ -96,7 +101,7 @@ function render(event, settings, maxLength = 4000) {
   const template = event.event === 'request' ? settings.notifications.requestTemplate : settings.notifications.availableTemplate;
   // Values are escaped by Handlebars. Triple braces would bypass escaping for external metadata.
   if (/\{\{\{|\{\{&/.test(template)) throw new Error('Use escaped template variables only');
-  const compile = Handlebars.compile(event.mediaType === 'season' && data.kind === 'Épisodes' ? template.replace('{{kind}} disponible sur Plex', '{{kind}} disponibles sur Plex') : template, { strict: false });
+  const compile = Handlebars.compile(template, { strict: false });
   let caption = compile(data);
   const prefix = event.isTest ? '[TEST Telgrarr]\n\n' : '';
   if (caption.length + prefix.length > maxLength) {
