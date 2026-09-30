@@ -1,5 +1,16 @@
 # Telgrarr
 
+## Notifications Plex et Seerr
+
+Ce fork ajoute un mode optionnel pour annoncer les demandes Seerr et les nouveautés
+confirmées dans Plex par Tautulli : modèles français éditables, résumé, qualité, origine
+prudente, liens Plex/Seerr et déduplication persistante. Les paramètres et aperçus sont
+dans **Settings → Notifications → Notifications Plex et Seerr**.
+
+Le mode est désactivé par défaut. Lire le [guide de configuration](docs/notifications.md)
+avant de remplacer les notifications existantes.
+
+
 Webhook-driven notification bridge between **Sonarr** / **Radarr** and
 **Telegram**, with optional **Emby** / **Jellyfin** library refresh and
 multi-language caption support.

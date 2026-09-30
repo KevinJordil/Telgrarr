@@ -6,7 +6,11 @@ import { copyText } from './clipboard';
 // H5.3c (SD-7/SD-15): reveal/copy, locked webhook link for the Sonarr/Radarr sections.
 // The secret is owned by Server settings; here it is shown masked and never edited.
 // Copy composes the real working URL via a one-shot SD-9 reveal (transient, not stored).
-const APP = { sonarr: 'Sonarr', radarr: 'Radarr' };
+const APP = { sonarr: 'Sonarr', radarr: 'Radarr', seerr: 'Seerr', tautulli: 'Tautulli' };
+const INSTRUCTIONS = {
+  seerr: 'Dans Seerr, ouvrir Paramètres → Notifications → Webhook. Utiliser cette URL et les événements demande en attente et demande approuvée automatiquement. Le modèle JSON est dans docs/notifications.md. Les disponibilités sont annoncées par Tautulli.',
+  tautulli: 'Dans Tautulli, ajouter un agent Webhook avec cette URL, méthode POST, déclencheur Recently Added. Le modèle JSON est dans docs/notifications.md. Désactiver le regroupement des saisons et séries pour recevoir chaque épisode.',
+};
 
 export default function WebhookCard({ source }) {
   const webhookInfo = useSettingsStore((s) => s.webhookInfo);
@@ -92,7 +96,7 @@ export default function WebhookCard({ source }) {
       </div>
 
       <p className="text-xs text-telgrarr-muted/70 leading-relaxed">
-        In {app}, open Settings → Connect → + → Webhook, paste this URL (method: POST), and enable the On Import and On Upgrade triggers only — leave everything else off. The webhook secret is managed in Server settings.
+        {INSTRUCTIONS[source] || `In ${app}, open Settings → Connect → + → Webhook, paste this URL (method: POST), and enable the On Import and On Upgrade triggers only. In unified notification mode these imports do not send a Telegram message.`}
       </p>
       {derived && (
         <p className="text-xs text-telgrarr-muted/70 leading-relaxed">

@@ -1,3 +1,4 @@
+import NotificationPreview from './NotificationPreview';
 import React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
@@ -89,9 +90,11 @@ export default function SettingsSection({
             </div>
           )}
 
-          {(section.id === 'sonarr' || section.id === 'radarr') && (
+          {['sonarr', 'radarr', 'seerr', 'tautulli'].includes(section.id) && (
             <WebhookCard source={section.id} />
           )}
+
+          {section.id === 'notifications' && <NotificationPreview />}
 
           {section.id === 'network' && (
             <WebhookSecretField openConfirm={openConfirm} startRestartPoll={startRestartPoll} />

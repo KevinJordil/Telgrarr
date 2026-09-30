@@ -155,6 +155,11 @@ export default function FieldRenderer({ field, value, onChange }) {
         />
       )}
 
+      {field.type === 'textarea' && (
+        <textarea id={field.key} value={value || ''} onChange={(e) => onChange(e.target.value)}
+          rows={8} className={`${base} font-mono resize-y`} />
+      )}
+
       {field.type === 'number' && (
         <input
           type="text"

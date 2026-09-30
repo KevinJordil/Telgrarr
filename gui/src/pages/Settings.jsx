@@ -15,8 +15,8 @@ import useNavGuard from '../store/navGuardStore';
 // only clusters the existing flat section list under labelled group headers. New
 // sections not listed here fall through to the "Other" group (never dropped).
 const SETTINGS_GROUPS = [
-  { id: 'services',      label: 'Services',      Icon: Clapperboard, sections: ['sonarr', 'radarr', 'emby', 'seerr'] },
-  { id: 'notifications', label: 'Notifications', Icon: Send,         sections: ['telegram'] },
+  { id: 'services',      label: 'Services',      Icon: Clapperboard, sections: ['sonarr', 'radarr', 'emby', 'seerr', 'tautulli'] },
+  { id: 'notifications', label: 'Notifications', Icon: Send,         sections: ['telegram', 'notifications'] },
   { id: 'metadata',      label: 'Metadata',      Icon: Database,     sections: ['tmdb', 'omdb', 'translator'] },
   { id: 'processing',    label: 'Processing',    Icon: Workflow,     sections: ['queue', 'mediaCache'] },
   { id: 'system',        label: 'System',        Icon: ServerCog,    sections: ['network', 'advanced', 'logging', 'history'], panels: true },
