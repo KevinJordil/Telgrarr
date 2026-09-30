@@ -12,7 +12,7 @@ describe('French notification messages', () => {
   it('escapes external titles and includes a coherent request link', () => {
     const event = model.normalizeSeerr(request);
     expect(model.render(event, settings)).toContain('&lt;Un film&gt; &amp; amis');
-    expect(model.render(event, settings)).toContain('<b>Demandé par :</b> Camille');
+    expect(model.render(event, settings)).toContain('<b>Demandé par :</b>\nCamille');
     expect(model.render(event, settings)).toContain('https://requests.example.test/movie/42');
   });
   it('uses the public Seerr URL rather than Docker DNS in Telegram links', () => {
@@ -39,8 +39,8 @@ describe('French notification messages', () => {
     expect(caption).toContain('Épisode disponible sur Plex');
     expect(caption).toContain('S02E03 — Le retour');
     expect(caption).toContain('<b>Une série</b>');
-    expect(caption).toContain('<b>Origine :</b> Inconnue');
-    expect(caption).toContain('<b>Qualité :</b> Non renseignée');
+    expect(caption).toContain('<b>Origine :</b>\nInconnue');
+    expect(caption).toContain('<b>Qualité :</b>\n<code>Non renseignée</code>');
   });
   it('marks test messages and keeps them outside the production deduplication ledger', () => {
     const event = model.normalizeTautulli({ ...plex, test: true, test_id: 'preview-1' });

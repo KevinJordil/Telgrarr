@@ -37,7 +37,7 @@ describe('Durable notification delivery', () => {
     const response = await request(app).post('/api/notifications/preview')
       .set('Cookie', `${COOKIE_NAME}=test-session`).send({ event });
     expect(response.status).toBe(200);
-    expect(response.body.caption).toContain('<b>Demandé par :</b> Camille');
+    expect(response.body.caption).toContain('<b>Demandé par :</b>\nCamille');
     expect(send).not.toHaveBeenCalled();
     expect(fs.existsSync(file)).toBe(false);
     activeSessions.delete('test-session');

@@ -184,3 +184,10 @@ disponibles ». Les qualités différentes sont affichées ensemble.
 Deux lots distincts d’une même saison ont des clés de déduplication distinctes :
 la sortie d’une seconde partie ne sera pas masquée par l’annonce de la première.
 La vérification de complétude dépend des métadonnées actuelles de Sonarr.
+
+### Présentation Telegram
+
+Le titre apparaît en premier, en gras, suivi du statut en italique. Des lignes
+séparatrices délimitent le résumé et les informations sur l’origine et la
+qualité. La qualité utilise une police à chasse fixe. Aucun emoji n’est ajouté.
+La taille de police des légendes d’affiches reste celle du client Telegram.
