@@ -116,7 +116,11 @@ function renderRich(event, settings) {
     availableTemplate: settings.notifications.availableRichTemplate || AVAILABLE_RICH_TEMPLATE,
   } };
   const html = render(event, adapted, 28000);
-  return event.isTest ? html.replace('[TEST Telgrarr]\n\n', '<p><b>[TEST Telgrarr]</b></p>') : html;
+  if (!event.isTest) return html;
+  const content = html.replace('[TEST Telgrarr]\n\n', '');
+  return /<h[1-6](?:\s[^>]*)?>/i.test(content)
+    ? content.replace(/(<h[1-6](?:\s[^>]*)?>)/i, '$1[TEST Telgrarr] — ')
+    : `${content}<footer>[TEST Telgrarr]</footer>`;
 }
 function presentation(event, settings, format = settings.notifications.format) {
   if (format === 'rich') return { caption: renderRich(event, settings), posterUrl: safeUrl(event.posterUrl), format: 'rich' };
