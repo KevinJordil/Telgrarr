@@ -200,7 +200,7 @@ La taille de police des légendes d’affiches reste celle du client Telegram.
 
 Dans Paramètres → Notifications → Notifications Plex et Seerr, sélectionner
 « Message enrichi ». Le transport utilise `sendRichMessage` avec du HTML enrichi :
-titres `h2`/`h4`, paragraphes, affiche, citations, séparateurs `hr` et liens.
+affiche en premier, puis titres `h2`/`h4`, paragraphes, citations, séparateurs `hr` et liens.
 Les modèles enrichis sont indépendants des modèles classiques. L’aperçu dans
 l’interface est indicatif ; Telegram décide du rendu exact. Le mode classique
 reste sélectionnable. Si Telegram répond explicitement que la méthode est
