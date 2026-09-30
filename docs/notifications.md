@@ -71,7 +71,10 @@ Activer uniquement **Recently Added**. Utiliser ce corps dans son modèle JSON :
   "action": "{action}",
   "media_type": "{media_type}",
   "rating_key": "{rating_key}",
-  "server_machine_id": "{server_machine_id}"
+  "server_machine_id": "{server_machine_id}",
+  "season_num": "{season_num}",
+  "episode_num": "{episode_num}",
+  "episode_count": "{episode_count}"
 }
 ```
 
@@ -79,9 +82,9 @@ Les titres et résumés sont récupérés par l’API Tautulli : les guillemets 
 ligne ne risquent donc pas de casser le JSON du webhook. Configurer les bibliothèques
 Plex en français si le résumé doit rester français même sans TMDb.
 
-Désactiver le regroupement des nouveautés par série et par saison dans Tautulli pour
-recevoir chaque épisode. Les notifications de série ou saison sont acceptées, mais
-leur qualité peut varier : Telgrarr ne leur attribue pas la qualité d’un épisode arbitraire.
+Activer le regroupement par saison (parent) et désactiver celui par série
+(grand-parent) : les lots d’épisodes donnent un message de saison, les épisodes
+isolés un message individuel. Les qualités d’un lot sont agrégées depuis Sonarr.
 L’exemplaire Plex sert d’abord à déterminer la résolution et le codec ; Radarr/Sonarr
 complètent le type de qualité (par exemple WEBDL). Le lien Plex est construit sans token.
 Les exclusions Radarr/Sonarr configurées dans Blacklist sont respectées lorsque
@@ -97,9 +100,10 @@ Demandes : `kind`, `title`, `year`, `requester`, `seasons`, `seerrUrl`.
 Disponibilités : `kind`, `title`, `year`, `episode`, `overview`, `origin`, `quality`,
 `plexUrl`, `seerrUrl`.
 
-Les messages sont envoyés sous forme de texte (pas de poster) pour conserver un résumé
-lisible et éviter la limite de 1024 caractères des légendes. Les aperçus affichent le message
-avec des données fictives et sans accès aux services.
+Le mode classique envoie une affiche avec une légende HTML limitée à 1024
+caractères, ou du texte sans affiche si nécessaire. Le mode enrichi permet des
+titres, séparateurs et médias dans le même message. Les aperçus utilisent des
+données fictives et n’envoient aucun message Telegram.
 
 ## Origine et qualité
 
@@ -191,3 +195,33 @@ Le titre apparaît en premier, en gras, suivi du statut en italique. Des lignes
 séparatrices délimitent le résumé et les informations sur l’origine et la
 qualité. La qualité utilise une police à chasse fixe. Aucun emoji n’est ajouté.
 La taille de police des légendes d’affiches reste celle du client Telegram.
+
+### Messages enrichis et bandes-annonces
+
+Dans Paramètres → Notifications → Notifications Plex et Seerr, sélectionner
+« Message enrichi ». Le transport utilise `sendRichMessage` avec du HTML enrichi :
+titres `h2`/`h4`, paragraphes, affiche, citations, séparateurs `hr` et liens.
+Les modèles enrichis sont indépendants des modèles classiques. L’aperçu dans
+l’interface est indicatif ; Telegram décide du rendu exact. Le mode classique
+reste sélectionnable. Si Telegram répond explicitement que la méthode est
+indisponible (404), Telgrarr utilise le modèle classique ; un timeout ne provoque
+pas un second envoi classique.
+
+Les bandes-annonces sont des liens YouTube. Les vidéos en anglais, les teasers
+et les vidéos explicitement VOST sont exclus. Pour une série, le numéro de saison
+doit correspondre. Avec une clé TMDb personnelle configurée, Telgrarr utilise
+l’endpoint de vidéos françaises de la saison exacte. Sinon, il examine les vidéos
+fournies par Seerr et n’utilise pour une saison que celles qui la nomment.
+
+Sans vidéo française identifiée, le lien indique « Rechercher la bande-annonce VF »
+et ouvre une recherche YouTube sur le titre et la saison. Il ne prétend pas être
+une bande-annonce vérifiée et ne remplace pas la saison par la bande-annonce
+générale de la série. L’identification repose sur les métadonnées, sans analyse audio.
+Une demande portant sur plusieurs saisons propose un lien par saison.
+
+Variables supplémentaires : `posterUrl`, `imdbRating`, `trailers` (liste de `url`,
+`label`, `season`, `isSearch`). Exemple :
+
+```handlebars
+{{#each trailers}}<a href="{{url}}">{{label}}</a>{{/each}}
+```

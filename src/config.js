@@ -15,7 +15,7 @@ const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 // DATA_DIR consumer never ENOENT. recursive:true is idempotent (no-op if present).
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const { REQUEST_TEMPLATE, AVAILABLE_TEMPLATE } = require('./notifications/model');
+const { REQUEST_TEMPLATE, AVAILABLE_TEMPLATE, REQUEST_RICH_TEMPLATE, AVAILABLE_RICH_TEMPLATE } = require('./notifications/model');
 
 const DEFAULTS = {
   listenerPort:  3400,
@@ -34,7 +34,7 @@ const DEFAULTS = {
   tmdb:       { apiKey: '' },
   seerr:      { baseUrl: '', apiKey: '', publicUrl: '' },
   tautulli:   { baseUrl: '', apiKey: '' },
-  notifications: { enabled: false, requestSource: 'webhook', summaryLength: 350, requestTemplate: REQUEST_TEMPLATE, availableTemplate: AVAILABLE_TEMPLATE },
+  notifications: { enabled: false, requestSource: 'webhook', format: 'classic', trailersEnabled: true, requestRichTemplate: REQUEST_RICH_TEMPLATE, availableRichTemplate: AVAILABLE_RICH_TEMPLATE, summaryLength: 350, requestTemplate: REQUEST_TEMPLATE, availableTemplate: AVAILABLE_TEMPLATE },
   omdb:       { apiKey: '' },
   translator: {
     endpoint:    'https://models.inference.ai.azure.com/chat/completions',

@@ -3,6 +3,7 @@ const axios = require('axios');
 const config = require('../config');
 const blacklist = require('../blacklist');
 const imdb = require('./imdb');
+const { trailers } = require('./trailers');
 const { id, text, safeUrl } = require('./model');
 
 async function api(section, resource, params) {
@@ -174,6 +175,7 @@ async function enrich(input) {
       }
     } catch { notes.push('tmdb-unavailable'); }
   }
+  event.trailers = await trailers(event, details);
   return { ...event, enrichmentNotes: notes };
 }
 module.exports = { enrich, guidId, rangeNumbers };

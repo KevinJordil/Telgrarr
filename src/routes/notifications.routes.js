@@ -5,7 +5,7 @@ const log = require('../logger');
 const { tokenValid } = require('../auth/webhook-token');
 const { requireAuth } = require('../middlewares/auth');
 const store = require('../notifications/store');
-const { normalizeSeerr, normalizeTautulli, render } = require('../notifications/model');
+const { normalizeSeerr, normalizeTautulli, presentation } = require('../notifications/model');
 const hooks = express.Router();
 const api = express.Router();
 
@@ -43,7 +43,7 @@ api.post('/notifications/preview', requireAuth, (req, res) => {
     const event = req.body?.event;
     if (!event || !['request', 'available'].includes(event.event)) return res.status(400).json({ error: 'Expected a request or availability event' });
     // Offline preview: no enrichment, queue mutation or Telegram request.
-    res.json({ caption: render(event, config) });
+    res.json(presentation(event, config));
   } catch { res.status(400).json({ error: 'Invalid event or notification template' }); }
 });
 module.exports = { hooks, api };

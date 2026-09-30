@@ -79,3 +79,14 @@ it('distinguishes season batches and only labels verified complete seasons as co
   expect(model.render({ ...season, seasonComplete: true }, settings)).toContain('Saison complète disponible sur Plex');
   expect(model.eventKey({ ...season, episodeRange: '9-12' })).not.toBe(model.eventKey(season));
 });
+
+it('renders rich headings, media, separators and trailers while escaping external metadata', () => {
+  const event = { ...model.normalizeTautulli(plex), isTest: true, title: '<Episode>', seriesTitle: '<Une série>', posterUrl: 'https://images.example.test/poster.jpg', trailers: [{ url: 'https://www.youtube.com/watch?v=abcdef12345', label: 'Bande-annonce FR — saison 2' }] };
+  const html = model.renderRich(event, settings);
+  expect(html).toContain('<h2>&lt;Une série&gt;</h2>');
+  expect(html).toContain('<hr/>');
+  expect(html).toContain('<img src="https://images.example.test/poster.jpg"/>');
+  expect(html).toContain('Bande-annonce FR — saison 2');
+  expect(html).toContain('<p><b>[TEST Telgrarr]</b></p>');
+  expect(model.renderRich({ ...event, posterUrl: 'https://images.example.test/?token=secret' }, settings)).not.toContain('secret');
+});

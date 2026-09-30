@@ -41,3 +41,21 @@ describe('Poster notification transport', () => {
     expect(text).not.toHaveBeenCalled();
   });
 });
+
+describe('Rich message transport', () => {
+  const telegram = require('../src/telegram');
+  it('sends HTML using the rich_message field, with the existing timeout', async () => {
+    const post = vi.spyOn(axios, 'post').mockResolvedValue({ data: { ok: true, result: { message_id: 1, rich_message: {} } } });
+    await telegram.sendRichMessage('<h2>Un film</h2><hr/>');
+    expect(post.mock.calls[0][0]).toContain('/sendRichMessage');
+    expect(post.mock.calls[0][1].rich_message.html).toBe('<h2>Un film</h2><hr/>');
+    expect(post.mock.calls[0][2].timeout).toBe(30000);
+  });
+  it.each([400, 403, 404])('sanitizes a %i failure and identifies only unavailable methods for fallback', async status => {
+    vi.spyOn(axios, 'post').mockRejectedValue({ response: { status, data: { description: 'private token and URL' } } });
+    const error = await telegram.sendRichMessage('html').catch(e => e);
+    expect(error.message).toBe('Telegram rich delivery failed');
+    expect(error.retryable).toBe(false);
+    expect(error.unsupported).toBe(status === 404);
+  });
+});

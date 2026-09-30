@@ -9,7 +9,7 @@ import { copyText } from './clipboard';
 const APP = { sonarr: 'Sonarr', radarr: 'Radarr', seerr: 'Seerr', tautulli: 'Tautulli' };
 const INSTRUCTIONS = {
   seerr: 'Dans Seerr, ouvrir Paramètres → Notifications → Webhook. Utiliser cette URL et les événements demande en attente et demande approuvée automatiquement. Le modèle JSON est dans docs/notifications.md. Les disponibilités sont annoncées par Tautulli.',
-  tautulli: 'Dans Tautulli, ajouter un agent Webhook avec cette URL, méthode POST, déclencheur Recently Added. Le modèle JSON est dans docs/notifications.md. Désactiver le regroupement des saisons et séries pour recevoir chaque épisode.',
+  tautulli: 'Dans Tautulli, ajouter un agent Webhook avec cette URL, méthode POST, déclencheur Recently Added. Le modèle JSON est dans docs/notifications.md. Activer le regroupement par saison (parent), et désactiver celui par série (grand-parent). Un épisode isolé garde son message individuel.',
 };
 
 export default function WebhookCard({ source }) {

@@ -6,7 +6,7 @@ const history = require('../history');
 const store = require('./store');
 const poller = require('./seerr-poller');
 const { enrich } = require('./enrichment');
-const { render, viewData } = require('./model');
+const { presentation, viewData } = require('./model');
 let running = null;
 let timer = null;
 let nextSendAt = 0;
@@ -30,15 +30,27 @@ async function processNext() {
       log.info('Notifications', 'Availability skipped by the configured blacklist');
       return;
     }
-    let caption;
-    try { caption = render(event, config); }
+    let message;
+    try { message = presentation(event, config); }
     catch (error) { error.retryable = false; throw error; }
-    let posterUrl = event.posterUrl;
-    if (posterUrl) {
-      try { caption = render(event, config, 1024); }
-      catch { posterUrl = ''; }
+    if (message.format === 'rich') {
+      try { await telegram.sendRichMessage(message.caption); }
+      catch (error) {
+        if (error.imageRejected) {
+          message = presentation({ ...event, posterUrl: '' }, config, 'rich');
+          await telegram.sendRichMessage(message.caption);
+        } else {
+          if (!error.unsupported) throw error;
+          try { message = presentation(event, config, 'classic'); }
+          catch (cause) { cause.retryable = false; throw cause; }
+          await telegram.sendNotification(message.caption, message.posterUrl);
+          log.warn('Notifications', 'Rich messages unavailable; sent the classic presentation');
+        }
+      }
+    } else {
+      await telegram.sendNotification(message.caption, message.posterUrl);
     }
-    await telegram.sendNotification(caption, posterUrl);
+    const { caption, posterUrl, format } = message;
     sent = true;
     await store.delivered(job.key);
     nextSendAt = Date.now() + Math.max(5000, config.telegram.delayMs);
@@ -48,7 +60,7 @@ async function processNext() {
       title: data.title, year: event.year, timestamp: new Date().toISOString(),
       details: event.event === 'request' ? 'Nouvelle demande' : 'Disponible sur Plex',
       overview: data.overview, quality: data.quality, origin: data.origin,
-      caption, posterUrl, imdbRating: event.imdbRating, event: event.event, tmdbId: event.tmdbId, enrichmentNotes: event.enrichmentNotes,
+      caption, posterUrl, format, trailers: event.trailers, imdbRating: event.imdbRating, event: event.event, tmdbId: event.tmdbId, enrichmentNotes: event.enrichmentNotes,
     }]);
     log.info('Notifications', `Delivered ${job.event.event}`);
   } catch (error) {

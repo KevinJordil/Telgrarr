@@ -1,8 +1,10 @@
 'use strict';
 const Handlebars = require('handlebars');
 
-const REQUEST_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>Nouvelle demande de {{kind}}</i>\n━━━━━━━━━━━━━━━━━━{{#if imdbRating}}\n\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if seasons}}\n<b>Saison(s) :</b> {{seasons}}{{/if}}\n\n<b>Demandé par :</b>\n{{requester}}{{#if seerrUrl}}\n\n━━━━━━━━━━━━━━━━━━\n<a href="{{seerrUrl}}">Voir la demande</a>{{/if}}';
-const AVAILABLE_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>{{kind}} disponible sur Plex</i>{{#if episode}}\n\n<b>{{episode}}</b>{{/if}}{{#if imdbRating}}\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if overview}}\n\n━━━━━━━━━━━━━━━━━━\n<i>{{overview}}</i>{{/if}}\n\n━━━━━━━━━━━━━━━━━━\n<b>Origine :</b>\n{{origin}}\n\n<b>Qualité :</b>\n<code>{{quality}}</code>{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#if seerrUrl}} · <a href="{{seerrUrl}}">Voir sur Seerr</a>{{/if}}';
+const REQUEST_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>Nouvelle demande de {{kind}}</i>\n━━━━━━━━━━━━━━━━━━{{#if imdbRating}}\n\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if seasons}}\n<b>Saison(s) :</b> {{seasons}}{{/if}}\n\n<b>Demandé par :</b>\n{{requester}}{{#if seerrUrl}}\n\n━━━━━━━━━━━━━━━━━━\n<a href="{{seerrUrl}}">Voir la demande</a>{{/if}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
+const AVAILABLE_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>{{kind}} disponible sur Plex</i>{{#if episode}}\n\n<b>{{episode}}</b>{{/if}}{{#if imdbRating}}\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if overview}}\n\n━━━━━━━━━━━━━━━━━━\n<i>{{overview}}</i>{{/if}}\n\n━━━━━━━━━━━━━━━━━━\n<b>Origine :</b>\n{{origin}}\n\n<b>Qualité :</b>\n<code>{{quality}}</code>{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#if seerrUrl}} · <a href="{{seerrUrl}}">Voir sur Seerr</a>{{/if}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
+const REQUEST_RICH_TEMPLATE = '<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>Nouvelle demande de {{kind}}</i></p>{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if seasons}}<p><b>Saison(s) :</b> {{seasons}}</p>{{/if}}<hr/><p><b>Demandé par :</b> {{requester}}</p><p>{{#if seerrUrl}}<a href="{{seerrUrl}}">Voir la demande</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
+const AVAILABLE_RICH_TEMPLATE = '<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>{{kind}} disponible sur Plex</i></p>{{#if episode}}<h4>{{episode}}</h4>{{/if}}{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if overview}}<blockquote>{{overview}}</blockquote>{{/if}}<hr/><p><b>Origine :</b><br/>{{origin}}</p><p><b>Qualité :</b><br/><code>{{quality}}</code></p><hr/><p>{{#if plexUrl}}<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#if seerrUrl}} · <a href="{{seerrUrl}}">Voir sur Seerr</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
 const TYPES = new Set(['movie', 'show', 'season', 'episode']);
 const REQUEST_EVENTS = new Set(['MEDIA_PENDING', 'MEDIA_APPROVED', 'MEDIA_AUTO_APPROVED']);
 function id(value) { return /^\d+$/.test(String(value ?? '')) ? String(value) : ''; }
@@ -83,7 +85,7 @@ function viewData(event, settings) {
   const plexUrl = safeUrl(event.plexUrl) || (event.ratingKey && event.serverId
     ? `https://app.plex.tv/desktop/#!/server/${encodeURIComponent(event.serverId)}/details?key=${encodeURIComponent('/library/metadata/' + event.ratingKey)}` : '');
   return {
-    ...event, kind, title: (!movie && event.seriesTitle) || event.title || 'Titre inconnu', episode,
+    ...event, posterUrl: safeUrl(event.posterUrl), trailers: (event.trailers || []).map(trailer => ({ ...trailer, url: safeUrl(trailer.url) })).filter(trailer => trailer.url), kind, title: (!movie && event.seriesTitle) || event.title || 'Titre inconnu', episode,
     overview: summary(event.overview, settings.notifications.summaryLength),
     origin: event.origin || 'Inconnue', quality: event.quality || 'Non renseignée',
     plexUrl, seerrUrl: seerrLink(settings.seerr.publicUrl || settings.seerr.baseUrl, event.mediaType, event.tmdbId),
@@ -108,4 +110,22 @@ function render(event, settings, maxLength = 4000) {
   if (!caption.trim() || caption.length + prefix.length > maxLength) throw new Error('Notification template is empty or exceeds 4000 characters');
   return prefix + caption;
 }
-module.exports = { REQUEST_TEMPLATE, AVAILABLE_TEMPLATE, normalizeSeerr, normalizeTautulli, eventKey, viewData, render, safeUrl, id, text };
+function renderRich(event, settings) {
+  const adapted = { ...settings, notifications: { ...settings.notifications,
+    requestTemplate: settings.notifications.requestRichTemplate || REQUEST_RICH_TEMPLATE,
+    availableTemplate: settings.notifications.availableRichTemplate || AVAILABLE_RICH_TEMPLATE,
+  } };
+  const html = render(event, adapted, 28000);
+  return event.isTest ? html.replace('[TEST Telgrarr]\n\n', '<p><b>[TEST Telgrarr]</b></p>') : html;
+}
+function presentation(event, settings, format = settings.notifications.format) {
+  if (format === 'rich') return { caption: renderRich(event, settings), posterUrl: safeUrl(event.posterUrl), format: 'rich' };
+  let caption = render(event, settings);
+  let posterUrl = safeUrl(event.posterUrl);
+  if (posterUrl) {
+    try { caption = render(event, settings, 1024); }
+    catch { posterUrl = ''; }
+  }
+  return { caption, posterUrl, format: 'classic' };
+}
+module.exports = { REQUEST_TEMPLATE, AVAILABLE_TEMPLATE, REQUEST_RICH_TEMPLATE, AVAILABLE_RICH_TEMPLATE, renderRich, presentation, normalizeSeerr, normalizeTautulli, eventKey, viewData, render, safeUrl, id, text };

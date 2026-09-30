@@ -108,6 +108,31 @@ async function sendMessage(text) {
   }
 }
 
+async function sendRichMessage(html) {
+  try {
+    const response = await retryWithBackoff(() => axios.post(
+      `https://api.telegram.org/bot${config.telegram.botToken}/sendRichMessage`,
+      { chat_id: config.telegram.chatId, rich_message: { html } },
+      { timeout: SEND_TIMEOUT_MS }
+    ), { shouldRetry: isRetryable, getRetryAfterMs, maxAttempts: 4, baseDelayMs: 500, maxDelayMs: 10000, jitter: true });
+    if (response.data?.ok !== true) {
+      const error = new Error('Telegram rejected rich notification');
+      error.retryable = false;
+      throw error;
+    }
+    return response.data.result;
+  } catch (cause) {
+    const error = new Error('Telegram rich delivery failed');
+    error.retryable = cause.retryable ?? isRetryable(cause);
+    error.retryAfterMs = getRetryAfterMs(cause);
+    // Only a definite unavailable-method response permits classic fallback.
+    // A timeout could have delivered already and must not trigger another send.
+    error.unsupported = cause.response?.status === 404;
+    error.imageRejected = cause.response?.status === 400 && /failed to get HTTP URL content|wrong file identifier|IMAGE_PROCESS_FAILED|PHOTO_INVALID|WEBPAGE_CURL_FAILED|WEBPAGE_MEDIA_EMPTY/i.test(cause.response?.data?.description || '');
+    throw error;
+  }
+}
+
 async function sendNotification(caption, posterUrl) {
   if (!posterUrl) return module.exports.sendMessage(caption);
   try { return await module.exports.sendPhoto(posterUrl, caption); }
@@ -123,4 +148,4 @@ async function sendNotification(caption, posterUrl) {
     throw error;
   }
 }
-module.exports = { sendPhoto, sendMessage, sendNotification, sleep };
+module.exports = { sendPhoto, sendMessage, sendNotification, sendRichMessage, sleep };

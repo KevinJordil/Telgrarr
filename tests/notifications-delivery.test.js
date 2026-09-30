@@ -22,6 +22,8 @@ beforeEach(() => {
   vi.restoreAllMocks();
   if (fs.existsSync(file)) fs.unlinkSync(file);
   config.notifications.enabled = true;
+  config.notifications.format = 'classic';
+  config.notifications.requestSource = 'webhook';
   config.queue.maxItems = 100;
   config.tmdb.apiKey = '';
 });
@@ -95,4 +97,27 @@ describe('Durable notification delivery', () => {
     expect(store.status().sent).toBe(1);
     expect(store.status().pending).toBe(1);
   });
+});
+
+it('uses rich delivery and falls back only after an explicit unavailable-method response', async () => {
+  config.notifications.format = 'rich';
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 60000);
+  await store.enqueue({ ...event, requestId: '80' });
+  const rich = vi.spyOn(telegram, 'sendRichMessage').mockRejectedValue(Object.assign(new Error('unsupported'), { unsupported: true, retryable: false }));
+  const classic = vi.spyOn(telegram, 'sendNotification').mockResolvedValue({});
+  await worker.tick();
+  expect(rich).toHaveBeenCalledTimes(1);
+  expect(classic).toHaveBeenCalledTimes(1);
+  expect(store.status().sent).toBe(1);
+});
+it('leaves rich failures pending without issuing a second classic message', async () => {
+  config.notifications.format = 'rich';
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 120000);
+  await store.enqueue({ ...event, requestId: '81' });
+  vi.spyOn(telegram, 'sendRichMessage').mockRejectedValue(Object.assign(new Error('timeout'), { retryable: true }));
+  const classic = vi.spyOn(telegram, 'sendNotification').mockResolvedValue({});
+  await worker.tick();
+  expect(classic).not.toHaveBeenCalled();
+  expect(store.status().pending).toBe(1);
+  expect(store.status().sent).toBe(0);
 });
