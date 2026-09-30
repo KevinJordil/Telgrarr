@@ -117,3 +117,26 @@ describe('Season batches', () => {
     expect(rangeNumbers('3-1')).toEqual([]);
   });
 });
+
+describe('Series IMDb rating', () => {
+  it.each(['tv', 'show', 'season', 'episode'])('uses the overall series ID for %s', async mediaType => {
+    const imdb = require('../src/notifications/imdb');
+    const lookup = vi.spyOn(imdb, 'lookup').mockResolvedValue(8.1);
+    get.mockImplementation(async url => ({ data: url.includes('/api/v1/tv/') ? { externalIds: { imdbId: 'tt13210838' } } : [] }));
+    const result = await enrich({ ...event, mediaType, event: mediaType === 'tv' ? 'request' : 'available' });
+    expect(lookup).toHaveBeenCalledWith('tt13210838');
+    expect(result.imdbRating).toBe('8,1');
+  });
+  it('ignores the episode IMDb GUID and uses its parent series GUID', async () => {
+    config.tautulli = { baseUrl: 'http://tautulli.test', apiKey: 'test-key' };
+    const imdb = require('../src/notifications/imdb');
+    const lookup = vi.spyOn(imdb, 'lookup').mockResolvedValue(8.1);
+    get.mockImplementation(async (url, options) => {
+      if (url.includes('tautulli') && options.params.rating_key === '56') return { data: { response: { result: 'success', data: { grandparent_rating_key: '10', guids: ['imdb://tt999999'], audience_rating: '9.9', audience_rating_image: 'imdb://image.rating' } } } };
+      if (url.includes('tautulli')) return { data: { response: { result: 'success', data: { title: 'Une série', guids: ['imdb://tt13210838'] } } } };
+      return { data: [] };
+    });
+    expect((await enrich({ event: 'available', mediaType: 'episode', ratingKey: '56' })).imdbRating).toBe('8,1');
+    expect(lookup).toHaveBeenCalledWith('tt13210838');
+  });
+});

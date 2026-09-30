@@ -1,0 +1,31 @@
+import { it, expect, vi, afterAll } from 'vitest';
+import { createRequire } from 'node:module';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import zlib from 'node:zlib';
+const require = createRequire(import.meta.url);
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'telgrarr-imdb-'));
+process.env.DATA_DIR = tmp;
+const axios = require('axios');
+const imdb = require('../src/notifications/imdb');
+afterAll(() => { vi.restoreAllMocks(); fs.rmSync(tmp, { recursive: true, force: true }); });
+it('downloads once and finds only the exact IMDb title in the official ratings dataset', async () => {
+  const post = vi.spyOn(axios, 'get').mockResolvedValue({ data: zlib.gzipSync('tconst\taverageRating\tnumVotes\ntt123\t8.1\t100\ntt124\t9.9\t200\n') });
+  expect(await imdb.lookup('tt123')).toBe(8.1);
+  expect(await imdb.lookup('tt124')).toBe(9.9);
+  expect(await imdb.lookup('tt999')).toBeNull();
+  expect(await imdb.lookup('invalid')).toBeNull();
+  expect(post).toHaveBeenCalledTimes(1);
+  expect(post.mock.calls[0][0]).toBe('https://datasets.imdbws.com/title.ratings.tsv.gz');
+  expect(fs.statSync(path.join(tmp, 'imdb-ratings.tsv.gz')).mode & 0o777).toBe(0o600);
+});
+it('keeps a usable stale dataset when the daily refresh fails and avoids repeated downloads', async () => {
+  const file = path.join(tmp, 'imdb-ratings.tsv.gz');
+  fs.utimesSync(file, new Date(0), new Date(1));
+  const get = vi.mocked(axios.get); get.mockRejectedValue(new Error('network unavailable'));
+  const count = get.mock.calls.length;
+  expect(await imdb.lookup('tt123')).toBe(8.1);
+  expect(await imdb.lookup('tt124')).toBe(9.9);
+  expect(get.mock.calls.length).toBe(count + 1);
+});

@@ -1,8 +1,8 @@
 'use strict';
 const Handlebars = require('handlebars');
 
-const REQUEST_TEMPLATE = '<b>Nouvelle demande de {{kind}}</b>\n<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n{{#if imdbRating}}IMDb : {{imdbRating}}/10\n{{/if}}Demandé par : {{requester}}{{#if seasons}}\nSaison(s) : {{seasons}}{{/if}}{{#if seerrUrl}}\n\n<a href="{{seerrUrl}}">Voir la demande</a>{{/if}}';
-const AVAILABLE_TEMPLATE = '<b>{{kind}} disponible sur Plex</b>\n<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>{{#if episode}}\n{{episode}}{{/if}}{{#if imdbRating}}\nIMDb : {{imdbRating}}/10{{/if}}{{#if overview}}\n\n{{overview}}{{/if}}\n\nOrigine : {{origin}}\nQualité : {{quality}}{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#if seerrUrl}} · <a href="{{seerrUrl}}">Voir sur Seerr</a>{{/if}}';
+const REQUEST_TEMPLATE = '<b>Nouvelle demande de {{kind}}</b>\n<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n{{#if imdbRating}}<b>IMDb :</b> {{imdbRating}}/10\n{{/if}}<b>Demandé par :</b> {{requester}}{{#if seasons}}\n<b>Saison(s) :</b> {{seasons}}{{/if}}{{#if seerrUrl}}\n\n<a href="{{seerrUrl}}">Voir la demande</a>{{/if}}';
+const AVAILABLE_TEMPLATE = '<b>{{kind}} disponible sur Plex</b>\n<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>{{#if episode}}\n<b>{{episode}}</b>{{/if}}{{#if imdbRating}}\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if overview}}\n\n<i>{{overview}}</i>{{/if}}\n\n<b>Origine :</b> {{origin}}\n<b>Qualité :</b> {{quality}}{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#if seerrUrl}} · <a href="{{seerrUrl}}">Voir sur Seerr</a>{{/if}}';
 const TYPES = new Set(['movie', 'show', 'season', 'episode']);
 const REQUEST_EVENTS = new Set(['MEDIA_PENDING', 'MEDIA_APPROVED', 'MEDIA_AUTO_APPROVED']);
 function id(value) { return /^\d+$/.test(String(value ?? '')) ? String(value) : ''; }

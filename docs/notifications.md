@@ -155,8 +155,13 @@ jeton n’est transmis à Telegram. Sans affiche, le message reste textuel.
 La variable `imdbRating` contient une note sur 10 avec une virgule française.
 Elle provient uniquement d’un champ explicitement IMDb dans Plex ou Radarr,
 ou de l’API `movie/:id/ratingscombined` de Seerr. Une note TMDb ou une note
-Sonarr sans source explicite n’est jamais renommée IMDb. La ligne est masquée
-si aucune note IMDb n’est disponible, notamment pour certaines séries.
+Sonarr sans source explicite n’est jamais renommée IMDb. Pour les séries, saisons et épisodes, la note est toujours celle de la série
+entière. Si Plex ne la fournit pas, l’identifiant IMDb de la série obtenu via
+Seerr, Sonarr ou les métadonnées parentes Plex est recherché dans le jeu de
+données officiel `title.ratings.tsv.gz` d’IMDb (usage personnel non commercial).
+Le fichier est mis en cache dans le dossier de données et actualisé au maximum
+une fois par jour. Une panne de téléchargement conserve le dernier cache utilisable.
+La ligne est masquée si aucune note IMDb n’est disponible.
 
 Les légendes des affiches sont limitées à 1024 caractères : le résumé est
 raccourci si nécessaire. Un modèle personnalisé trop long est envoyé en texte.

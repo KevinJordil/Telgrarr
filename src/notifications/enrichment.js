@@ -2,6 +2,7 @@
 const axios = require('axios');
 const config = require('../config');
 const blacklist = require('../blacklist');
+const imdb = require('./imdb');
 const { id, text, safeUrl } = require('./model');
 
 async function api(section, resource, params) {
@@ -43,6 +44,7 @@ async function plexMetadata(event) {
   return {
     ...event,
     imdbRating: plexImdb(series ? parent : metadata),
+    imdbId: imdb.validId((guids || []).map(g => typeof g === 'string' ? g : g.id).find(g => g?.startsWith('imdb://'))?.slice(7)),
     title: text(metadata.title) || event.title,
     seriesTitle: series ? text(parent?.title || metadata.grandparent_title || metadata.parent_title) || event.seriesTitle : event.seriesTitle,
     year: id(parent?.year || metadata.year) || event.year,
@@ -152,6 +154,13 @@ async function enrich(input) {
       const ratings = await api('seerr', `api/v1/movie/${event.tmdbId}/ratingscombined`);
       event.imdbRating = imdbScore(ratings?.imdb?.criticsScore);
     } catch { notes.push('imdb-unavailable'); }
+  }
+  if (event.mediaType !== 'movie' && !event.imdbRating) {
+    // Both Seerr TV external IDs and Plex parent GUIDs refer to the series,
+    // never the IMDb ID of the individual episode.
+    const seriesId = imdb.validId(details?.externalIds?.imdbId) || imdb.validId(arr?.imdbId) || imdb.validId(event.imdbId);
+    try { event.imdbRating = imdbScore(await imdb.lookup(seriesId)); }
+    catch { notes.push('imdb-unavailable'); }
   }
   if (config.tmdb.apiKey && event.tmdbId) {
     try {
