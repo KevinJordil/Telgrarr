@@ -58,6 +58,14 @@ function seerrLink(baseUrl, mediaType, tmdbId) {
   const base = safeUrl(baseUrl);
   return base && tmdbId ? `${base.replace(/\/+$/, '')}/${mediaType === 'movie' ? 'movie' : 'tv'}/${tmdbId}` : '';
 }
+function summary(value, limit) {
+  const full = text(value, 1500).replace(/\s+/g, ' ');
+  if (!limit) return '';
+  if (full.length <= limit) return full;
+  const cut = full.slice(0, limit - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > limit / 2 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
+}
 function viewData(event, settings) {
   const movie = event.mediaType === 'movie';
   const kind = event.event === 'request' ? (movie ? 'film' : 'série') : ({ movie: 'Film', show: 'Série', season: 'Saison', episode: 'Épisode' }[event.mediaType]);
@@ -68,7 +76,7 @@ function viewData(event, settings) {
     ? `https://app.plex.tv/desktop/#!/server/${encodeURIComponent(event.serverId)}/details?key=${encodeURIComponent('/library/metadata/' + event.ratingKey)}` : '');
   return {
     ...event, kind, title: (!movie && event.seriesTitle) || event.title || 'Titre inconnu', episode,
-    overview: text(event.overview, settings.notifications.summaryLength),
+    overview: summary(event.overview, settings.notifications.summaryLength),
     origin: event.origin || 'Inconnue', quality: event.quality || 'Non renseignée',
     plexUrl, seerrUrl: seerrLink(settings.seerr.baseUrl, event.mediaType, event.tmdbId),
   };

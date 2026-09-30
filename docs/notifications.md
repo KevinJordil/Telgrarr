@@ -30,6 +30,13 @@ Tautulli peut avoir plusieurs agents distincts.
 
 ## Seerr
 
+Si le webhook Seerr est déjà utilisé par une autre intégration, choisir **Source des
+demandes Seerr → API toutes les 30 secondes**. Son webhook existant reste inchangé.
+L’URL et la clé API Seerr sont alors requises. La première lecture initialise un
+repère sans annoncer les demandes historiques. Les nouvelles demandes sont récupérées
+avec pagination, conservées en file et dédupliquées par leur ID ; le repère survit aux
+redémarrages. Dans ce mode, la configuration du webhook ci-dessous est facultative.
+
 URL : `http://telgrarr:3400/hooks/SECRET/seerr`, méthode POST, corps JSON ci-dessous.
 Activer **Request Pending Approval** et **Request Automatically Approved**. Une demande
 manuellement approuvée peut également être reçue, sans répéter une demande déjà annoncée.
@@ -121,8 +128,8 @@ courant avant de terminer.
 
 Telegram n’offre pas de clé d’idempotence pour sendMessage : un arrêt brutal après
 l’envoi mais avant son enregistrement, ou une réponse réseau perdue après acceptation,
-peut encore produire un doublon. Aucun rattrapage des webhooks Seerr/Tautulli jamais reçus
-n’est implémenté. Les notifications natives des autres applications doivent être
+peut encore produire un doublon. En mode webhook, aucun rattrapage des événements Seerr/Tautulli jamais reçus
+n’est implémenté. Le mode API Seerr rattrape les nouvelles demandes depuis son dernier repère. Les notifications natives des autres applications doivent être
 explicitement désactivées après validation ; leur envoi direct n’est pas intercepté.
 
 La restauration d’une ancienne sauvegarde rétablit son état d’envoi : certains messages

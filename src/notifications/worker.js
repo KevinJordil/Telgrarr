@@ -4,14 +4,22 @@ const log = require('../logger');
 const telegram = require('../telegram');
 const history = require('../history');
 const store = require('./store');
+const poller = require('./seerr-poller');
 const { enrich } = require('./enrichment');
 const { render, viewData } = require('./model');
 let running = null;
 let timer = null;
 let nextSendAt = 0;
 let stopping = false;
+let nextPollAt = 0;
 async function processNext() {
-  if (stopping || !config.notifications?.enabled || Date.now() < nextSendAt) return;
+  if (stopping || !config.notifications?.enabled) return;
+  if (config.notifications.requestSource === 'poll' && Date.now() >= nextPollAt) {
+    nextPollAt = Date.now() + poller.INTERVAL_MS;
+    try { await poller.poll(); }
+    catch { log.warn('Notifications', 'Seerr request polling unavailable; retrying on the next cycle'); }
+  }
+  if (Date.now() < nextSendAt) return;
   const job = store.nextJob();
   if (!job) return;
   let sent = false;

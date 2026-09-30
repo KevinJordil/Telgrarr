@@ -40,6 +40,12 @@ async function enqueue(event) {
     return { accepted: true, duplicate: false };
   });
 }
+function requestCursor() {
+  return read().requestCursor ?? null;
+}
+async function setRequestCursor(cursor) {
+  return update(state => { state.requestCursor = cursor; });
+}
 function nextJob() {
   return read().jobs.find(job => job.status === 'pending' && job.nextAttemptAt <= Date.now());
 }
@@ -82,4 +88,4 @@ function status() {
     jobs: state.jobs.map(({ key, status: jobStatus, attempts, createdAt, lastError }) => ({ key, status: jobStatus, attempts, createdAt, lastError })),
   };
 }
-module.exports = { enqueue, nextJob, discard, delivered, failed, retryBlocked, status };
+module.exports = { requestCursor, setRequestCursor, enqueue, nextJob, discard, delivered, failed, retryBlocked, status };

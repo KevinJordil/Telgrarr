@@ -34,7 +34,7 @@ const DEFAULTS = {
   tmdb:       { apiKey: '' },
   seerr:      { baseUrl: '', apiKey: '' },
   tautulli:   { baseUrl: '', apiKey: '' },
-  notifications: { enabled: false, summaryLength: 350, requestTemplate: REQUEST_TEMPLATE, availableTemplate: AVAILABLE_TEMPLATE },
+  notifications: { enabled: false, requestSource: 'webhook', summaryLength: 350, requestTemplate: REQUEST_TEMPLATE, availableTemplate: AVAILABLE_TEMPLATE },
   omdb:       { apiKey: '' },
   translator: {
     endpoint:    'https://models.inference.ai.azure.com/chat/completions',

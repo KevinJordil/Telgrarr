@@ -118,6 +118,7 @@ const SETTINGS_SCHEMA = [
     id: 'notifications', title: 'Notifications Plex et Seerr', icon: 'Send',
     fields: [
       { key: 'notifications.enabled', label: 'Activer les notifications unifiées', type: 'toggle', note: 'Seerr annonce les demandes ; Tautulli confirme la disponibilité sur Plex. Les notifications des imports Radarr/Sonarr sont suspendues dans ce mode. Configurer les webhooks avant activation.' },
+      { key: 'notifications.requestSource', label: 'Source des demandes Seerr', type: 'select', options: [{ value: 'webhook', label: 'Webhook' }, { value: 'poll', label: 'API toutes les 30 secondes' }], note: 'Le mode API préserve un webhook Seerr déjà utilisé par une autre intégration. La première lecture ignore les demandes historiques.' },
       { key: 'notifications.summaryLength', label: 'Longueur maximale du résumé', type: 'number', integer: true, min: 0, max: 1500 },
       { key: 'notifications.requestTemplate', label: 'Modèle des demandes', type: 'textarea', required: true, mustBeString: true, note: 'Variables : {{kind}}, {{title}}, {{year}}, {{requester}}, {{seasons}}, {{seerrUrl}}. HTML Telegram et conditions Handlebars autorisés.' },
       { key: 'notifications.availableTemplate', label: 'Modèle des disponibilités', type: 'textarea', required: true, mustBeString: true, note: 'Variables : {{kind}}, {{title}}, {{year}}, {{episode}}, {{overview}}, {{origin}}, {{quality}}, {{plexUrl}}, {{seerrUrl}}. Aucun emoji par défaut.' },

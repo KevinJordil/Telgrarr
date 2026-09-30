@@ -30,6 +30,7 @@ async function plexMetadata(event) {
   }
   const guids = series ? (parent?.guids || metadata.grandparent_guids || metadata.parent_guids) : metadata.guids;
   const info = metadata.media_info?.[0] || {};
+  const video = (info.parts || []).flatMap(part => part.streams || []).find(stream => String(stream.type) === '1') || {};
   return {
     ...event,
     title: text(metadata.title) || event.title,
@@ -41,7 +42,7 @@ async function plexMetadata(event) {
     episodeNumber: id(metadata.media_index) || event.episodeNumber,
     resolution: text(info.video_resolution || metadata.video_resolution, 30) || event.resolution,
     codec: text(info.video_codec || metadata.video_codec, 30) || event.codec,
-    dynamicRange: text(info.video_dynamic_range, 30) || event.dynamicRange,
+    dynamicRange: Number(video.video_dovi_present) ? 'Dolby Vision' : text(video.video_dynamic_range || info.video_dynamic_range, 30) || event.dynamicRange,
   };
 }
 async function findArr(event) {
