@@ -137,3 +137,11 @@ La restauration d’une ancienne sauvegarde rétablit son état d’envoi : cert
 postérieurs à cette sauvegarde peuvent être renvoyés. Redémarrer après restauration.
 En revenant au mode historique, vérifier sa file d’imports précédente avant activation,
 car les éléments en attente n’ont pas été supprimés par le mode unifié.
+
+## Tests contrôlés dans Telegram
+
+Un webhook portant `"test": true` et un `"test_id"` distinct produit un message
+préfixé `[TEST Telgrarr]`. Il traverse la file et le même enrichissement que les
+notifications réelles, mais sa clé de déduplication est séparée : il ne bloque
+pas une future annonce du même média. Ces tests publient réellement dans le
+groupe configuré. Les aperçus de l’interface continuent à ne rien envoyer.

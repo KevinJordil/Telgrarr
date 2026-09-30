@@ -26,6 +26,7 @@ function normalizeSeerr(payload) {
   const tmdbId = id(media.tmdbId || media.tmdb_id || payload.tmdb_id);
   return {
     event: 'request', requestId, mediaType, tmdbId,
+    ...(payload.test === true ? { isTest: true, testId: text(payload.test_id, 128) || 'default' } : {}),
     title: text(payload.subject || payload.title), year: id(payload.year),
     requester: text(request.requestedBy_username || request.requestedBy?.displayName || payload.requester) || 'Utilisateur inconnu',
     seasons: text(payload.seasons || (payload.extra || []).find(e => /season/i.test(e.name))?.value),
@@ -40,6 +41,7 @@ function normalizeTautulli(payload) {
   if (!TYPES.has(mediaType) || !ratingKey || !serverId) throw new Error('Missing media type, rating key or server identifier');
   return {
     event: 'available', mediaType, ratingKey, serverId,
+    ...(payload.test === true ? { isTest: true, testId: text(payload.test_id, 128) || 'default' } : {}),
     title: text(payload.title), year: id(payload.year),
     tmdbId: id(payload.tmdb_id || payload.themoviedb_id), tvdbId: id(payload.tvdb_id),
     seriesTitle: text(payload.grandparent_title || payload.parent_title),
@@ -52,7 +54,8 @@ function normalizeTautulli(payload) {
 }
 function eventKey(event) {
   // Upgrades of the same Plex item do not repeat its original availability announcement.
-  return event.event === 'request' ? `request:${event.requestId}` : `plex:${event.serverId}:${event.ratingKey}`;
+  const key = event.event === 'request' ? `request:${event.requestId}` : `plex:${event.serverId}:${event.ratingKey}`;
+  return event.isTest ? `test:${event.testId}:${key}` : key;
 }
 function seerrLink(baseUrl, mediaType, tmdbId) {
   const base = safeUrl(baseUrl);
@@ -64,7 +67,7 @@ function summary(value, limit) {
   if (full.length <= limit) return full;
   const cut = full.slice(0, limit - 1);
   const lastSpace = cut.lastIndexOf(' ');
-  return (lastSpace > limit / 2 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
+  return (lastSpace > limit / 2 ? cut.slice(0, lastSpace) : cut).replace(/[ ,;:-]+$/, '') + '…';
 }
 function viewData(event, settings) {
   const movie = event.mediaType === 'movie';
@@ -93,6 +96,6 @@ function render(event, settings) {
     caption = compile(data);
   }
   if (!caption.trim() || caption.length > 4000) throw new Error('Notification template is empty or exceeds 4000 characters');
-  return caption;
+  return event.isTest ? `[TEST Telgrarr]\n\n${caption}` : caption;
 }
 module.exports = { REQUEST_TEMPLATE, AVAILABLE_TEMPLATE, normalizeSeerr, normalizeTautulli, eventKey, viewData, render, safeUrl, id, text };

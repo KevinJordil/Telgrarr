@@ -42,6 +42,11 @@ describe('French notification messages', () => {
     expect(caption).toContain('Origine : Inconnue');
     expect(caption).toContain('Qualité : Non renseignée');
   });
+  it('marks test messages and keeps them outside the production deduplication ledger', () => {
+    const event = model.normalizeTautulli({ ...plex, test: true, test_id: 'preview-1' });
+    expect(model.render(event, settings)).toMatch(/^\[TEST Telgrarr\]/);
+    expect(model.eventKey(event)).not.toBe(model.eventKey(model.normalizeTautulli(plex)));
+  });
   it('never forwards token-bearing or unsafe URLs', () => {
     expect(model.safeUrl('https://plex.example.test/?X-Plex-Token=secret')).toBe('');
     expect(model.safeUrl('javascript:alert(1)')).toBe('');
