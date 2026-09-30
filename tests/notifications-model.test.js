@@ -12,7 +12,7 @@ describe('French notification messages', () => {
   it('escapes external titles and omits Seerr links', () => {
     const event = model.normalizeSeerr(request);
     expect(model.render(event, settings)).toContain('&lt;Un film&gt; &amp; amis');
-    expect(model.render(event, settings)).toContain('<b>Demandé par :</b>\nCamille');
+    expect(model.render(event, settings)).toContain('<b>Source :</b>\nCamille');
     expect(model.render(event, settings)).not.toContain('https://requests.example.test/movie/42');
   });
   it('does not expose the public Seerr URL or Docker DNS in Telegram links', () => {
@@ -39,7 +39,7 @@ describe('French notification messages', () => {
     expect(caption).toContain('Épisode disponible sur Plex');
     expect(caption).toContain('S02E03 — Le retour');
     expect(caption).toContain('<b>Une série</b>');
-    expect(caption).toContain('<b>Origine :</b> Non identifiée');
+    expect(caption).toContain('<b>Source :</b> Non identifiée');
     expect(caption).toContain('<b>Qualité :</b> Non renseignée');
   });
   it('marks test messages and keeps them outside the production deduplication ledger', () => {
@@ -66,7 +66,7 @@ it('fits photo captions including the test label and preserves the IMDb line and
   const event = { ...model.normalizeTautulli(plex), isTest: true, imdbRating: '7,3', overview: 'Résumé très détaillé '.repeat(100), origin: 'Demande Seerr — Camille', quality: 'WEBDL-2160p · HEVC · Dolby Vision' };
   const caption = model.render(event, settings, 1024);
   expect(caption.length).toBeLessThanOrEqual(1024);
-  expect(caption).toContain('<b>IMDb :</b> 7,3/10');
+  expect(caption).toContain('<b>IMDb :</b> 7,3');
   expect(caption).toContain('Voir sur Plex');
   expect(model.render(model.normalizeSeerr(request), settings)).not.toContain('IMDb :');
 });
@@ -106,12 +106,14 @@ it('makes partial and complete season counts clear in rich messages', () => {
   expect(complete).not.toContain('Épisodes ajoutés');
 });
 
- it('presents requester and quality compactly without losing probable origin information', () => {
+ it('presents only the source name and an IMDb score without a denominator', () => {
   const event = { ...model.normalizeTautulli(plex), origin: 'Demande Seerr — Camille <test>', quality: 'WEBDL-2160p · HEVC · Dolby Vision', imdbRating: '8,1' };
   const html = model.renderRich(event, settings);
-  expect(html).toContain('<b>Demandé par :</b> Camille &lt;test&gt;');
+  expect(html).toContain('<b>Source :</b> Camille &lt;test&gt;');
   expect(html).toContain('<b>Qualité :</b> WEB-DL · 4K (2160p) · H.265 · Dolby Vision');
-  expect(html).toContain('<mark><b>IMDb</b></mark> <b>8,1/10</b>');
-  expect(model.renderRich({ ...event, origin: 'Liste Radarr probable — Films récents' }, settings)).toContain('<b>Liste Radarr probable :</b> Films récents');
+  expect(html).toContain('<mark><b>IMDb</b></mark> <b>8,1</b>');
+  expect(html).not.toContain('/10');
+  expect(html).not.toContain('Demande Seerr');
+  expect(model.renderRich({ ...event, origin: 'Liste Radarr probable — Films récents' }, settings)).toContain('<b>Source :</b> Films récents');
   expect(model.viewData({ ...event, quality: 'Bluray-1080p · H264 · SDR' }, settings).qualityDisplay).toBe('Blu-ray · Full HD (1080p) · H.264 · SDR');
  });

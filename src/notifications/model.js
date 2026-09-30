@@ -1,10 +1,10 @@
 'use strict';
 const Handlebars = require('handlebars');
 
-const REQUEST_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>Nouvelle demande de {{kind}}</i>\n━━━━━━━━━━━━━━━━━━{{#if imdbRating}}\n\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if seasons}}\n<b>Saison(s) :</b> {{seasons}}{{/if}}\n\n<b>Demandé par :</b>\n{{requester}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
-const AVAILABLE_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>{{kind}} disponible sur Plex</i>{{#if episode}}\n\n<b>{{episode}}</b>{{/if}}{{#if imdbRating}}\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if overview}}\n\n━━━━━━━━━━━━━━━━━━\n<i>{{overview}}</i>{{/if}}\n\n━━━━━━━━━━━━━━━━━━\n<b>{{originLabel}} :</b> {{originDetail}}\n<b>Qualité :</b> {{qualityDisplay}}{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
-const REQUEST_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>Nouvelle demande de {{kind}}</i></p>{{#if imdbRating}}<p><mark><b>IMDb</b></mark> <b>{{imdbRating}}/10</b></p>{{/if}}{{#if seasons}}<p><b>Saison(s) :</b> {{seasons}}</p>{{/if}}<hr/><p><b>Demandé par :</b> {{requester}}</p><p>{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
-const AVAILABLE_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>{{kind}} disponible sur Plex</i></p>{{#if seasonNotification}}<h4>{{seasonLabel}}</h4>{{#if seasonComplete}}<p><b>Nombre total d’épisodes :</b> {{seasonTotal}}</p>{{else}}<p>{{#if episodeRangeLabel}}<b>Épisodes ajoutés :</b> {{episodeRangeLabel}}<br/>{{/if}}<b>Nombre total d’épisodes :</b> {{#if seasonTotal}}{{seasonTotal}}{{else}}Non renseigné{{/if}}</p>{{/if}}{{else}}{{#if episode}}<h4>{{episode}}</h4>{{/if}}{{/if}}{{#if imdbRating}}<p><mark><b>IMDb</b></mark> <b>{{imdbRating}}/10</b></p>{{/if}}{{#if overview}}<blockquote>{{overview}}</blockquote>{{/if}}<hr/><p><b>{{originLabel}} :</b> {{originDetail}}<br/><b>Qualité :</b> {{qualityDisplay}}</p><hr/><p>{{#if plexUrl}}<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
+const REQUEST_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>Nouvelle demande de {{kind}}</i>\n━━━━━━━━━━━━━━━━━━{{#if imdbRating}}\n\n<b>IMDb :</b> {{imdbRating}}{{/if}}{{#if seasons}}\n<b>Saison(s) :</b> {{seasons}}{{/if}}\n\n<b>Source :</b>\n{{requester}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
+const AVAILABLE_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>{{kind}} disponible sur Plex</i>{{#if episode}}\n\n<b>{{episode}}</b>{{/if}}{{#if imdbRating}}\n<b>IMDb :</b> {{imdbRating}}{{/if}}{{#if overview}}\n\n━━━━━━━━━━━━━━━━━━\n<i>{{overview}}</i>{{/if}}\n\n━━━━━━━━━━━━━━━━━━\n<b>{{originLabel}} :</b> {{originDetail}}\n<b>Qualité :</b> {{qualityDisplay}}{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
+const REQUEST_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>Nouvelle demande de {{kind}}</i></p>{{#if imdbRating}}<p><mark><b>IMDb</b></mark> <b>{{imdbRating}}</b></p>{{/if}}{{#if seasons}}<p><b>Saison(s) :</b> {{seasons}}</p>{{/if}}<hr/><p><b>Source :</b> {{requester}}</p><p>{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
+const AVAILABLE_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>{{kind}} disponible sur Plex</i></p>{{#if seasonNotification}}<h4>{{seasonLabel}}</h4>{{#if seasonComplete}}<p><b>Nombre total d’épisodes :</b> {{seasonTotal}}</p>{{else}}<p>{{#if episodeRangeLabel}}<b>Épisodes ajoutés :</b> {{episodeRangeLabel}}<br/>{{/if}}<b>Nombre total d’épisodes :</b> {{#if seasonTotal}}{{seasonTotal}}{{else}}Non renseigné{{/if}}</p>{{/if}}{{else}}{{#if episode}}<h4>{{episode}}</h4>{{/if}}{{/if}}{{#if imdbRating}}<p><mark><b>IMDb</b></mark> <b>{{imdbRating}}</b></p>{{/if}}{{#if overview}}<blockquote>{{overview}}</blockquote>{{/if}}<hr/><p><b>{{originLabel}} :</b> {{originDetail}}<br/><b>Qualité :</b> {{qualityDisplay}}</p><hr/><p>{{#if plexUrl}}<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
 const TYPES = new Set(['movie', 'show', 'season', 'episode']);
 const REQUEST_EVENTS = new Set(['MEDIA_PENDING', 'MEDIA_APPROVED', 'MEDIA_AUTO_APPROVED']);
 function id(value) { return /^\d+$/.test(String(value ?? '')) ? String(value) : ''; }
@@ -71,10 +71,10 @@ function summary(value, limit) {
   return (lastSpace > limit / 2 ? cut.slice(0, lastSpace) : cut).replace(/[ ,;:-]+$/, '') + '…';
 }
 function originPresentation(origin) {
-  if (origin?.startsWith('Demande Seerr — ')) return { originLabel: 'Demandé par', originDetail: origin.slice('Demande Seerr — '.length) };
-  if (origin === 'Demande Seerr') return { originLabel: 'Origine', originDetail: 'Demande via Seerr' };
-  if (origin?.startsWith('Liste Radarr probable — ')) return { originLabel: 'Liste Radarr probable', originDetail: origin.slice('Liste Radarr probable — '.length) };
-  return { originLabel: 'Origine', originDetail: origin || 'Non identifiée' };
+  if (origin?.startsWith('Demande Seerr — ')) return { originLabel: 'Source', originDetail: origin.slice('Demande Seerr — '.length) };
+  if (origin === 'Demande Seerr') return { originLabel: 'Source', originDetail: 'Non identifiée' };
+  if (origin?.startsWith('Liste Radarr probable — ')) return { originLabel: 'Source', originDetail: origin.slice('Liste Radarr probable — '.length) };
+  return { originLabel: 'Source', originDetail: origin || 'Non identifiée' };
 }
 function qualityPresentation(quality) {
   return (quality || 'Non renseignée')

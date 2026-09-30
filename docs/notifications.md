@@ -239,8 +239,9 @@ n’est pas inclus dans une plage continue. Le nombre total reste « Non renseig
 si Sonarr ne fournit pas la liste. Les variables correspondantes sont `seasonLabel`,
 `seasonTotal`, `addedEpisodeCount`, `episodeRangeLabel` et `seasonNotification`.
 
-Les modèles affichent l’utilisateur sous « Demandé par » et les listes sous
-« Liste Radarr probable », pour conserver le caractère incertain de cette origine.
+Les modèles affichent « Source : » suivi uniquement du nom de la personne ou
+de la liste. L’identification d’une liste reste une déduction à partir des tags ;
+le champ brut `origin` conserve cette indication. La note IMDb est affichée sans « /10 ».
 La qualité est présentée sur une ligne sans police de code, avec résolution lisible
 (4K, Full HD, HD), source, codec et plage dynamique. Les valeurs brutes `origin` et
 `quality` restent disponibles pour les modèles personnalisés ; `originLabel`,
