@@ -108,4 +108,19 @@ async function sendMessage(text) {
   }
 }
 
-module.exports = { sendPhoto, sendMessage, sleep };
+async function sendNotification(caption, posterUrl) {
+  if (!posterUrl) return module.exports.sendMessage(caption);
+  try { return await module.exports.sendPhoto(posterUrl, caption); }
+  catch (cause) {
+    // A rejected image has not produced a message. Only these explicit media
+    // errors permit text fallback; timeouts and rate limits must not duplicate.
+    if (cause.httpStatus === 400 && /failed to get HTTP URL content|wrong file identifier|IMAGE_PROCESS_FAILED|PHOTO_INVALID|WEBPAGE_CURL_FAILED|WEBPAGE_MEDIA_EMPTY/i.test(cause.message)) {
+      return module.exports.sendMessage(caption);
+    }
+    const error = new Error('Telegram delivery failed');
+    error.retryable = cause.retryable;
+    error.retryAfterMs = cause.retryAfterMs;
+    throw error;
+  }
+}
+module.exports = { sendPhoto, sendMessage, sendNotification, sleep };

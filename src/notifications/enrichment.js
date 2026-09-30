@@ -2,7 +2,7 @@
 const axios = require('axios');
 const config = require('../config');
 const blacklist = require('../blacklist');
-const { id, text } = require('./model');
+const { id, text, safeUrl } = require('./model');
 
 async function api(section, resource, params) {
   const settings = config[section];
@@ -15,6 +15,15 @@ async function api(section, resource, params) {
 function guidId(guids, provider) {
   const match = (guids || []).map(g => typeof g === 'string' ? g : g.id).find(g => g?.startsWith(`${provider}://`));
   return id(match?.split('://')[1]);
+}
+function imdbScore(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 && n <= 10 ? n.toFixed(1).replace('.', ',') : '';
+}
+function plexImdb(metadata) {
+  if (String(metadata?.audience_rating_image).startsWith('imdb://')) return imdbScore(metadata.audience_rating);
+  if (String(metadata?.rating_image).startsWith('imdb://')) return imdbScore(metadata.rating);
+  return '';
 }
 async function plexMetadata(event) {
   if (!config.tautulli?.baseUrl || !config.tautulli.apiKey) return event;
@@ -33,6 +42,7 @@ async function plexMetadata(event) {
   const video = (info.parts || []).flatMap(part => part.streams || []).find(stream => String(stream.type) === '1') || {};
   return {
     ...event,
+    imdbRating: plexImdb(series ? parent : metadata),
     title: text(metadata.title) || event.title,
     seriesTitle: series ? text(parent?.title || metadata.grandparent_title || metadata.parent_title) || event.seriesTitle : event.seriesTitle,
     year: id(parent?.year || metadata.year) || event.year,
@@ -52,9 +62,7 @@ async function findArr(event) {
   return items.find(item => (event.tmdbId && String(item.tmdbId) === event.tmdbId)
     || (!movie && event.tvdbId && String(item.tvdbId) === event.tvdbId)) || null;
 }
-async function requestOrigin(event) {
-  if (!event.tmdbId) return null;
-  const details = await api('seerr', `api/v1/${event.mediaType === 'movie' ? 'movie' : 'tv'}/${event.tmdbId}`);
+function requestOrigin(event, details) {
   const requests = details?.mediaInfo?.requests || [];
   // A declined or failed request must not be attributed to an available item.
   const relevant = requests.filter(r => [1, 2, 5].includes(Number(r.status))
@@ -87,6 +95,17 @@ async function enrich(input) {
   let event = input.event === 'available' ? await plexMetadata({ ...input }) : { ...input };
   const notes = [];
   let arr = null;
+  let details = null;
+  if (event.tmdbId) {
+    try {
+      details = await api('seerr', `api/v1/${event.mediaType === 'movie' ? 'movie' : 'tv'}/${event.tmdbId}`, { language: 'fr' });
+      if (/^\/[a-zA-Z0-9._/-]+$/.test(details?.posterPath || '')) event.posterUrl = `https://image.tmdb.org/t/p/w500${details.posterPath}`;
+      if (event.event === 'request') {
+        event.title = text(details?.title || details?.name) || event.title;
+        event.year = id((details?.releaseDate || details?.firstAirDate || '').slice(0, 4)) || event.year;
+      }
+    } catch { notes.push('seerr-unavailable'); }
+  }
   if (event.event === 'available') {
     try { arr = await findArr(event); } catch { notes.push('arr-unavailable'); }
     const source = event.mediaType === 'movie' ? 'radarr' : 'sonarr';
@@ -94,11 +113,19 @@ async function enrich(input) {
       return { ...event, suppressed: true, enrichmentNotes: ['blacklisted'] };
     }
     if (!event.tmdbId && arr?.tmdbId) event.tmdbId = String(arr.tmdbId);
-    try { event.origin = await requestOrigin(event); } catch { notes.push('seerr-unavailable'); }
+    try { event.origin = requestOrigin(event, details); } catch { notes.push('seerr-unavailable'); }
     if (!event.origin && event.mediaType === 'movie') {
       try { event.origin = await listOrigin(arr); } catch { notes.push('lists-unavailable'); }
     }
     try { event.quality = await quality(event, arr); } catch { event.quality = event.quality || event.resolution; notes.push('quality-unavailable'); }
+  }
+  event.posterUrl = event.posterUrl || safeUrl(arr?.images?.find(image => image.coverType === 'poster')?.remoteUrl);
+  event.imdbRating = event.imdbRating || imdbScore(arr?.ratings?.imdb?.value);
+  if (!event.imdbRating && event.mediaType === 'movie' && event.tmdbId) {
+    try {
+      const ratings = await api('seerr', `api/v1/movie/${event.tmdbId}/ratingscombined`);
+      event.imdbRating = imdbScore(ratings?.imdb?.criticsScore);
+    } catch { notes.push('imdb-unavailable'); }
   }
   if (config.tmdb.apiKey && event.tmdbId) {
     try {

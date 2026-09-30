@@ -145,3 +145,20 @@ préfixé `[TEST Telgrarr]`. Il traverse la file et le même enrichissement que 
 notifications réelles, mais sa clé de déduplication est séparée : il ne bloque
 pas une future annonce du même média. Ces tests publient réellement dans le
 groupe configuré. Les aperçus de l’interface continuent à ne rien envoyer.
+
+### Affiche et note IMDb
+
+Les demandes et disponibilités incluent une affiche publique issue de Seerr
+(TMDb), avec les images Radarr/Sonarr en secours. Aucun lien Plex contenant un
+jeton n’est transmis à Telegram. Sans affiche, le message reste textuel.
+
+La variable `imdbRating` contient une note sur 10 avec une virgule française.
+Elle provient uniquement d’un champ explicitement IMDb dans Plex ou Radarr,
+ou de l’API `movie/:id/ratingscombined` de Seerr. Une note TMDb ou une note
+Sonarr sans source explicite n’est jamais renommée IMDb. La ligne est masquée
+si aucune note IMDb n’est disponible, notamment pour certaines séries.
+
+Les légendes des affiches sont limitées à 1024 caractères : le résumé est
+raccourci si nécessaire. Un modèle personnalisé trop long est envoyé en texte.
+Une image explicitement rejetée par Telegram entraîne un envoi textuel ; les
+erreurs réseau ambiguës suivent la file de reprise habituelle.

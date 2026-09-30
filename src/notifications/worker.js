@@ -33,7 +33,12 @@ async function processNext() {
     let caption;
     try { caption = render(event, config); }
     catch (error) { error.retryable = false; throw error; }
-    await telegram.sendMessage(caption);
+    let posterUrl = event.posterUrl;
+    if (posterUrl) {
+      try { caption = render(event, config, 1024); }
+      catch { posterUrl = ''; }
+    }
+    await telegram.sendNotification(caption, posterUrl);
     sent = true;
     await store.delivered(job.key);
     nextSendAt = Date.now() + Math.max(5000, config.telegram.delayMs);
@@ -43,7 +48,7 @@ async function processNext() {
       title: data.title, year: event.year, timestamp: new Date().toISOString(),
       details: event.event === 'request' ? 'Nouvelle demande' : 'Disponible sur Plex',
       overview: data.overview, quality: data.quality, origin: data.origin,
-      caption, event: event.event, tmdbId: event.tmdbId, enrichmentNotes: event.enrichmentNotes,
+      caption, posterUrl, imdbRating: event.imdbRating, event: event.event, tmdbId: event.tmdbId, enrichmentNotes: event.enrichmentNotes,
     }]);
     log.info('Notifications', `Delivered ${job.event.event}`);
   } catch (error) {

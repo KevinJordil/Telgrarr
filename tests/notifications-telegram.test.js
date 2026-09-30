@@ -24,3 +24,20 @@ describe('Telegram text notification transport', () => {
     expect(post).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Poster notification transport', () => {
+  const telegram = require('../src/telegram');
+  it('falls back to text only when Telegram explicitly rejects the image', async () => {
+    const error = Object.assign(new Error('failed to get HTTP URL content'), { httpStatus: 400, retryable: false });
+    vi.spyOn(telegram, 'sendPhoto').mockRejectedValue(error);
+    const text = vi.spyOn(telegram, 'sendMessage').mockResolvedValue({ message_id: 1 });
+    await telegram.sendNotification('Caption', 'https://image.tmdb.org/poster.jpg');
+    expect(text).toHaveBeenCalledTimes(1);
+  });
+  it('does not risk sending a second message after an ambiguous transport failure', async () => {
+    vi.spyOn(telegram, 'sendPhoto').mockRejectedValue(Object.assign(new Error('private token'), { retryable: true }));
+    const text = vi.spyOn(telegram, 'sendMessage').mockResolvedValue({});
+    await expect(telegram.sendNotification('Caption', 'https://image.tmdb.org/poster.jpg')).rejects.toThrow('Telegram delivery failed');
+    expect(text).not.toHaveBeenCalled();
+  });
+});

@@ -44,7 +44,7 @@ describe('Notification origin and media enrichment', () => {
     get.mockResolvedValue({ data: [{ id: 1, tmdbId: 42, tags: [] }] });
     const result = await enrich(event);
     expect(result.suppressed).toBe(true);
-    expect(get).toHaveBeenCalledTimes(1);
+    expect(get.mock.calls.filter(([url]) => url.includes('/api/v3/movie'))).toHaveLength(1);
   });
   it('keeps availability usable when optional enrichment services fail', async () => {
     get.mockRejectedValue(new Error('private URL and credentials'));
@@ -70,5 +70,24 @@ describe('Notification origin and media enrichment', () => {
     expect(result.seriesTitle).toBe('Une série');
     expect(result.overview).toBe('Résumé français');
     expect(result.quality).toContain('WEBDL-1080p');
+  });
+});
+
+describe('Poster and IMDb enrichment', () => {
+  it('uses the public poster and explicitly identified IMDb score, never the TMDb score', async () => {
+    get.mockImplementation(async url => {
+      if (url.includes('ratingscombined')) return { data: { imdb: { criticsScore: 7.3 } } };
+      if (url.includes('/api/v1/movie')) return { data: { posterPath: '/poster.jpg', voteAverage: 9.9 } };
+      return { data: [] };
+    });
+    const result = await enrich({ ...event, event: 'request' });
+    expect(result.posterUrl).toBe('https://image.tmdb.org/t/p/w500/poster.jpg');
+    expect(result.imdbRating).toBe('7,3');
+  });
+  it('does not mislabel unqualified Sonarr or TMDb ratings as IMDb', async () => {
+    config.sonarr = { baseUrl: 'http://sonarr.test', apiKey: 'test-key' };
+    get.mockImplementation(async url => ({ data: url.includes('/series') ? [{ tmdbId: 42, ratings: { value: 8.1 } }] : { voteAverage: 8.6 } }));
+    const result = await enrich({ ...event, mediaType: 'show' });
+    expect(result.imdbRating).toBe('');
   });
 });

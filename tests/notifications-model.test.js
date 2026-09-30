@@ -61,3 +61,12 @@ describe('French notification messages', () => {
     expect(() => model.render(event, { ...settings, notifications: { ...settings.notifications, availableTemplate: '{{{title}}}' } })).toThrow();
   });
 });
+
+it('fits photo captions including the test label and preserves the IMDb line and links', () => {
+  const event = { ...model.normalizeTautulli(plex), isTest: true, imdbRating: '7,3', overview: 'Résumé très détaillé '.repeat(100), origin: 'Demande Seerr — Camille', quality: 'WEBDL-2160p · HEVC · Dolby Vision' };
+  const caption = model.render(event, settings, 1024);
+  expect(caption.length).toBeLessThanOrEqual(1024);
+  expect(caption).toContain('IMDb : 7,3/10');
+  expect(caption).toContain('Voir sur Plex');
+  expect(model.render(model.normalizeSeerr(request), settings)).not.toContain('IMDb :');
+});

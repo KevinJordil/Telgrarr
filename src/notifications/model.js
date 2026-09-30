@@ -1,8 +1,8 @@
 'use strict';
 const Handlebars = require('handlebars');
 
-const REQUEST_TEMPLATE = '<b>Nouvelle demande de {{kind}}</b>\n<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\nDemandé par : {{requester}}{{#if seasons}}\nSaison(s) : {{seasons}}{{/if}}{{#if seerrUrl}}\n\n<a href="{{seerrUrl}}">Voir la demande</a>{{/if}}';
-const AVAILABLE_TEMPLATE = '<b>{{kind}} disponible sur Plex</b>\n<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>{{#if episode}}\n{{episode}}{{/if}}{{#if overview}}\n\n{{overview}}{{/if}}\n\nOrigine : {{origin}}\nQualité : {{quality}}{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#if seerrUrl}} · <a href="{{seerrUrl}}">Voir sur Seerr</a>{{/if}}';
+const REQUEST_TEMPLATE = '<b>Nouvelle demande de {{kind}}</b>\n<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n{{#if imdbRating}}IMDb : {{imdbRating}}/10\n{{/if}}Demandé par : {{requester}}{{#if seasons}}\nSaison(s) : {{seasons}}{{/if}}{{#if seerrUrl}}\n\n<a href="{{seerrUrl}}">Voir la demande</a>{{/if}}';
+const AVAILABLE_TEMPLATE = '<b>{{kind}} disponible sur Plex</b>\n<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>{{#if episode}}\n{{episode}}{{/if}}{{#if imdbRating}}\nIMDb : {{imdbRating}}/10{{/if}}{{#if overview}}\n\n{{overview}}{{/if}}\n\nOrigine : {{origin}}\nQualité : {{quality}}{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#if seerrUrl}} · <a href="{{seerrUrl}}">Voir sur Seerr</a>{{/if}}';
 const TYPES = new Set(['movie', 'show', 'season', 'episode']);
 const REQUEST_EVENTS = new Set(['MEDIA_PENDING', 'MEDIA_APPROVED', 'MEDIA_AUTO_APPROVED']);
 function id(value) { return /^\d+$/.test(String(value ?? '')) ? String(value) : ''; }
@@ -84,18 +84,23 @@ function viewData(event, settings) {
     plexUrl, seerrUrl: seerrLink(settings.seerr.publicUrl || settings.seerr.baseUrl, event.mediaType, event.tmdbId),
   };
 }
-function render(event, settings) {
+function render(event, settings, maxLength = 4000) {
   const data = viewData(event, settings);
   const template = event.event === 'request' ? settings.notifications.requestTemplate : settings.notifications.availableTemplate;
   // Values are escaped by Handlebars. Triple braces would bypass escaping for external metadata.
   if (/\{\{\{|\{\{&/.test(template)) throw new Error('Use escaped template variables only');
   const compile = Handlebars.compile(template, { strict: false });
   let caption = compile(data);
-  if (caption.length > 4000) {
+  const prefix = event.isTest ? '[TEST Telgrarr]\n\n' : '';
+  if (caption.length + prefix.length > maxLength) {
+    data.overview = summary(event.overview, Math.max(0, data.overview.length - (caption.length + prefix.length - maxLength) - 20));
+    caption = compile(data);
+  }
+  if (caption.length + prefix.length > maxLength) {
     data.overview = '';
     caption = compile(data);
   }
-  if (!caption.trim() || caption.length > 4000) throw new Error('Notification template is empty or exceeds 4000 characters');
-  return event.isTest ? `[TEST Telgrarr]\n\n${caption}` : caption;
+  if (!caption.trim() || caption.length + prefix.length > maxLength) throw new Error('Notification template is empty or exceeds 4000 characters');
+  return prefix + caption;
 }
 module.exports = { REQUEST_TEMPLATE, AVAILABLE_TEMPLATE, normalizeSeerr, normalizeTautulli, eventKey, viewData, render, safeUrl, id, text };
