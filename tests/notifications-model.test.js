@@ -9,15 +9,15 @@ const settings = {
 const request = { notification_type: 'MEDIA_PENDING', subject: '<Un film> & amis', media: { media_type: 'movie', tmdbId: '42' }, request: { request_id: '12', requestedBy_username: 'Camille' } };
 const plex = { action: 'created', media_type: 'episode', rating_key: '56', server_machine_id: 'server', grandparent_title: 'Une série', title: 'Le retour', season_num: '2', episode_num: '3' };
 describe('French notification messages', () => {
-  it('escapes external titles and includes a coherent request link', () => {
+  it('escapes external titles and omits Seerr links', () => {
     const event = model.normalizeSeerr(request);
     expect(model.render(event, settings)).toContain('&lt;Un film&gt; &amp; amis');
     expect(model.render(event, settings)).toContain('<b>Demandé par :</b>\nCamille');
-    expect(model.render(event, settings)).toContain('https://requests.example.test/movie/42');
+    expect(model.render(event, settings)).not.toContain('https://requests.example.test/movie/42');
   });
-  it('uses the public Seerr URL rather than Docker DNS in Telegram links', () => {
+  it('does not expose the public Seerr URL or Docker DNS in Telegram links', () => {
     const custom = { ...settings, seerr: { ...settings.seerr, baseUrl: 'http://jellyseerr:5055', publicUrl: 'https://requests.example.test' } };
-    expect(model.render(model.normalizeSeerr(request), custom)).toContain('https://requests.example.test/movie/42');
+    expect(model.render(model.normalizeSeerr(request), custom)).not.toContain('https://requests.example.test/movie/42');
     expect(model.render(model.normalizeSeerr(request), custom)).not.toContain('jellyseerr');
   });
   it('deduplicates pending and later approval for the same request', () => {

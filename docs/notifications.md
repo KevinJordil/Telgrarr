@@ -225,3 +225,7 @@ Variables supplémentaires : `posterUrl`, `imdbRating`, `trailers` (liste de `ur
 ```handlebars
 {{#each trailers}}<a href="{{url}}">{{label}}</a>{{/each}}
 ```
+
+Les notifications Telegram ne contiennent aucun lien vers Seerr, y compris pour
+les demandes. `seerrUrl` reste vide pour les anciens modèles personnalisés.
+Les liens de navigation sont ceux de Plex et des bandes-annonces YouTube.

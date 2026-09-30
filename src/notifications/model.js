@@ -1,9 +1,9 @@
 'use strict';
 const Handlebars = require('handlebars');
 
-const REQUEST_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>Nouvelle demande de {{kind}}</i>\n━━━━━━━━━━━━━━━━━━{{#if imdbRating}}\n\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if seasons}}\n<b>Saison(s) :</b> {{seasons}}{{/if}}\n\n<b>Demandé par :</b>\n{{requester}}{{#if seerrUrl}}\n\n━━━━━━━━━━━━━━━━━━\n<a href="{{seerrUrl}}">Voir la demande</a>{{/if}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
+const REQUEST_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>Nouvelle demande de {{kind}}</i>\n━━━━━━━━━━━━━━━━━━{{#if imdbRating}}\n\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if seasons}}\n<b>Saison(s) :</b> {{seasons}}{{/if}}\n\n<b>Demandé par :</b>\n{{requester}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
 const AVAILABLE_TEMPLATE = '<b>{{title}}{{#if year}} ({{year}}){{/if}}</b>\n<i>{{kind}} disponible sur Plex</i>{{#if episode}}\n\n<b>{{episode}}</b>{{/if}}{{#if imdbRating}}\n<b>IMDb :</b> {{imdbRating}}/10{{/if}}{{#if overview}}\n\n━━━━━━━━━━━━━━━━━━\n<i>{{overview}}</i>{{/if}}\n\n━━━━━━━━━━━━━━━━━━\n<b>Origine :</b>\n{{origin}}\n\n<b>Qualité :</b>\n<code>{{quality}}</code>{{#if plexUrl}}\n\n<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}\n<a href="{{url}}">{{label}}</a>{{/each}}';
-const REQUEST_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>Nouvelle demande de {{kind}}</i></p>{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if seasons}}<p><b>Saison(s) :</b> {{seasons}}</p>{{/if}}<hr/><p><b>Demandé par :</b> {{requester}}</p><p>{{#if seerrUrl}}<a href="{{seerrUrl}}">Voir la demande</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
+const REQUEST_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>Nouvelle demande de {{kind}}</i></p>{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if seasons}}<p><b>Saison(s) :</b> {{seasons}}</p>{{/if}}<hr/><p><b>Demandé par :</b> {{requester}}</p><p>{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
 const AVAILABLE_RICH_TEMPLATE = '{{#if posterUrl}}<img src="{{posterUrl}}"/>{{/if}}<h2>{{title}}{{#if year}} ({{year}}){{/if}}</h2><p><i>{{kind}} disponible sur Plex</i></p>{{#if episode}}<h4>{{episode}}</h4>{{/if}}{{#if imdbRating}}<p><b>IMDb :</b> {{imdbRating}}/10</p>{{/if}}{{#if overview}}<blockquote>{{overview}}</blockquote>{{/if}}<hr/><p><b>Origine :</b><br/>{{origin}}</p><p><b>Qualité :</b><br/><code>{{quality}}</code></p><hr/><p>{{#if plexUrl}}<a href="{{plexUrl}}">Voir sur Plex</a>{{/if}}{{#each trailers}}<br/><a href="{{url}}">{{label}}</a>{{/each}}</p>';
 const TYPES = new Set(['movie', 'show', 'season', 'episode']);
 const REQUEST_EVENTS = new Set(['MEDIA_PENDING', 'MEDIA_APPROVED', 'MEDIA_AUTO_APPROVED']);
@@ -88,7 +88,7 @@ function viewData(event, settings) {
     ...event, posterUrl: safeUrl(event.posterUrl), trailers: (event.trailers || []).map(trailer => ({ ...trailer, url: safeUrl(trailer.url) })).filter(trailer => trailer.url), kind, title: (!movie && event.seriesTitle) || event.title || 'Titre inconnu', episode,
     overview: summary(event.overview, settings.notifications.summaryLength),
     origin: event.origin || 'Inconnue', quality: event.quality || 'Non renseignée',
-    plexUrl, seerrUrl: seerrLink(settings.seerr.publicUrl || settings.seerr.baseUrl, event.mediaType, event.tmdbId),
+    plexUrl, seerrUrl: '',
   };
 }
 function render(event, settings, maxLength = 4000) {
