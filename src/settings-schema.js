@@ -103,6 +103,7 @@ const SETTINGS_SCHEMA = [
     id: 'seerr', title: 'Seerr', icon: 'Search',
     testEndpoint: '/api/settings/test/seerr', testLabel: 'Test Connection',
     fields: [
+      { key: 'seerr.publicUrl', label: 'Public URL', type: 'url', required: false, rule: 'url', note: 'Address used in Telegram links. Keep the API base URL reachable from the container; this public URL must be reachable by Telegram users.' },
       { key: 'seerr.apiKey', label: 'API Key', type: 'secret', required: false, note: 'Used to identify the requester when a title becomes available.' },
       { key: 'seerr.baseUrl', label: 'Base URL', type: 'url', placeholder: 'https://your-seerr-instance', required: false, rule: 'url' },
     ],

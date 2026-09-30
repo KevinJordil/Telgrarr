@@ -32,7 +32,7 @@ const DEFAULTS = {
   emby:       { refreshUrl: '', apiKey: '' },
   radarr:     { baseUrl: '', apiKey: '' },
   tmdb:       { apiKey: '' },
-  seerr:      { baseUrl: '', apiKey: '' },
+  seerr:      { baseUrl: '', apiKey: '', publicUrl: '' },
   tautulli:   { baseUrl: '', apiKey: '' },
   notifications: { enabled: false, requestSource: 'webhook', summaryLength: 350, requestTemplate: REQUEST_TEMPLATE, availableTemplate: AVAILABLE_TEMPLATE },
   omdb:       { apiKey: '' },

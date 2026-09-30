@@ -13,7 +13,8 @@ Les modèles du mode historique Sonarr/Radarr restent disponibles lorsque ce mod
 3. Dans Services, renseigner Tautulli (version 2.18 ou supérieure), son URL et sa clé API.
    Ce service fournit les titres, le résumé Plex et les identifiants des séries/films.
 4. Renseigner les URL et clés API de Seerr, Radarr et Sonarr pour enrichir l’origine et
-   la qualité. Ils sont facultatifs : une panne produit une information inconnue,
+   la qualité. Renseigner aussi **Seerr → Public URL** pour que les liens Telegram utilisent l’adresse
+   accessible aux utilisateurs, et non le nom Docker. Les autres services sont facultatifs : une panne produit une information inconnue,
    jamais une attribution inventée. Seerr utilise sa clé API administrateur pour
    accéder aux demandes. TMDb est facultatif et fournit le résumé français s’il existe.
 5. Configurer les deux webhooks ci-dessous. Leurs URL sont copiables dans les sections

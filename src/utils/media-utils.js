@@ -2,7 +2,7 @@
 const config = require('../config');
 
 function attachSeerr(media, type) {
-  const base = config.seerr?.baseUrl;
+  const base = config.seerr?.publicUrl || config.seerr?.baseUrl;
   if (!base) return { ...media };
   
   const copy = { ...media };

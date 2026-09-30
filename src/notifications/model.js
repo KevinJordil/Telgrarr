@@ -78,7 +78,7 @@ function viewData(event, settings) {
     ...event, kind, title: (!movie && event.seriesTitle) || event.title || 'Titre inconnu', episode,
     overview: summary(event.overview, settings.notifications.summaryLength),
     origin: event.origin || 'Inconnue', quality: event.quality || 'Non renseignée',
-    plexUrl, seerrUrl: seerrLink(settings.seerr.baseUrl, event.mediaType, event.tmdbId),
+    plexUrl, seerrUrl: seerrLink(settings.seerr.publicUrl || settings.seerr.baseUrl, event.mediaType, event.tmdbId),
   };
 }
 function render(event, settings) {

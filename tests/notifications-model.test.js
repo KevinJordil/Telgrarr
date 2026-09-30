@@ -15,6 +15,11 @@ describe('French notification messages', () => {
     expect(model.render(event, settings)).toContain('Demandé par : Camille');
     expect(model.render(event, settings)).toContain('https://requests.example.test/movie/42');
   });
+  it('uses the public Seerr URL rather than Docker DNS in Telegram links', () => {
+    const custom = { ...settings, seerr: { ...settings.seerr, baseUrl: 'http://jellyseerr:5055', publicUrl: 'https://requests.example.test' } };
+    expect(model.render(model.normalizeSeerr(request), custom)).toContain('https://requests.example.test/movie/42');
+    expect(model.render(model.normalizeSeerr(request), custom)).not.toContain('jellyseerr');
+  });
   it('deduplicates pending and later approval for the same request', () => {
     const approved = model.normalizeSeerr({ ...request, notification_type: 'MEDIA_APPROVED' });
     expect(model.eventKey(approved)).toBe(model.eventKey(model.normalizeSeerr(request)));
