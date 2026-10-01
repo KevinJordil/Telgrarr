@@ -74,6 +74,28 @@ describe('Notification origin and media enrichment', () => {
 });
 
 describe('Poster and IMDb enrichment', () => {
+  it('falls back to the TMDb poster when Seerr metadata fails for a request', async () => {
+    config.tmdb = { apiKey: 'test-tmdb-key' };
+    get.mockImplementation(async url => {
+      if (url.includes('api.themoviedb.org/3/movie/42/videos')) return { data: { results: [] } };
+      if (url.includes('api.themoviedb.org/3/movie/42')) return { data: { poster_path: '/fallback.jpg', title: 'Un film' } };
+      throw new Error('Seerr unavailable');
+    });
+    const result = await enrich({ ...event, event: 'request' });
+    expect(result.posterUrl).toBe('https://image.tmdb.org/t/p/w500/fallback.jpg');
+    expect(result.enrichmentNotes).toContain('seerr-unavailable');
+  });
+  it('preserves a Seerr poster and rejects malformed TMDb poster paths', async () => {
+    config.tmdb = { apiKey: 'test-tmdb-key' };
+    get.mockImplementation(async url => ({ data: url.includes('seerr.test') ? { posterPath: '/seerr.jpg' } : { poster_path: '/bad.jpg?api_key=private' } }));
+    expect((await enrich({ ...event, event: 'request' })).posterUrl).toBe('https://image.tmdb.org/t/p/w500/seerr.jpg');
+    get.mockImplementation(async url => {
+      if (url.includes('seerr.test')) throw new Error('Seerr unavailable');
+      return { data: { poster_path: '/bad.jpg?api_key=private' } };
+    });
+    expect((await enrich({ ...event, event: 'request' })).posterUrl).toBeFalsy();
+  });
+
   it('uses the public poster and explicitly identified IMDb score, never the TMDb score', async () => {
     get.mockImplementation(async url => {
       if (url.includes('ratingscombined')) return { data: { imdb: { criticsScore: 7.3 } } };

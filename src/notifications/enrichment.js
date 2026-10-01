@@ -170,6 +170,7 @@ async function enrich(input) {
       const { data } = await axios.get(`https://api.themoviedb.org/3/${event.mediaType === 'movie' ? 'movie' : 'tv'}/${event.tmdbId}`, {
         headers: {}, params: { api_key: config.tmdb.apiKey, language: 'fr-FR' }, timeout: 15000,
       });
+      if (!event.posterUrl && /^\/[a-zA-Z0-9._/-]+$/.test(data.poster_path || '')) event.posterUrl = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
       if (data.overview) event.overview = text(data.overview, 1500);
       if (event.event === 'request') {
         event.title = text(data.title || data.name) || event.title;
